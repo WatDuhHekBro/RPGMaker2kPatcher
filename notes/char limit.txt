@@ -1,0 +1,15 @@
+*Note* This was taken from 2k3, but should still be relevant.
+
+Text is displayed in a fixed width font, allowing for up to 38 characters to be shown per line if a face graphic is displayed, and 50 characters without a face graphic. Up to four lines of text can be displayed at once.
+
+[No Portrait - 50 chars]
+Radio: exit testyeet12345678901234567890abcdefghijklmnopqrstuvwxyz
+Radio: exit testyeet12345678901234567890abcdefghij
+
+[With Portrait - 38 chars]
+?????: aaa123456789012345678901234567890aioqwjernovnoizenofjiomqwoeijf
+?????: aaa1234567890123456789012345678
+
+Note that extra characters will still take up the text parser and won't let you click through the message until you that is finished.
+
+Implementation: Start at the maximum position (50 or 38), then go backwards until you find a space (or punctuation). Then break the string at that point.

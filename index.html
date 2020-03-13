@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>RPGMaker2kPatcher</title>
+		<meta charset="utf-8">
+		<script src="code/class.js"></script>
+		<script src="code/general.js"></script>
+		<script src="code/reader.js"></script>
+		<script src="code/writer.js"></script>
+		<style type="text/css">
+		html, body
+		{
+			height: 100%;
+			margin: 0;
+		}
+		</style>
+	</head>
+	<body>
+		<!-- Implement drag-n-drop, it'll save a lot of headache. -->
+		<div>
+			<div>Upload an <code>.lmu</code> file here and the parsed data will be downloaded along with a fill-in-the-blank patch and copy-paste-ready text for Google Translate.</div>
+			<input type="file" onchange="upload(this.files[0])">
+		</div>
+		<div>
+			<div>Upload a map file, then a patch file, then download the patched result.</div>
+			<input type="file">
+			<input type="file">
+			<button>Download Patched Map File</button>
+		</div>
+	</body>
+</html>

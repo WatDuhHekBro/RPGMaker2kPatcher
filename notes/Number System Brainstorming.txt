@@ -1,0 +1,207 @@
+100 = 64
+# Theorization Zone #
+120 = 78
+121 = 79
+122 = 7A
+123 = 7B
+124 = 7C
+125 = 7D
+126 = 7E
+127 = 7F
+128 = 80 or 81 00
+129 = 81 01
+130 = 81 02
+131 = 81 03
+132 = 81 04
+133 = 81 05
+134 = 81 06
+135 = 81 07
+# End #
+136 = 81 08
+320 = 82 40
+782 = 86 0E
+783 = 86 0F
+10005 = CE 15
+10220 = CF 6C
+11110 = D6 66
+11410 = D9 12
+12110 = DE 4E
+12120 = DE 58
+22010 = 81 AB 7A
+22410 = 81 AF 0A
+40839216 = 93 BC D0 30
+1378382453 = 85 91 A1 E4 75
+-1 = 8F FF FF FF 7F =/= 4294967295
+-75 = 8F FF FF FF 35
+-95 = 8F FF FF FF 21 =/= 4294967201
+-1031863457 = 8C 93 FC 86 5F =/= 3263103839
+-2147483640 = 88 80 80 80 08
+
+82 40
+81 08
+40 - 8 = 38 --> 56
+320 - 136 - 56 = 128
+
+12110 and 11410
+4E - 12 = 3C --> 60
+12110 - 11410 - 60 = 640
+DE - D9 = 5
+5 * 128 = 640
+
+
+
+-= Formula? =-
+XX (YY)
+If XX > 80, 80*(XX-80)+YY, otherwise, take the value as is.
+
+So the maximum value of this system is ‭16511‬, as opposed to 65535. But I guess there's the advantage of using single bits for numbers <= 80.
+
+But actually, for numbers bigger than that, you use 3 bytes, and the first 2 bytes must be bigger than 80. I guess that's how you get bigger numbers.
+
+
+
+-= Formula 2.0? =-
+XX YY ZZ
+If XX > 80 and YY > 80, 4000*(XX-80) + 80*(YY-80) + ZZ.
+80^2 = 4000
+
+This can actually go for 5 bytes, which is the amount used for negatives as well.
+
+7F - 35 = 4A --> 74
+
+8F FF FF FF 7F = -1
+7F + 1 = 80 (natural limit, pseudo zero)
+8F FF FF FF 7E = -2
+88 80 80 80 08 = -2147483640
+
+-= Review =-
+0000 0000 = 0
+0000 0001 = 1
+0111 1111 = 127
+1000 0000 = -128
+1000 0001 = -127
+1111 1110 = -2
+1111 1111 = -1
+
+Seems like the 8 there is to signal that it's both not a single digit as well as not positive. And from what it looks like, 80 is a reserved character for padding (literally 0*128). That would make 128 be 81 00, since 80 7F would be 127.
+
+-= Theorization Zone =-
+80 80 80 80 00 = 0
+80 80 80 80 01 = 1
+80 80 80 81 00 = 128
+80 80 80 FF 7F = 16383
+80 80 81 80 00 = 16384
+80 81 80 80 00 = 2097152
+80 FF FF FF 7F = ‭268435455‬
+87 FF FF FF 7F = ‭‬‭2147483647
+88 80 80 80 00 = -2147483648
+88 80 80 80 08 = -2147483640
+8F FF FF FF 7F = -1
+-= End =-
+
+4294967295 is actually -1, so the signed number limit must be around this number.
+Turns out it's the max value of an unsigned 32 bit integer. Not too bad considering you only expand when necessary.
+
+Based on the values I do have, it seems like the second bit of the 5th power determines sign. 80-85 is positive, 88-8F is negative.
+
+80 8F
+81 8E
+82 8D
+83 8C
+84 8B
+85 8A
+86 89
+87 88
+
+Theoretically then, <= 87 is positive and >= 88 is negative. Seems rather odd to not use the final half-byte though.
+And according to the last entry, if these rules are right, I just hit the limit for a signed 32 bit integer.
+By the looks of it, the 5th byte is special. Its flag is always 8 and the power (which is multiplied by 80^4).
+
+
+
+-= Bug =-
+event 45
+page 1
+page 2
+page 3
+page 4
+
+After looking at the hex code, the fundamental problem is whether or not 128 is counted as 0x80 or 0x8100.
+
+D6 66
+00
+13 6E 5F 69 6E 74 72 6F 5F 74 72 61 6E 73 5F 65 66 66 63 74 (n_intro_trans_effct)
+0E 07 00 81 20 78 00 64 46 00 64 64 64 64 00 3C
+
+D6 70
+00
+00
+10 07 00 81 20 78 00 81 16 64 00 64 64 64 64 00 88 80 80 80 08 1E 00
+
+D6 66
+00
+13 6E 5F 69 6E 74 72 6F 5F 74 72 61 6E 73 5F 65 66 66 63 74 (n_intro_trans_effct)
+0E 08 00 81 20 78 00 64 46 00 64 64 64 64 00 3C D6 70 00 00 10 08 00 81 20 78 00 81 34 64 00 64 64 64 64 00 14 1E 00 D6 66 00 13 6E 5F 69 6E 74 72 6F 5F 74 72 61 6E 73 5F 65 66 66 63 74 0E 09 00 81 20 78 00 64 46 00 64 64 64 64 00 82 CF C8 78 D6 70 00 00 10 09 00 81 20 78 00 81 52 64 00 64 64 64 64 00 14 1E 00 D6 66 00 13 6E 5F 69 6E 74 72 6F 5F 74 72 61 6E 73 5F 65 66 66 63 74 0E 0A 00 81 20 78 00 64 46 00 64 64 64 64 00 3C D6 70 00 00 10 0A 00 81 20 78 00 81 70 64 00 64 64 64 64 00 82 CF C8 78 1E 00 E0 2A 00 00 03 00 77 00 CF 12 00 0C 46 41 43 45 2D 53 65 6C 64 61 6E 31 03 01 00 01 CE 7E 00 32 5C 63 5B 31 5D 53 65 6C 64 61 6E 5C 63 5B 30 5D 3A 5C 73 5B 37 5D 41 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 21 21 21 00
+
+Luckily, n_intro_trans_effct is here to save the day.
+
+13/16 elements are known for sure.
+10 [07] [00] [81 20] [78] [00] [81 16] [64] [00] [64] [64] [64] [64] [00] 88 80 80 80 08 1E 00
+
+0x80 Approach (19/16)
+10 [07] [00] [81 20] [78] [00] [81 16] [64] [00] [64] [64] [64] [64] [00] [88 80] [80] [80] [08] [1E] [00]
+
+0x8100 Approach (16/16)
+10 [07] [00] [81 20] [78] [00] [81 16] [64] [00] [64] [64] [64] [64] [00] [88 80 80 80 08] [1E] [00]
+
+So it actually is >= 0x80 rather than just > 0x80.
+
+
+
+-= Formula 3.0? =-
+Same for the first 4 digits, then for the 5th digit...
+XY - 80 = Y
+If Y is <= 7, carry on as usual.
+If Y is >= 8, aka F - Y <= 7, calculate as usual, then subtract the entire sum by 4294967296 or 1 0000 0000, the length of an unsigned 32 bit integer plus 1.
+
+
+
+And now comes the problem of converting these numbers back once I'm done with them.
+I think the approach I'll take is to start with the biggest number and divide downwards.
+
+80 80 80 80 7F = 127 = 0x7F --> 0x80
+80 80 80 FF 7F = 16383 = 0x3FFF --> 0x4000
+80 80 FF FF 7F = 2097151 = 0x1FFFFF --> 0x200000
+80 FF FF FF 7F = 268435455 = 0xFFFFFFF --> 0x10000000
+87 FF FF FF 7F = ‭‬‭2147483647 = 0x7FFFFFFF --> 0x80000000
+40839216 = 93 BC D0 30
+1378382453 = 85 91 A1 E4 75
+
+128 = 81 00
+128 / 0x80 = 1 + 0x80 = 129
+128 % 0x80 = 0
+
+40839216 / 0x80000000 = 0x0 + 0x80 = 0x0
+40839216 / 0x10000000 = 0x0 + 0x80 = 0x0
+40839216 / 0x200000 = 0x13 + 0x80 = 0x93
+40839216 % 0x200000 = 0xF2830‬
+0xF2830 / 0x4000 = 0x3C + 0x80 = 0xBC
+0xF2830 % 0x4000 = 0x2830
+0x2830 / 0x80 = 0x50 + 0x80 = 0xD0
+0x2830 % 0x80 = 0x30
+
+1378382453 /% 0x80000000 = 0 and 1378382453 <-- positive
+1378382453 /% 0x10000000 = 5 (and 36205173)
+36205173 /% 0x200000 = 17 (and 553589)
+553589 /% 0x4000 = 33 (and 12917)
+12917 /% 0x80 = 100 and 117
+85 91 A1 E4 75 = 5 17 33 100 117
+
+(-1 + 0x100000000) /% 0x80000000 = 1 (and 2147483647) <-- negative
+2147483647 /% 0x10000000 = 7 (and 268435455)
+268435455 /% 0x200000 = 127 (and 2097151)
+2097151 /% 0x4000 = 127 (and 16383)
+16383 /% 0x80 = 127 (and 127)
+127 /% 0x1 = 127 (and 0)
+-1 = 8F FF FF FF 7F = (87+8) FF FF FF 7F
+5th digit + 8 if negative

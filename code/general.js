@@ -23,8 +23,8 @@ function generatePatch(data)
 				if((last === 20110 && code !== 20110) || (last === 10110 && (code !== 10110 && code !== 20110)))
 				{
 					dialogue.push({
-						path: [ev_num, pg_num, start],
-						original: lines,
+						path: [ev_num, pg_num, start, lines.length],
+						//original: lines,
 						patch: lines
 					});
 					
@@ -61,9 +61,9 @@ function extractDialogue(patch)
 	
 	for(let entry of patch.dialogue)
 	{
-		for(let line of entry.original)
-			s += line.replace(/\\.(\[\d*\])*/g, '') + '\n';
-		s += '\n';
+		for(let line of entry.patch)
+			s += line.replace(/\\.(\[\d*\])*/g, '').trimEnd() + ' ';
+		s = s.trimEnd() + '\n';
 	}
 	
 	return s.trimEnd();
@@ -77,13 +77,12 @@ function applyPatch(data, patch)
 	
 	for(let entry of patch.dialogue)
 	{
-		let length = entry.original.length;
 		let commands = [];
 		
 		for(let i = 0, lines = entry.patch, len = lines.length; i < len; i++)
 			commands.push([i === 0 ? 10110 : 20110, 0, lines[i], []]);
 		
-		data.events[entry.path[0]].pages[entry.path[1]].event.splice(entry.path[2], length, ...commands);
+		data.events[entry.path[0]].pages[entry.path[1]].event.splice(entry.path[2], entry.path[3], ...commands);
 	}
 	
 	return data;

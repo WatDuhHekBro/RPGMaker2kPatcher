@@ -1,20 +1,4 @@
-function upload(f)
-{
-	if(f)
-	{
-		let reader = new FileReader();
-		reader.onload = function() {
-			parseMain(new Uint8Array(this.result));
-			let filename = f.name.substring(0, f.name.indexOf('.lmu'));
-			let patch = generatePatch(map);
-			download(JSON.stringify(map), filename + '.json');
-			download(JSON.stringify(patch), filename + '.patch.json');
-			download(extractDialogue(patch), filename + '.txt');
-		};
-		reader.readAsArrayBuffer(f);
-	}
-}
-
+// Modularize the parser with options.
 function parseMain(b)
 {
 	let main = new ByteReader(b);

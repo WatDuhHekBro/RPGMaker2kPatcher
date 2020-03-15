@@ -1,18 +1,3 @@
-// Usage: download(new Uint8Array([1,3,128]))
-function download(contents, filename = '')
-{
-	const dlink = document.createElement('a');
-	dlink.download = filename;
-	dlink.href = window.URL.createObjectURL(new Blob([contents]));
-	dlink.click();
-	dlink.remove();
-}
-
-function makeMap(data)
-{
-	download(new Uint8Array(createMain(data)), '');
-}
-
 // Have one ByteWriter per process that needs a byte count. In total, 4 types per map: main, events, pages, and commands.
 function createMain(data)
 {

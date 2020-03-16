@@ -1,115 +1,95 @@
-// Modularize the parser with options.
-function parseMain(b)
+function parseStart(bytes, definitions)
 {
-	let main = new ByteReader(b);
-	map = {header: main.readString()};
-	while(stepMain(map, main));
-	console.log(map);
+	ByteReader.setBytes(bytes);
+	let reader = new ByteReader(0, bytes.length);
+	let data = {header: reader.readString()};
+	while(stepRead(data, reader, definitions));
+	return data;
 }
 
-function parseEvents(b)
+function parseObject(reader, definitions)
 {
-	let ev = {};
+	let data = {};
 	
-	for(let length = b.readInt(); length--;)
+	for(let length = reader.readInt(); length--;)
 	{
-		let id = b.readInt().toString();
-		let event = {};
-		while(stepEvent(event, b));
-		ev[id] = event;
+		let id = reader.readInt().toString();
+		let part = {};
+		while(stepRead(part, reader, definitions));
+		data[id] = part;
 	}
 	
-	return ev;
+	return data;
 }
 
-function parsePages(b)
+function parseList(reader, definitions)
 {
-	let pages = {};
+	let data = {};
+	while(stepRead(data, reader, definitions));
+	return data;
+}
+
+function stepRead(data, reader, definitions)
+{
+	let id = reader.readInt();
+	let def = getDefinitionFromValue(definitions, id);
+	let ins = definitions[def];
+	let val;
 	
-	for(let length = b.readInt(); length--;)
+	if(ins)
 	{
-		let id = b.readInt().toString();
-		let page = {};
-		while(stepPage(page, b));
-		delete page[getKeyFromValue(PAGE, 51)];
-		pages[id] = page;
+		if(ins.type === TYPE.INT)
+			val = reader.readInt();
+		else if(ins.type === TYPE.INT_STATIC)
+			val = reader.readIntStatic();
+		else if(ins.type === TYPE.INT8)
+			val = reader.readInt8();
+		else if(ins.type === TYPE.INT16)
+			val = reader.readInt16();
+		else if(ins.type === TYPE.STRING)
+			val = reader.readString();
+		else if(ins.type === TYPE.INT_ARRAY)
+			val = reader.readIntArray();
+		else if(ins.type === TYPE.INT8_ARRAY)
+			val = reader.readInt8Array();
+		else if(ins.type === TYPE.COMMANDS)
+		{
+			let b = reader.spliceBytes();
+			let commands = [];
+			let event;
+			let condition = false;
+			
+			do
+			{
+				if(condition)
+					commands.push(event);
+				event = b.readCommand();
+				condition = event[0] != 0;
+			}
+			while(condition);
+			
+			val = commands;
+		}
+		else if(ins.type === TYPE.TILES)
+			val = reader.readMap();
+		else if(ins.type === TYPE.LIST)
+			val = parseList(reader.spliceBytes(), ins.value);
+		else if(ins.type === TYPE.OBJECT)
+			val = parseObject(reader.spliceBytes(), ins.value);
+		
+		if(ins.skip)
+			return null;
 	}
 	
-	return pages;
-}
-
-function parseCommands(b)
-{
-	let commands = [];
-	let event;
-	let condition = false;
-	
-	do
+	if(id)
 	{
-		if(condition)
-			commands.push(event);
-		event = b.readEvent();
-		condition = event[0] != 0;
+		// gotta increment even if no definition is found
+		if(val === undefined)
+			val = reader.readInt8Array();
+		data[def] = val;
 	}
-	while(condition);
 	
-	return commands;
-}
-
-function stepMain(a, b)
-{
-	let id = b.readInt();
-	let val;
-	
-	if(id === 81)
-		val = parseEvents(b.spliceBytes());
-	else if(id === 71 || id === 72)
-		val = b.readMap();
-	else if(id === 32)
-		val = b.readString();
-	else if(id)
-		val = b.readStaticInt();
-	
-	if(id && val !== undefined)
-		a[getKeyFromValue(MAIN, id)] = val;
-	
-	return id;
-}
-
-function stepEvent(a, b)
-{
-	let id = b.readInt();
-	let val;
-	
-	if(id === 5)
-		val = parsePages(b.spliceBytes());
-	else if(id === 1)
-		val = b.readString();
-	else if(id)
-		val = b.readStaticInt();
-	
-	if(id && val !== undefined)
-		a[getKeyFromValue(EVENT, id)] = val;
-	
-	return id;
-}
-
-function stepPage(a, b)
-{
-	let id = b.readInt();
-	let val;
-	
-	if(id === 52)
-		val = parseCommands(b.spliceBytes());
-	else if(id === 2 || id === 41)
-		val = b.read8bIntArray();
-	else if(id === 21)
-		val = b.readString();
-	else if(id)
-		val = b.readStaticInt();
-	
-	if(id && val !== undefined)
-		a[getKeyFromValue(PAGE, id)] = val;
+	console.log(`Key "${def}" added with a value of:`, val, `at position ${reader.pos}, endpoint ${reader.end}`);
 	
 	return id;
 }

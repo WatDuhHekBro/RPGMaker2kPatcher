@@ -1,49 +1,62 @@
+// Int: A 32 bit number of up to 5 digits.
+// IntStatic: An Int with a pre-defined length of how many digits it has.
+// Int8: An 8 bit number of exactly 1 digit.
+// Int16: A 16 bit number of exactly 2 digits, little-endian.
+// String: An array of Int8s which form text.
+
 class ByteReader
 {
-	constructor(b)
+	constructor(start, end)
+	{
+		this.pos = start;
+		this.end = end;
+	}
+	
+	static setBytes(b)
 	{
 		this.bytes = b;
-		this.pos = 0;
+	}
+	
+	check()
+	{
+		if(this.pos > this.end)
+			throw `FATAL ERROR: Position ${this.pos} exceeded the given endpoint of ${this.end}!`;
 	}
 	
 	spliceBytes()
 	{
+		this.check();
 		let length = this.readInt();
-		let reader = new ByteReader(this.bytes.slice(this.pos, this.pos + length));
+		let reader = new ByteReader(this.pos, this.pos + length);
 		this.pos += length;
 		return reader;
 	}
 	
 	readMap()
 	{
+		this.check();
 		let values = [];
 		
 		for(let length = this.readInt()/2; length--;)
-			values.push(this.readLE16bInt());
+			values.push(this.readInt16());
 		
 		return values;
 	}
 	
-	readEvent()
+	readCommand()
 	{
-		let code = this.readInt(),
-		    indent = this.readInt(),
-		    string = this.readString(),
-		    parameters = [];
-		
-		for(let length = this.readInt(); length--;)
-			parameters.push(this.readInt());
-		
-		return [code, indent, string, parameters];
+		this.check();
+		return [this.readInt(), this.readInt(), this.readString(), this.readIntArray()];
 	}
 	
 	// Defined Length
 	readString()
 	{
+		this.check();
 		let s = '';
 		
 		for(let length = this.readInt(); length--;)
-			s += String.fromCharCode(this.read8bInt());
+			s += String.fromCharCode(this.readInt8());
 		
 		return s;
 	}
@@ -51,6 +64,7 @@ class ByteReader
 	// Defined Length
 	readIntArray()
 	{
+		this.check();
 		let array = [];
 		
 		for(let length = this.readInt(); length--;)
@@ -60,34 +74,37 @@ class ByteReader
 	}
 	
 	// Defined Length
-	read8bIntArray()
+	readInt8Array()
 	{
+		this.check();
 		let array = [];
 		
 		for(let length = this.readInt(); length--;)
-			array.push(this.read8bInt());
+			array.push(this.readInt8());
 		
 		return array;
 	}
 	
 	// Defined Length
-	readStaticInt()
+	readIntStatic()
 	{
+		this.check();
 		let digits = [];
 		
 		for(let length = this.readInt(); length--;)
-			digits.push(this.read8bInt());
+			digits.push(this.readInt8());
 		
 		return ByteReader.convertNumber(digits);
 	}
 	
 	readInt()
 	{
+		this.check();
 		let digits = [];
 		
 		for(let length = 5; length--;)
 		{
-			let d = this.bytes[this.pos++];
+			let d = ByteReader.bytes[this.pos++];
 			digits.push(d);
 			
 			if(d < 0x80)
@@ -97,16 +114,18 @@ class ByteReader
 		return ByteReader.convertNumber(digits);
 	}
 	
-	read8bInt()
+	readInt16()
 	{
-		return this.bytes[this.pos++];
+		this.check();
+		let d1 = ByteReader.bytes[this.pos++];
+		let d2 = ByteReader.bytes[this.pos++];
+		return (d2 << 8) + d1;
 	}
 	
-	readLE16bInt()
+	readInt8()
 	{
-		let d1 = this.bytes[this.pos++];
-		let d2 = this.bytes[this.pos++];
-		return (d2 << 8) + d1;
+		this.check();
+		return ByteReader.bytes[this.pos++];
 	}
 	
 	static convertNumber(digits)
@@ -143,15 +162,20 @@ class ByteWriter
 		return ByteWriter.convertNumber(this.bytes.length);
 	}
 	
+	merge(...args)
+	{
+		this.bytes = this.bytes.concat(...args);
+	}
+	
 	writeMap(tiles)
 	{
 		this.writeInt(tiles.length * 2)
 		
 		for(let tile of tiles)
-			this.writeLE16bInt(tile);
+			this.writeInt16(tile);
 	}
 	
-	writeEvent(e)
+	writeCommand(e)
 	{
 		this.writeInt(e[0]);
 		this.writeInt(e[1]);
@@ -165,7 +189,7 @@ class ByteWriter
 		this.writeInt(str.length);
 		
 		for(let i = 0, len = str.length; i < len; i++)
-			this.write8bInt(str.charCodeAt(i));
+			this.writeInt8(str.charCodeAt(i));
 	}
 	
 	// Defined Length
@@ -177,13 +201,13 @@ class ByteWriter
 	}
 	
 	// Defined Length
-	write8bIntArray(array)
+	writeInt8Array(array)
 	{
 		this.merge(array.length, array);
 	}
 	
 	// Defined Length
-	writeStaticInt(num)
+	writeIntStatic(num)
 	{
 		let digits = ByteWriter.convertNumber(num);
 		this.merge(digits.length, digits);
@@ -194,20 +218,15 @@ class ByteWriter
 		this.merge(ByteWriter.convertNumber(num));
 	}
 	
-	write8bInt(num)
-	{
-		this.bytes.push(num);
-	}
-	
-	writeLE16bInt(num)
+	writeInt16(num)
 	{
 		num = num.toString(16).padStart(4, '0');
 		this.merge(parseInt(num.slice(2,4), 16), parseInt(num.slice(0,2), 16));
 	}
 	
-	merge(...args)
+	writeInt8(num)
 	{
-		this.bytes = this.bytes.concat(...args);
+		this.bytes.push(num);
 	}
 	
 	static convertNumber(num = 0)

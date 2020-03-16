@@ -1,3 +1,40 @@
+/*function createStart(data, definitions)
+{
+	let writer = new ByteWriter();
+	writer.writeString(data.header);
+	delete data.header;
+	stepWrite(data, writer, definitions);
+	writer.writeInt8(0);
+	return writer.bytes;
+}
+
+function createObject(data, definitions)
+{
+	let writer = new ByteWriter();
+	writer.writeInt(Object.keys(data).length);
+	
+	for(let id in data)
+	{
+		writer.writeInt(parseInt(id));
+		stepWrite(data[id], writer, definitions);
+		writer.writeInt8(0);
+	}
+}
+
+function createList(data, definitions)
+{
+	
+}
+
+function stepWrite(data, writer, definitions)
+{
+	for(let key in data)
+	{
+		let ins = definitions[key] || parseInt(key);
+		let id = ins.id || parseInt();
+	}
+}*/
+
 // Have one ByteWriter per process that needs a byte count. In total, 4 types per map: main, events, pages, and commands.
 function createMain(data)
 {
@@ -18,10 +55,10 @@ function createMain(data)
 		else if(id === 32)
 			main.writeString(val);
 		else
-			main.writeStaticInt(val);
+			main.writeIntStatic(val);
 	}
 	
-	main.write8bInt(0);
+	main.writeInt8(0);
 	
 	return main.bytes;
 }
@@ -47,10 +84,10 @@ function createEvents(data)
 			else if(id === 1)
 				events.writeString(val);
 			else
-				events.writeStaticInt(val);
+				events.writeIntStatic(val);
 		}
 		
-		events.write8bInt(0);
+		events.writeInt8(0);
 	}
 	
 	return [...events.getByteCount(), ...events.bytes];
@@ -83,19 +120,19 @@ function createPages(data)
 			if(cmds)
 			{
 				pages.writeInt(51);
-				pages.writeStaticInt(val.bytes.length);
+				pages.writeIntStatic(val.bytes.length);
 				pages.writeInt(id);
 				pages.merge(val.getByteCount(), val.bytes);
 			}
 			else if(id === 2 || id === 41)
-				pages.write8bIntArray(val);
+				pages.writeInt8Array(val);
 			else if(id === 21)
 				pages.writeString(val);
 			else
-				pages.writeStaticInt(val);
+				pages.writeIntStatic(val);
 		}
 		
-		pages.write8bInt(0);
+		pages.writeInt8(0);
 	}
 	
 	return [...pages.getByteCount(), ...pages.bytes];
@@ -106,8 +143,8 @@ function createCommands(data)
 	let commands = new ByteWriter();
 	
 	for(let e of data)
-		commands.writeEvent(e);
-	commands.writeEvent([0, 0, '', []]);
+		commands.writeCommand(e);
+	commands.writeCommand([0, 0, '', []]);
 	
 	return commands;
 }

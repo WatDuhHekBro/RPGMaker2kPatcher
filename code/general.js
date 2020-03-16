@@ -1,5 +1,4 @@
 let stack = {};
-let map;
 
 function generatePatch(data, hasOther = false)
 {
@@ -128,20 +127,6 @@ function checkDialogue(patch)
 	}
 }
 
-function getKeyFromValue(definitions, value)
-{
-	let v;
-	
-	for(let key in definitions)
-		if(definitions[key] === value)
-			v = key;
-	
-	if(!v)
-		v = value + '?';
-	
-	return v;
-}
-
 function download(contents, filename = '')
 {
 	const dlink = document.createElement('a');
@@ -161,28 +146,38 @@ function upload(e)
 		{
 			let file = list[i].getAsFile();
 			
-			if(/Map\d\d\d\d/.test(file.name))
+			if(file.name.includes('.lmu'))
 			{
 				let reader = new FileReader();
-				
-				if(file.name.includes('.lmu'))
+				reader.readAsArrayBuffer(file);
+				reader.onload = function()
 				{
-					reader.readAsArrayBuffer(file);
-					reader.onload = function()
-					{
-						let filename = curateName(file.name);
-						parseMain(new Uint8Array(this.result));
-						let patch = generatePatch(map);
-						download(JSON.stringify(map), filename + '.json');
-						download(JSON.stringify(patch), filename + '.patch.json');
-						download(extractDialogue(patch), filename + '.txt');
-					};
-				}
-				else if(file.name.includes('.json'))
-				{
-					reader.readAsText(file, 'UTF-8');
-					reader.onload = function() {stack[file.name] = JSON.parse(this.result)};
-				}
+					let filename = curateName(file.name);
+					let map = parseStart(new Uint8Array(this.result), MAP);
+					console.log(map);
+					let patch = generatePatch(map);
+					download(JSON.stringify(map), filename + '.json');
+					download(JSON.stringify(patch), filename + '.patch.json');
+					download(extractDialogue(patch), filename + '.txt');
+				};
+			}
+			else if(file.name.includes('.ldb'))
+			{
+				let reader = new FileReader();
+				reader.readAsArrayBuffer(file);
+				reader.onload = function() {stack.database = new Uint8Array(this.result)};
+			}
+			else if(file.name.includes('.json'))
+			{
+				let reader = new FileReader();
+				reader.readAsText(file, 'UTF-8');
+				reader.onload = function() {stack[file.name] = JSON.parse(this.result)};
+			}
+			else
+			{
+				let reader = new FileReader();
+				reader.readAsArrayBuffer(file);
+				reader.onload = function() {stack[file.name] = new Uint8Array(this.result)};
 			}
 		}
 	}
@@ -217,6 +212,34 @@ function handleData()
 	}
 }
 
+function getKeyFromValue(definitions, value)
+{
+	let v;
+	
+	for(let key in definitions)
+		if(definitions[key] === value)
+			v = key;
+	
+	if(!v)
+		v = value + '?';
+	
+	return v;
+}
+
+function getDefinitionFromValue(definitions, value)
+{
+	let v;
+	
+	for(let key in definitions)
+		if(definitions[key].id === value)
+			v = key;
+	
+	if(!v)
+		v = value + '?';
+	
+	return v;
+}
+
 function curateName(name)
 {
 	if(name.includes('.patch.json'))
@@ -225,7 +248,6 @@ function curateName(name)
 		return name.substring(0, name.lastIndexOf('.'));
 }
 
-// function if special, otherwise enum
 const MAIN = {
 	'chipset': 1,
 	'width': 2,
@@ -269,3 +291,281 @@ const PAGE = {
 	'event_size': 51,
 	'event': 52
 };
+
+const TYPE = {
+	INT: 0,
+	INT_STATIC: 1,
+	INT8: 2,
+	INT16: 3,
+	STRING: 4,
+	INT_ARRAY: 5,
+	INT8_ARRAY: 6,
+	COMMANDS: 7,
+	TILES: 8,
+	LIST: 9,
+	OBJECT: 10
+};
+
+const MAP = {
+	chipset:
+	{
+		id: 1,
+		type: TYPE.INT_STATIC
+	},
+	width:
+	{
+		id: 2,
+		type: TYPE.INT_STATIC
+	},
+	height:
+	{
+		id: 3,
+		type: TYPE.INT_STATIC
+	},
+	scroll:
+	{
+		id: 11,
+		type: TYPE.INT_STATIC
+	},
+	parallax:
+	{
+		id: 31,
+		type: TYPE.INT_STATIC
+	},
+	parallax_name:
+	{
+		id: 32,
+		type: TYPE.STRING
+	},
+	parallax_horizontal:
+	{
+		id: 33,
+		type: TYPE.INT_STATIC
+	},
+	parallax_vertical:
+	{
+		id: 34,
+		type: TYPE.INT_STATIC
+	},
+	parallax_horizontal_auto:
+	{
+		id: 35,
+		type: TYPE.INT_STATIC
+	},
+	parallax_horizontal_auto_speed:
+	{
+		id: 36,
+		type: TYPE.INT_STATIC
+	},
+	parallax_vertical_auto:
+	{
+		id: 37,
+		type: TYPE.INT_STATIC
+	},
+	parallax_vertical_auto_speed:
+	{
+		id: 38,
+		type: TYPE.INT_STATIC
+	},
+	lower:
+	{
+		id: 71,
+		type: TYPE.TILES
+	},
+	upper:
+	{
+		id: 72,
+		type: TYPE.TILES
+	},
+	events:
+	{
+		id: 81,
+		type: TYPE.OBJECT,
+		value:
+		{
+			name:
+			{
+				id: 1,
+				type: TYPE.STRING
+			},
+			x:
+			{
+				id: 2,
+				type: TYPE.INT_STATIC
+			},
+			y:
+			{
+				id: 3,
+				type: TYPE.INT_STATIC
+			},
+			pages:
+			{
+				id: 5,
+				type: TYPE.OBJECT,
+				value:
+				{
+					condition:
+					{
+						id: 2,
+						type: TYPE.INT8_ARRAY
+					},
+					charset:
+					{
+						id: 21,
+						type: TYPE.STRING
+					},
+					charset_other:
+					{
+						id: 22,
+						type: TYPE.INT_STATIC
+					},
+					charset_dir:
+					{
+						id: 23,
+						type: TYPE.INT_STATIC
+					},
+					translucent:
+					{
+						id: 24,
+						type: TYPE.INT_STATIC
+					},
+					charset_index:
+					{
+						id: 25,
+						type: TYPE.INT_STATIC
+					},
+					move_type:
+					{
+						id: 31,
+						type: TYPE.INT_STATIC
+					},
+					move_frequency:
+					{
+						id: 32,
+						type: TYPE.INT_STATIC
+					},
+					trigger:
+					{
+						id: 33,
+						type: TYPE.INT_STATIC
+					},
+					draw_priority:
+					{
+						id: 34,
+						type: TYPE.INT_STATIC
+					},
+					draw_prevent_conflict:
+					{
+						id: 35,
+						type: TYPE.INT_STATIC
+					},
+					anim_type:
+					{
+						id: 36,
+						type: TYPE.INT_STATIC
+					},
+					move_route:
+					{
+						id: 41,
+						type: TYPE.INT8_ARRAY
+					},
+					event_size:
+					{
+						id: 51,
+						type: TYPE.INT_STATIC,
+						skip: true
+					},
+					event:
+					{
+						id: 52,
+						type: TYPE.COMMANDS,
+						extra: 'event_size'
+					}
+				}
+			}
+		}
+	},
+	save:
+	{
+		id: 91,
+		type: TYPE.INT_STATIC
+	}
+};
+
+/*const DATABASE = {
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	},
+	:
+	{
+		id: ,
+		type: TYPE.
+	}
+};*/

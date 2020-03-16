@@ -32,27 +32,22 @@ function parseList(reader, definitions)
 function stepRead(data, reader, definitions)
 {
 	let id = reader.readInt();
-	let def = getDefinitionFromValue(definitions, id);
-	let ins = definitions[def];
 	let val;
 	
-	if(ins)
+	if(id)
 	{
-		if(ins.type === TYPE.INT)
-			val = reader.readInt();
-		else if(ins.type === TYPE.INT_STATIC)
-			val = reader.readIntStatic();
-		else if(ins.type === TYPE.INT8)
-			val = reader.readInt8();
-		else if(ins.type === TYPE.INT16)
-			val = reader.readInt16();
-		else if(ins.type === TYPE.STRING)
+		if(ByteReader.bytes[reader.pos] == 0)
+		{
+			val = null;
+			reader.pos++;
+		}
+		else if('strings' in definitions && (definitions.strings === '*' || definitions.strings.includes(id)))
 			val = reader.readString();
-		else if(ins.type === TYPE.INT_ARRAY)
-			val = reader.readIntArray();
-		else if(ins.type === TYPE.INT8_ARRAY)
-			val = reader.readInt8Array();
-		else if(ins.type === TYPE.COMMANDS)
+		else if('objects' in definitions && definitions.objects.includes(id))
+			val = parseObject(reader.spliceBytes(), definitions.special[id]);
+		else if('lists' in definitions && definitions.lists.includes(id))
+			val = parseList(reader.spliceBytes(), definitions.special[id])
+		else if(id === definitions.commands)
 		{
 			let b = reader.spliceBytes();
 			let commands = [];
@@ -70,26 +65,16 @@ function stepRead(data, reader, definitions)
 			
 			val = commands;
 		}
-		else if(ins.type === TYPE.TILES)
-			val = reader.readMap();
-		else if(ins.type === TYPE.LIST)
-			val = parseList(reader.spliceBytes(), ins.value);
-		else if(ins.type === TYPE.OBJECT)
-			val = parseObject(reader.spliceBytes(), ins.value);
-		
-		if(ins.skip)
-			return null;
-	}
-	
-	if(id)
-	{
-		// gotta increment even if no definition is found
-		if(val === undefined)
+		else if(id === definitions.bytecount)
+			reader.readIntStatic();
+		else
 			val = reader.readInt8Array();
-		data[def] = val;
+		
+		if(val !== undefined)
+			data[id] = val;
 	}
 	
-	console.log(`Key "${def}" added with a value of:`, val, `at position ${reader.pos}, endpoint ${reader.end}`);
+	console.log('Key', id, 'added with a value of', val, 'at position', reader.pos, 'with an endpoint of', reader.end);
 	
 	return id;
 }

@@ -1,8 +1,20 @@
+// Data Types //
 // Int: A 32 bit number of up to 5 digits.
 // IntStatic: An Int with a pre-defined length of how many digits it has.
 // Int8: An 8 bit number of exactly 1 digit.
 // Int16: A 16 bit number of exactly 2 digits, little-endian.
 // String: An array of Int8s which form text.
+
+// List //
+// Header (only at the top): Int length and String.
+// Array: Int id, Int length, and an Int8Array of length bytes.
+// Ending Int8 0 as the id is read.
+
+// Object //
+// Int number of objects.
+// Int id of object.
+// Array: Int id, Int length, Int8Array/String/IntArray (Int8Array unless otherwise specified).
+// If the length is 0, then the value is null.
 
 class ByteReader
 {
@@ -155,11 +167,6 @@ class ByteWriter
 	constructor()
 	{
 		this.bytes = [];
-	}
-	
-	getByteCount()
-	{
-		return ByteWriter.convertNumber(this.bytes.length);
 	}
 	
 	merge(...args)

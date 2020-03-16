@@ -1,4 +1,4 @@
-/*function createStart(data, definitions)
+function createStart(data, definitions)
 {
 	let writer = new ByteWriter();
 	writer.writeString(data.header);
@@ -19,24 +19,65 @@ function createObject(data, definitions)
 		stepWrite(data[id], writer, definitions);
 		writer.writeInt8(0);
 	}
+	
+	return writer;
 }
 
 function createList(data, definitions)
 {
-	
+	let writer = new ByteWriter();
+	stepWrite(data, writer, definitions);
+	return writer;
 }
 
 function stepWrite(data, writer, definitions)
 {
-	for(let key in data)
+	for(let id in data)
 	{
-		let ins = definitions[key] || parseInt(key);
-		let id = ins.id || parseInt();
+		id = parseInt(id);
+		let val = data[id];
+		
+		if(id !== definitions.commands)
+			writer.writeInt(id);
+		
+		if(val == null)
+			writer.writeInt8(0);
+		else if('strings' in definitions && (definitions.strings === '*' || definitions.strings.includes(id)))
+			writer.writeString(val);
+		else if('objects' in definitions && definitions.objects.includes(id))
+		{
+			let wr = createObject(data, definitions.special[id]);
+			writer.writeInt(wr.bytes.length);
+			writer.merge(wr.bytes);
+		}
+		else if('lists' in definitions && definitions.lists.includes(id))
+		{
+			let wr = createList(data, definitions.special[id]);
+			writer.writeInt(wr.bytes.length);
+			writer.merge(wr.bytes);
+		}
+		else if(id === definitions.commands)
+		{
+			let wr = new ByteWriter();
+			for(let cmd of val)
+				wr.writeCommand(cmd);
+			wr.writeCommand([0, 0, '', []]);
+			
+			writer.writeInt(definitions.bytecount);
+			writer.writeIntStatic(wr.bytes.length);
+			writer.writeInt(id);
+			writer.writeIntStatic(wr.bytes.length);
+			writer.merge(wr.bytes);
+		}
+		else
+			writer.writeInt8Array(val);
+		
+		console.log('added ...');
 	}
-}*/
+}
 
 // Have one ByteWriter per process that needs a byte count. In total, 4 types per map: main, events, pages, and commands.
-function createMain(data)
+/*function createMain(data)
 {
 	let main = new ByteWriter();
 	main.writeString(data.header);
@@ -147,4 +188,4 @@ function createCommands(data)
 	commands.writeCommand([0, 0, '', []]);
 	
 	return commands;
-}
+}*/

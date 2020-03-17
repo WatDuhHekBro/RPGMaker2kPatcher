@@ -169,9 +169,9 @@ class ByteWriter
 		this.bytes = [];
 	}
 	
-	merge(...args)
+	appendBytes(b)
 	{
-		this.bytes = this.bytes.concat(...args);
+		this.bytes = this.bytes.concat(b);
 	}
 	
 	writeMap(tiles)
@@ -202,33 +202,37 @@ class ByteWriter
 	// Defined Length
 	writeIntArray(array)
 	{
-		for(let i in array)
-			array[i] = ByteWriter.convertNumber(array[i]);
-		this.merge(array.length, ...array);
+		this.writeInt(array.length);
+		
+		for(let num of array)
+			this.writeInt(num);
 	}
 	
 	// Defined Length
 	writeInt8Array(array)
 	{
-		this.merge(array.length, array);
+		this.writeInt(array.length);
+		this.appendBytes(array);
 	}
 	
 	// Defined Length
 	writeIntStatic(num)
 	{
 		let digits = ByteWriter.convertNumber(num);
-		this.merge(digits.length, digits);
+		this.writeInt(digits.length);
+		this.appendBytes(digits);
 	}
 	
 	writeInt(num)
 	{
-		this.merge(ByteWriter.convertNumber(num));
+		this.appendBytes(ByteWriter.convertNumber(num));
 	}
 	
 	writeInt16(num)
 	{
 		num = num.toString(16).padStart(4, '0');
-		this.merge(parseInt(num.slice(2,4), 16), parseInt(num.slice(0,2), 16));
+		this.writeInt8(parseInt(num.slice(2,4), 16));
+		this.writeInt8(parseInt(num.slice(0,2), 16));
 	}
 	
 	writeInt8(num)

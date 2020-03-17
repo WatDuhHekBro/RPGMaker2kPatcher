@@ -9,12 +9,12 @@ function generatePatchMap(data, hasOther = false)
 	
 	for(let ev in e)
 	{
-		let ev_num = Number(ev);
+		let ev_num = parseInt(ev);
 		let p = e[ev][5];
 		
 		for(let pg in p)
 		{
-			let pg_num = Number(pg);
+			let pg_num = parseInt(pg);
 			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], hasOther ? other : undefined);
 		}
 	}
@@ -30,8 +30,9 @@ function generatePatchDatabase(data)
 	let dialogue = [];
 	let e = data[21];
 	
-	for(let term in e)
+	for(let id in e)
 	{
+		id = parseInt(id);
 		vocab.push({
 			path: [21, id],
 			patch: e[id]
@@ -42,7 +43,7 @@ function generatePatchDatabase(data)
 	
 	for(let ev in e)
 	{
-		let ev_num = Number(ev);
+		let ev_num = parseInt(ev);
 		generatePatchEvent(dialogue, e[ev][22], [25, ev_num]);
 	}
 	
@@ -70,9 +71,9 @@ function generatePatchEvent(patch, cmd, path, other)
 			let entry = {};
 			entry.path = [...path, start, lines.length];
 			if(hasIndent)
-				entry.indent = ind;
+				entry.indent = indent;
 			if(hasParams)
-				entry.parameters = prm;
+				entry.parameters = params;
 			entry.lines = lines;
 			patch.push(entry);
 			lines = [];
@@ -156,11 +157,11 @@ function applyPatchMap(data, patch)
 			pg = entry.path[1];
 			let commands = [];
 			
-			for(let i = 0, lines = entry.patch, len = lines.length; i < len; i++)
-				commands.push([i === 0 ? 10110 : 20110, 0, lines[i], []]);
+			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], prm = entry.parameters || []; i < len; i++)
+				commands.push([i === 0 ? 10110 : 20110, ind[i] || 0, lines[i], prm[i] || []]);
 			
 			data[81][entry.path[0]][5][entry.path[1]][52].splice(entry.path[2] + offset, entry.path[3], ...commands);
-			offset += entry.patch.length - entry.path[3];
+			offset += entry.lines.length - entry.path[3];
 		}
 	}
 	
@@ -186,20 +187,22 @@ function applyPatchDatabase(data, patch)
 			ev = entry.path[1];
 			let commands = [];
 			
-			for(let i = 0, lines = entry.patch, len = lines.length, ind = entry.indent || [], prm = entry.parameters || []; i < len; i++)
+			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], prm = entry.parameters || []; i < len; i++)
 				commands.push([i === 0 ? 10110 : 20110, ind[i] || 0, lines[i], prm[i] || []]);
 			
-			data[entry.path[0]][entry.path[1]].splice(entry.path[2] + offset, entry.path[3], ...commands);
-			offset += entry.patch.length - entry.path[3];
+			data[entry.path[0]][entry.path[1]][22].splice(entry.path[2] + offset, entry.path[3], ...commands);
+			offset += entry.lines.length - entry.path[3];
 		}
 	}
+	
+	return data;
 }
 
 function checkDialogue(patch)
 {
 	for(let entry of patch.dialogue)
 	{
-		for(let line of entry.patch)
+		for(let line of entry.lines)
 		{
 			let chars = line.replace(/\\[^n](\[\d*\])*/g, '').length;
 			let text_safe = chars <= 50;
@@ -271,12 +274,6 @@ function upload(e)
 				reader.readAsText(file, 'UTF-8');
 				reader.onload = function() {stack[file.name] = JSON.parse(this.result)};
 			}
-			else
-			{
-				let reader = new FileReader();
-				reader.readAsArrayBuffer(file);
-				reader.onload = function() {stack[file.name] = new Uint8Array(this.result)};
-			}
 		}
 	}
 }
@@ -286,67 +283,29 @@ function handleData()
 	for(let filename in stack)
 	{
 		filename = curateName(filename);
-		
-		// MAP --> DATABASE, .lmu --> .ldb, applyPatch
-		/*if(filename === 'database')
-		{
-			
-		}
-		else
-		{
-			
-		}*/
-		
-		let map = stack[filename + '.json'];
+		let isDatabase = filename === 'database';
+		let data = stack[filename + '.json'];
 		let patch = stack[filename + '.patch.json'];
-		let hasMap = !!map;
+		let hasData = !!data;
 		let hasPatch = !!patch;
 		
 		if(hasPatch)
 		{
-			if(hasMap)
-				map = applyPatchMap(map, patch);
+			if(hasData)
+				data = isDatabase ? applyPatchDatabase(data, patch) : applyPatchMap(data, patch);
 			else
 				checkDialogue(patch);
 		}
 		
-		if(hasMap)
+		if(hasData)
 		{
-			download(new Uint8Array(createStart(map, MAP)), filename + '.lmu');
+			download(new Uint8Array(isDatabase ? createStart(data, DATABASE) : createStart(data, MAP).concat(0)), isDatabase ? 'RPG_RT.ldb' : filename + '.lmu');
 			console.log(hasPatch ? `${filename} was patched.` : `${filename} was not patched.`);
 		}
 		
 		delete stack[filename + '.json'];
 		delete stack[filename + '.patch.json'];
 	}
-}
-
-function getKeyFromValue(definitions, value)
-{
-	let v;
-	
-	for(let key in definitions)
-		if(definitions[key] === value)
-			v = key;
-	
-	if(!v)
-		v = value + '?';
-	
-	return v;
-}
-
-function getDefinitionFromValue(definitions, value)
-{
-	let v;
-	
-	for(let key in definitions)
-		if(definitions[key].id === value)
-			v = key;
-	
-	if(!v)
-		v = value + '?';
-	
-	return v;
 }
 
 function curateName(name)
@@ -357,250 +316,9 @@ function curateName(name)
 		return name.substring(0, name.lastIndexOf('.'));
 }
 
-/*const MAIN = {
-	'chipset': 1,
-	'width': 2,
-	'height': 3,
-	'scroll': 11,
-	'parallax': 31,
-	'parallax_name': 32,
-	'parallax_horizontal': 33,
-	'parallax_vertical': 34,
-	'parallax_horizontal_auto': 35,
-	'parallax_horizontal_auto_speed': 36,
-	'parallax_vertical_auto': 37,
-	'parallax_vertical_auto_speed': 38,
-	'lower': 71,
-	'upper': 72,
-	'events': 81,
-	'save': 91
-};
-
-const EVENT = {
-	'name': 1,
-	'x': 2,
-	'y': 3,
-	'pages': 5 
-};
-
-const PAGE = {
-	'condition': 2,
-	'charset': 21,
-	'charset_other': 22,
-	'charset_dir': 23,
-	'translucent': 24,
-	'charset_index': 25,
-	'move_type': 31,
-	'move_frequency': 32,
-	'trigger': 33,
-	'draw_priority': 34,
-	'draw_prevent_conflict': 35,
-	'anim_type': 36,
-	'move_route': 41,
-	'event_size': 51,
-	'event': 52
-};
-
-const TYPE = {
-	INT: 0,
-	INT_STATIC: 1,
-	INT8: 2,
-	INT16: 3,
-	STRING: 4,
-	INT_ARRAY: 5,
-	INT8_ARRAY: 6,
-	COMMANDS: 7,
-	TILES: 8,
-	LIST: 9,
-	OBJECT: 10
-};*/
-
-/*const MAP = {
-	chipset:
-	{
-		id: 1,
-		type: TYPE.INT_STATIC
-	},
-	width:
-	{
-		id: 2,
-		type: TYPE.INT_STATIC
-	},
-	height:
-	{
-		id: 3,
-		type: TYPE.INT_STATIC
-	},
-	scroll:
-	{
-		id: 11,
-		type: TYPE.INT_STATIC
-	},
-	parallax:
-	{
-		id: 31,
-		type: TYPE.INT_STATIC
-	},
-	parallax_name:
-	{
-		id: 32,
-		type: TYPE.STRING
-	},
-	parallax_horizontal:
-	{
-		id: 33,
-		type: TYPE.INT_STATIC
-	},
-	parallax_vertical:
-	{
-		id: 34,
-		type: TYPE.INT_STATIC
-	},
-	parallax_horizontal_auto:
-	{
-		id: 35,
-		type: TYPE.INT_STATIC
-	},
-	parallax_horizontal_auto_speed:
-	{
-		id: 36,
-		type: TYPE.INT_STATIC
-	},
-	parallax_vertical_auto:
-	{
-		id: 37,
-		type: TYPE.INT_STATIC
-	},
-	parallax_vertical_auto_speed:
-	{
-		id: 38,
-		type: TYPE.INT_STATIC
-	},
-	lower:
-	{
-		id: 71,
-		type: TYPE.TILES
-	},
-	upper:
-	{
-		id: 72,
-		type: TYPE.TILES
-	},
-	events:
-	{
-		id: 81,
-		type: TYPE.OBJECT,
-		value:
-		{
-			name:
-			{
-				id: 1,
-				type: TYPE.STRING
-			},
-			x:
-			{
-				id: 2,
-				type: TYPE.INT_STATIC
-			},
-			y:
-			{
-				id: 3,
-				type: TYPE.INT_STATIC
-			},
-			pages:
-			{
-				id: 5,
-				type: TYPE.OBJECT,
-				value:
-				{
-					condition:
-					{
-						id: 2,
-						type: TYPE.INT8_ARRAY
-					},
-					charset:
-					{
-						id: 21,
-						type: TYPE.STRING
-					},
-					charset_other:
-					{
-						id: 22,
-						type: TYPE.INT_STATIC
-					},
-					charset_dir:
-					{
-						id: 23,
-						type: TYPE.INT_STATIC
-					},
-					translucent:
-					{
-						id: 24,
-						type: TYPE.INT_STATIC
-					},
-					charset_index:
-					{
-						id: 25,
-						type: TYPE.INT_STATIC
-					},
-					move_type:
-					{
-						id: 31,
-						type: TYPE.INT_STATIC
-					},
-					move_frequency:
-					{
-						id: 32,
-						type: TYPE.INT_STATIC
-					},
-					trigger:
-					{
-						id: 33,
-						type: TYPE.INT_STATIC
-					},
-					draw_priority:
-					{
-						id: 34,
-						type: TYPE.INT_STATIC
-					},
-					draw_prevent_conflict:
-					{
-						id: 35,
-						type: TYPE.INT_STATIC
-					},
-					anim_type:
-					{
-						id: 36,
-						type: TYPE.INT_STATIC
-					},
-					move_route:
-					{
-						id: 41,
-						type: TYPE.INT8_ARRAY
-					},
-					event_size:
-					{
-						id: 51,
-						type: TYPE.INT_STATIC,
-						skip: true
-					},
-					event:
-					{
-						id: 52,
-						type: TYPE.COMMANDS,
-						extra: 'event_size'
-					}
-				}
-			}
-		}
-	},
-	save:
-	{
-		id: 91,
-		type: TYPE.INT_STATIC
-	}
-};*/
-
+// There aren't named keys for this reason: Don't expand out what you don't need to expand.
+// Leave it as 8 bit arrays unless you actually need to modify what's in it.
+// This is first and foremost patching dialogue, not changing the game.
 const MAP = {
 	strings: [32],
 	objects: [81],

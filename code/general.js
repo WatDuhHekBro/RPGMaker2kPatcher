@@ -1,6 +1,7 @@
 let chars;
 let stack = {};
 let disableDownloading = false;
+let text = ''; // copy(text) to copy the text-form dialogue.
 
 // Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
 function generatePatchMap(data, hasOther = false)
@@ -184,7 +185,9 @@ function checkDialogue(patch)
 		}
 	}
 	
-	console.log(extractDialogue(patch));
+	text = extractDialogue(patch);
+	console.log(text);
+	console.log("To copy this text, do %ccopy(text)%c.", 'color: #800000', 'color: black');
 }
 
 function applyPatchMap(data, patch)
@@ -305,8 +308,16 @@ function upload(e)
 					{
 						download(JSON.stringify(db), 'database.json');
 						download(JSON.stringify(generatePatchDatabase(db)), 'database.patch.json');
+						download(JSON.stringify(chars), 'chars.json');
 					}
 				};
+			}
+			else if(file.name === 'chars.json')
+			{
+				let reader = new FileReader();
+				reader.readAsText(file, 'UTF-8');
+				reader.onload = function() {chars = JSON.parse(this.result)};
+				console.log("Imported chars.json.");
 			}
 			else if(file.name.includes('.json'))
 			{

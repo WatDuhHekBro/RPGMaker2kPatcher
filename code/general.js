@@ -37,6 +37,7 @@ function generatePatchDatabase(data)
 		id = parseInt(id);
 		vocab.push({
 			path: [21, id],
+			original: e[id],
 			patch: e[id]
 		});
 	}
@@ -123,6 +124,7 @@ function generatePatchEvent(patch, cmd, path, other)
 		{
 			other.push({
 				path: [...path, i],
+				original: str,
 				patch: str
 			});
 		}
@@ -277,12 +279,11 @@ function upload(e)
 					let filename = curateName(file.name);
 					let map = parseStart(new Uint8Array(this.result), MAP);
 					console.log(map);
-					let patch = generatePatchMap(map);
 					
 					if(!disableDownloading)
 					{
 						download(JSON.stringify(map), filename + '.json');
-						download(JSON.stringify(patch), filename + '.patch.json');
+						download(JSON.stringify(generatePatchMap(map)), filename + '.patch.json');
 					}
 				};
 			}
@@ -294,7 +295,6 @@ function upload(e)
 				{
 					let db = parseStart(new Uint8Array(this.result), DATABASE);
 					console.log(db);
-					let patch = generatePatchDatabase(db);
 					chars = {};
 					
 					for(let c in db[11])
@@ -304,7 +304,7 @@ function upload(e)
 					if(!disableDownloading)
 					{
 						download(JSON.stringify(db), 'database.json');
-						download(JSON.stringify(patch), 'database.patch.json');
+						download(JSON.stringify(generatePatchDatabase(db)), 'database.patch.json');
 					}
 				};
 			}

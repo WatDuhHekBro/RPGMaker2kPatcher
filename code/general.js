@@ -4,6 +4,10 @@ let disableDownloading = false;
 let text = ''; // copy(text) to copy the text-form dialogue.
 
 // Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
+// a = events.length
+// per_event_offset + a --- if it's the same event
+// splice(index, a, ...events)
+// Also add a text generator (canvas). Then you're all set.
 function generatePatchMap(data, hasOther = false)
 {
 	let dialogue = [];
@@ -243,8 +247,8 @@ function applyPatchDatabase(data, patch)
 			ev = entry.path[1];
 			let commands = [];
 			
-			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], prm = entry.parameters || []; i < len; i++)
-				commands.push([i === 0 ? 10110 : 20110, ind[i] || 0, lines[i], prm[i] || []]);
+			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], mainIndent = entry.indent || 0, prm = entry.parameters || []; i < len; i++)
+				commands.push([i === 0 ? 10110 : 20110, ind[i] || mainIndent, lines[i], prm[i] || []]);
 			
 			data[entry.path[0]][entry.path[1]][22].splice(entry.path[2] + offset, entry.path[3], ...commands);
 			offset += entry.lines.length - entry.path[3];

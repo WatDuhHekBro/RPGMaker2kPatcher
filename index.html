@@ -19,12 +19,13 @@
 	<body ondrop="upload(event)" ondragover="event.preventDefault()">
 		<h1>Instructions</h1>
 		<p>Drag and drop files here to make the magic happen.</p>
-		<p>The accepted file types are <code>Map####.lmu</code>, <code>Map####.json</code>, and <code>Map####.patch.json</code>.</p>
-		<p>Uploading an <code>.lmu</code> file here and the parsed data will be downloaded along with a fill-in-the-blank patch and copy-paste-ready text for Google Translate.</p>
+		<p>The accepted file types are <code>.lmu</code>, <code>.ldb</code>, <code>.json</code>, and <code>.patch.json</code>.</p>
+		<p>Upload an <code>.lmu</code> file here and the parsed data will be downloaded along with a fill-in-the-blank patch and a common characters file if you're importing</p>
+		<p>Upload an <code>.ldb</code> file and it'll do the same as an <code>.lmu</code> file except that a common characters file will also be downloaded.</p>
 		<p>Uploading a <code>.json</code> or <code>.patch.json</code> file won't do anything immediately, but will be stored. When you click the button below, it'll deal with these files.</p>
 		<p><code>.json</code> files will generate an <code>.lmu</code> file. If a patch exists, then the map file will be patched.</p>
-		<p><code>.patch.json</code> files will display dialogue info in the console if no corresponding map exists and patch a map file if it exists.</p>
-		<p>Info about which maps got patched and which ones didn't will be in the console.</p>
+		<p><code>.patch.json</code> files will display dialogue info in the console if no corresponding map exists and patch a map file if it exists. It'll also show copy-paste-ready text for Google Translate.</p>
+		<p>Info about which maps got patched and which ones didn't will be in the console. The text will also be available in the console.</p>
 		<button onclick="handleData()">Handle Data &amp; Patches</button>
 	</body>
 </html>

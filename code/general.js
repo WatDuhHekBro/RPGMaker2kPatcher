@@ -1,6 +1,8 @@
+let chars;
 let stack = {};
 let disableDownloading = false;
 
+// Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
 function generatePatchMap(data, hasOther = false)
 {
 	let dialogue = [];
@@ -50,6 +52,10 @@ function generatePatchDatabase(data)
 	return {vocabulary: vocab, dialogue: dialogue};
 }
 
+// My goal with the new patch format is to avoid duplicating text.
+// So have an extra node for the original text and then the patched lines below,
+// rather than having a separate text file which you'll then have to update both.
+// Also, the if all indents of a node are the same, it'll be just one number.
 function generatePatchEvent(patch, cmd, path, other)
 {
 	// 10110 as A
@@ -59,7 +65,7 @@ function generatePatchEvent(patch, cmd, path, other)
 	// A B --> [A,B]
 	// A B B --> [A,B,B]
 	// A B A --> [A,B] [A]
-	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0; i < len; i++)
+	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0, mainIndent = 0; i < len; i++)
 	{
 		let code = cmd[i][0];
 		let ind = cmd[i][1];
@@ -71,9 +77,10 @@ function generatePatchEvent(patch, cmd, path, other)
 			let entry = {};
 			entry.path = [...path, start, lines.length];
 			if(hasIndent)
-				entry.indent = indent;
+				entry.indent = mainIndent !== -1 ? mainIndent : indent;
 			if(hasParams)
 				entry.parameters = params;
+			entry.original = compressLines(lines);
 			entry.lines = lines;
 			patch.push(entry);
 			lines = [];
@@ -93,6 +100,7 @@ function generatePatchEvent(patch, cmd, path, other)
 			lines = [str];
 			indent = [ind];
 			params = [prm];
+			mainIndent = ind;
 			if(ind != 0)
 				hasIndent = true;
 			if(prm.length != 0)
@@ -103,6 +111,9 @@ function generatePatchEvent(patch, cmd, path, other)
 			lines.push(str);
 			indent.push(ind);
 			params.push(prm);
+			// Check if any indents are different
+			if(ind !== mainIndent)
+				mainIndent = -1;
 			if(ind != 0)
 				hasIndent = true;
 			if(prm.length != 0)
@@ -122,16 +133,56 @@ function generatePatchEvent(patch, cmd, path, other)
 
 function extractDialogue(patch)
 {
-	let s = '';
+	let orig = '';
+	let p = '';
+	let path1;
+	let path2;
 	
 	for(let entry of patch.dialogue)
 	{
-		for(let line of entry.lines)
-			s += line.replace(/\\[^n](\[\d*\])*/g, '').trimEnd() + ' ';
-		s = s.trimEnd() + '\n';
+		orig += (entry.original || '') + '\n';
+		p += compressLines(entry.lines) + '\n';
+		
+		if(entry.path[0] !== path1 || entry.path[1] !== path2)
+		{
+			orig += '\n';
+			p += '\n';
+		}
+		
+		path1 = entry.path[0];
+		path2 = entry.path[1];
 	}
 	
-	return s.trimEnd();
+	return (orig + '\n\n\n' + p).trimStart().trimEnd();
+}
+
+function compressLines(lines)
+{
+	let s = '';
+	
+	for(let line of lines)
+		s += line.replace(/\\[^nv](\[\d*\])*/g, '').trimEnd() + ' ';
+	
+	for(let c in chars)
+		s = s.replace(`\\n[${c}]`, chars[c]);
+	
+	return s.trimStart().trimEnd();
+}
+
+function checkDialogue(patch)
+{
+	for(let entry of patch.dialogue)
+	{
+		for(let line of entry.lines)
+		{
+			let chars = line.replace(/\\[^nv](\[\d*\])*/g, '').length;
+			let text_safe = chars <= 50;
+			let portrait_safe = chars <= 38;
+			console.log(`%c-= Line Analysis =-\nLine: %c${line}\n%cCharacters: %c${chars}\n%cText Safe? %c${text_safe}\n%cPortrait Safe? %c${portrait_safe}`, 'color: black', 'color: #800000', 'color: black', 'color: #e18000', 'color: black', text_safe ? 'color: green' : 'color: red', 'color: black', portrait_safe ? 'color: green' : 'color: red');
+		}
+	}
+	
+	console.log(extractDialogue(patch));
 }
 
 function applyPatchMap(data, patch)
@@ -157,8 +208,8 @@ function applyPatchMap(data, patch)
 			pg = entry.path[1];
 			let commands = [];
 			
-			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], prm = entry.parameters || []; i < len; i++)
-				commands.push([i === 0 ? 10110 : 20110, ind[i] || 0, lines[i], prm[i] || []]);
+			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], mainIndent = entry.indent || 0, prm = entry.parameters || []; i < len; i++)
+				commands.push([i === 0 ? 10110 : 20110, ind[i] || mainIndent, lines[i], prm[i] || []]);
 			
 			data[81][entry.path[0]][5][entry.path[1]][52].splice(entry.path[2] + offset, entry.path[3], ...commands);
 			offset += entry.lines.length - entry.path[3];
@@ -198,20 +249,6 @@ function applyPatchDatabase(data, patch)
 	return data;
 }
 
-function checkDialogue(patch)
-{
-	for(let entry of patch.dialogue)
-	{
-		for(let line of entry.lines)
-		{
-			let chars = line.replace(/\\[^n](\[\d*\])*/g, '').length;
-			let text_safe = chars <= 50;
-			let portrait_safe = chars <= 38;
-			console.log(`%c-= Line Analysis =-\nLine: %c${line}\n%cCharacters: %c${chars}\n%cText Safe? %c${text_safe}\n%cPortrait Safe? %c${portrait_safe}`, 'color: black', 'color: #800000', 'color: black', 'color: #e18000', 'color: black', text_safe ? 'color: green' : 'color: red', 'color: black', portrait_safe ? 'color: green' : 'color: red');
-		}
-	}
-}
-
 function download(contents, filename = '')
 {
 	const dlink = document.createElement('a');
@@ -246,7 +283,6 @@ function upload(e)
 					{
 						download(JSON.stringify(map), filename + '.json');
 						download(JSON.stringify(patch), filename + '.patch.json');
-						download(extractDialogue(patch), filename + '.txt');
 					}
 				};
 			}
@@ -259,12 +295,16 @@ function upload(e)
 					let db = parseStart(new Uint8Array(this.result), DATABASE);
 					console.log(db);
 					let patch = generatePatchDatabase(db);
+					chars = {};
+					
+					for(let c in db[11])
+						if(db[11][c][1])
+							chars[c] = db[11][c][1];
 					
 					if(!disableDownloading)
 					{
 						download(JSON.stringify(db), 'database.json');
 						download(JSON.stringify(patch), 'database.patch.json');
-						download(extractDialogue(patch), 'database.txt');
 					}
 				};
 			}
@@ -299,7 +339,8 @@ function handleData()
 		
 		if(hasData)
 		{
-			download(new Uint8Array(isDatabase ? createStart(data, DATABASE) : createStart(data, MAP).concat(0)), isDatabase ? 'RPG_RT.ldb' : filename + '.lmu');
+			if(!disableDownloading)
+				download(new Uint8Array(isDatabase ? createStart(data, DATABASE) : createStart(data, MAP).concat(0)), isDatabase ? 'RPG_RT.ldb' : filename + '.lmu');
 			console.log(hasPatch ? `${filename} was patched.` : `${filename} was not patched.`);
 		}
 		

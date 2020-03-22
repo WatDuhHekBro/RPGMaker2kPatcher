@@ -1,13 +1,15 @@
+// Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
+// a = events.length
+// per_event_offset + a --- if it's the same event
+// splice(index, a, ...events)
+// Actually, never mind. If I need to add events, I'll manually do it after a patch is applied and before that patched data gets compiled.
+// The event will be noted and it won't need to happen too often anyways...
 let chars;
 let stack = {};
 let disableDownloading = false;
 let text = ''; // copy(text) to copy the text-form dialogue.
 
-// Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
-// a = events.length
-// per_event_offset + a --- if it's the same event
-// splice(index, a, ...events)
-// Also add a text generator (canvas). Then you're all set.
+// Common Events Dialogue: path = [event #, page #, pos, length]
 function generatePatchMap(data, hasOther = false)
 {
 	let dialogue = [];
@@ -212,15 +214,9 @@ function applyPatchMap(data, patch)
 		{
 			if(ev !== entry.path[0] || pg !== entry.path[1])
 				offset = 0;
-			
 			ev = entry.path[0];
 			pg = entry.path[1];
-			let commands = [];
-			
-			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], mainIndent = entry.indent || 0, prm = entry.parameters || []; i < len; i++)
-				commands.push([i === 0 ? 10110 : 20110, ind[i] || mainIndent, lines[i], prm[i] || []]);
-			
-			data[81][entry.path[0]][5][entry.path[1]][52].splice(entry.path[2] + offset, entry.path[3], ...commands);
+			data[81][entry.path[0]][5][entry.path[1]][52].splice(entry.path[2] + offset, entry.path[3], ...getPatchedCommands(entry));
 			offset += entry.lines.length - entry.path[3];
 		}
 	}
@@ -243,19 +239,23 @@ function applyPatchDatabase(data, patch)
 		{
 			if(ev !== entry.path[1])
 				offset = 0;
-			
 			ev = entry.path[1];
-			let commands = [];
-			
-			for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], mainIndent = entry.indent || 0, prm = entry.parameters || []; i < len; i++)
-				commands.push([i === 0 ? 10110 : 20110, ind[i] || mainIndent, lines[i], prm[i] || []]);
-			
-			data[entry.path[0]][entry.path[1]][22].splice(entry.path[2] + offset, entry.path[3], ...commands);
+			data[entry.path[0]][entry.path[1]][22].splice(entry.path[2] + offset, entry.path[3], ...getPatchedCommands(entry));
 			offset += entry.lines.length - entry.path[3];
 		}
 	}
 	
 	return data;
+}
+
+function getPatchedCommands(entry)
+{
+	let commands = [];
+	
+	for(let i = 0, lines = entry.lines, len = lines.length, ind = entry.indent || [], mainIndent = entry.indent || 0, prm = entry.parameters || []; i < len; i++)
+		commands.push([i === 0 ? 10110 : 20110, ind[i] || mainIndent, lines[i], prm[i] || []]);
+	
+	return commands;
 }
 
 function download(contents, filename = '')

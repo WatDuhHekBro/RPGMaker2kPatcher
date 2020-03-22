@@ -11,7 +11,7 @@ function generateText()
 	{
 		for(let c of line)
 		{
-			let info = LETTERS[c];
+			let info = LETTERS[c] || [1,194,4];
 			context.drawImage(FONT, info[1], info[0] * 12, info[2], 12, hpos, vpos, info[2], 12);
 			hpos += info[2];
 		}
@@ -25,9 +25,7 @@ const FONT = new Image();
 FONT.src = 'font.png';
 
 // [row, x-offset, width, height (12)]
-const LETTERS = {
-	' ': [1,194,4]
-};
+const LETTERS = {};
 
 // For each row, the letter is x width.
 const SPLIT = [

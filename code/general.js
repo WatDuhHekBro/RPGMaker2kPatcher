@@ -150,9 +150,6 @@ function extractDialogue(patch)
 	
 	for(let entry of patch.dialogue)
 	{
-		orig += (entry.original || '') + '\n';
-		p += compressLines(entry.lines) + '\n';
-		
 		if(entry.path[0] !== path1 || entry.path[1] !== path2)
 		{
 			orig += '\n';
@@ -161,6 +158,8 @@ function extractDialogue(patch)
 		
 		path1 = entry.path[0];
 		path2 = entry.path[1];
+		orig += (entry.original || '') + '\n';
+		p += compressLines(entry.lines) + '\n';
 	}
 	
 	return (orig + '\n\n\n' + p).trimStart().trimEnd();

@@ -7,10 +7,11 @@
 let chars;
 let stack = {};
 let disableDownloading = false;
+let hasOther = false;
 let text = ''; // copy(text) to copy the text-form dialogue.
 
 // Common Events Dialogue: path = [event #, page #, pos, length]
-function generatePatchMap(data, hasOther = false)
+function generatePatchMap(data)
 {
 	let dialogue = [];
 	let other = [];

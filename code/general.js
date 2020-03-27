@@ -1,3 +1,11 @@
+// ins patch (post-fx), set an index, delete count, then elements to insert. Does not store offsets, so it's quite volatile. Or maybe it shows you the patch steps and you select the appropriate index.
+// continue(index) as the user response
+// entering null or undefined skips that index
+// So it's not inserting or deleting, it's both. It's not prepending or appending, it could be either or both. It's...
+// Patching Part II? Map0010.patch.json, in the "splice" node.
+// "splice": [{"path":[1,5],"":""}]
+// Actually just do the below, then download a patched JSON instead of a patched binary. Then you splice the JSON later. "splice": true
+
 // Maybe add appending and prepending? Execute those instructions before anything else, then have a common offset in addition.
 // a = events.length
 // per_event_offset + a --- if it's the same event
@@ -343,11 +351,15 @@ function handleData()
 		let patch = stack[filename + '.patch.json'];
 		let hasData = !!data;
 		let hasPatch = !!patch;
+		let allowSplicing = false;
 		
 		if(hasPatch)
 		{
 			if(hasData)
+			{
 				data = isDatabase ? applyPatchDatabase(data, patch) : applyPatchMap(data, patch);
+				allowSplicing = !!patch.allowManualEditing;
+			}
 			else
 				checkDialogue(patch);
 		}
@@ -355,7 +367,22 @@ function handleData()
 		if(hasData)
 		{
 			if(!disableDownloading)
-				download(new Uint8Array(isDatabase ? createStart(data, DATABASE) : createStart(data, MAP).concat(0)), isDatabase ? 'RPG_RT.ldb' : filename + '.lmu');
+			{
+				if(allowSplicing)
+				{
+					if(isDatabase)
+						download(JSON.stringify(data), 'database.patch.json');
+					else
+						download(JSON.stringify(data), filename + '.patch.json');
+				}
+				else
+				{
+					if(isDatabase)
+						download(new Uint8Array(createStart(data, DATABASE)), 'RPG_RT.ldb');
+					else
+						download(new Uint8Array(createStart(data, MAP).concat(0)), filename + '.lmu');
+				}
+			}
 			console.log(hasPatch ? `${filename} was patched.` : `${filename} was not patched.`);
 		}
 		

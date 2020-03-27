@@ -12,11 +12,13 @@
 // splice(index, a, ...events)
 // Actually, never mind. If I need to add events, I'll manually do it after a patch is applied and before that patched data gets compiled.
 // The event will be noted and it won't need to happen too often anyways...
+
 let chars;
 let stack = {};
 let disableDownloading = false;
 let hasOther = false;
 let text = ''; // copy(text) to copy the text-form dialogue.
+let extractPatched = false;
 
 // Common Events Dialogue: path = [event #, page #, pos, length]
 function generatePatchMap(data)
@@ -170,7 +172,7 @@ function extractDialogue(patch)
 		p += compressLines(entry.lines) + '\n';
 	}
 	
-	return (orig + '\n\n\n' + p).trimStart().trimEnd();
+	return (extractPatched ? (orig + '\n\n\n' + p) : orig).trimStart().trimEnd();
 }
 
 function compressLines(lines)

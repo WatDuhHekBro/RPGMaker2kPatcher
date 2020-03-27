@@ -194,10 +194,13 @@ function checkDialogue(patch)
 	{
 		for(let line of entry.lines)
 		{
-			let chars = line.replace(/\\[^nv](\[\d*\])*/g, '').length;
-			let text_safe = chars <= 50;
-			let portrait_safe = chars <= 38;
-			console.log(`%c-= Line Analysis =-\nLine: %c${line}\n%cCharacters: %c${chars}\n%cText Safe? %c${text_safe}\n%cPortrait Safe? %c${portrait_safe}`, 'color: black', 'color: #800000', 'color: black', 'color: #e18000', 'color: black', text_safe ? 'color: green' : 'color: red', 'color: black', portrait_safe ? 'color: green' : 'color: red');
+			line = line.replace(/\\[^nv](\[\d*\])*/g, '');
+			for(let c in chars)
+				line = line.replace(`\\n[${c}]`, chars[c]);
+			let length = line.length;
+			let text_safe = length <= 50;
+			let portrait_safe = length <= 38;
+			console.log(`%c-= Line Analysis =-\nLine: %c${line}\n%cCharacters: %c${length}\n%cText Safe? %c${text_safe}\n%cPortrait Safe? %c${portrait_safe}`, 'color: black', 'color: #800000', 'color: black', 'color: #e18000', 'color: black', text_safe ? 'color: green' : 'color: red', 'color: black', portrait_safe ? 'color: green' : 'color: red');
 		}
 	}
 	

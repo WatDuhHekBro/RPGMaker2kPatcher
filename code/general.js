@@ -105,6 +105,8 @@ function generatePatchEvent(patch, cmd, path, other)
 			lines = [];
 			indent = [];
 			params = [];
+			hasIndent = false;
+			hasParams = false;
 		}
 		
 		if(code === 10110)

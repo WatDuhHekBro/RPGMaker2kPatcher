@@ -25,6 +25,7 @@ function generatePatchMap(data)
 {
 	let dialogue = [];
 	let other = [];
+	let choices = [];
 	let e = data[81];
 	
 	for(let ev in e)
@@ -35,11 +36,18 @@ function generatePatchMap(data)
 		for(let pg in p)
 		{
 			let pg_num = parseInt(pg);
-			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], hasOther ? other : undefined);
+			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], choices, hasOther ? other : undefined);
 		}
 	}
 	
-	return hasOther ? {dialogue: dialogue, other: other} : {dialogue: dialogue};
+	let out = {dialogue: dialogue};
+	
+	if(hasOther)
+		out.other = other;
+	else if(choices.length > 0)
+		out.other = choices;
+	
+	return out;
 }
 
 // Vocabulary: path = [global_id, term #]
@@ -48,6 +56,7 @@ function generatePatchDatabase(data)
 {
 	let vocab = [];
 	let dialogue = [];
+	let choices = [];
 	let e = data[21];
 	
 	for(let id in e)
@@ -65,17 +74,17 @@ function generatePatchDatabase(data)
 	for(let ev in e)
 	{
 		let ev_num = parseInt(ev);
-		generatePatchEvent(dialogue, e[ev][22], [25, ev_num]);
+		generatePatchEvent(dialogue, e[ev][22], [25, ev_num], choices);
 	}
 	
-	return {vocabulary: vocab, dialogue: dialogue};
+	return {dialogue: dialogue, other: choices, vocabulary: vocab};
 }
 
 // My goal with the new patch format is to avoid duplicating text.
 // So have an extra node for the original text and then the patched lines below,
 // rather than having a separate text file which you'll then have to update both.
 // Also, the if all indents of a node are the same, it'll be just one number.
-function generatePatchEvent(patch, cmd, path, other)
+function generatePatchEvent(patch, cmd, path, choices, other)
 {
 	// 10110 as A
 	// 20110 as B
@@ -143,6 +152,15 @@ function generatePatchEvent(patch, cmd, path, other)
 		else if(other && str)
 		{
 			other.push({
+				path: [...path, i],
+				original: str,
+				patch: str
+			});
+		}
+		
+		if(code === 10140 || code === 20140)
+		{
+			choices.push({
 				path: [...path, i],
 				original: str,
 				patch: str
@@ -244,6 +262,10 @@ function applyPatchDatabase(data, patch)
 	if(patch.vocabulary)
 		for(let entry of patch.vocabulary)
 			data[entry.path[0]][entry.path[1]] = entry.patch;
+	
+	if(patch.other)
+		for(let entry of patch.other)
+			data[entry.path[0]][entry.path[1]][22][entry.path[2]][2] = entry.patch;
 	
 	if(patch.dialogue)
 	{

@@ -400,9 +400,9 @@ function handleData()
 				if(allowSplicing)
 				{
 					if(isDatabase)
-						download(JSON.stringify(data), 'database.patch.json');
+						download(JSON.stringify(data), 'database.json');
 					else
-						download(JSON.stringify(data), filename + '.patch.json');
+						download(JSON.stringify(data), filename + '.json');
 				}
 				else
 				{
@@ -412,7 +412,7 @@ function handleData()
 						download(new Uint8Array(createStart(data, MAP).concat(0)), filename + '.lmu');
 				}
 			}
-			console.log(hasPatch ? `${filename} was patched.` : `${filename} was not patched.`);
+			console.log(hasPatch ? `${filename} was patched.` : `${filename} was not patched. (Or it was manually patched.)`);
 		}
 		
 		delete stack[filename + '.json'];

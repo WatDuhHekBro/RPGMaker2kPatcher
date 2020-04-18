@@ -191,12 +191,30 @@ class ByteWriter
 	}
 	
 	// Defined Length
+	// Even though my system locale is English (US), it seems that RPG Maker 2k was using Windows-1251 to encode text, which would explain why letters with umlauts appeared as Cyrillic characters.
 	writeString(str)
 	{
 		this.writeInt(str.length);
 		
 		for(let i = 0, len = str.length; i < len; i++)
-			this.writeInt8(str.charCodeAt(i));
+		{
+			let c = str.charCodeAt(i);
+			
+			if(c >= 0x410 && c <= 0x44F)
+				c -= 0x350;
+			else if(c === 0x401)
+				c = 0xA8;
+			else if(c === 0x451)
+				c = 0xB8;
+			
+			if(c > 0xFF)
+			{
+				alert(`ATTENTION! The character ${c.toString(16).toUpperCase()} is out of bounds!`);
+				c = 0x2E; // "."
+			}
+			
+			this.writeInt8(c);
+		}
 	}
 	
 	// Defined Length

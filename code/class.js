@@ -209,7 +209,7 @@ class ByteWriter
 			
 			if(c > 0xFF)
 			{
-				alert(`ATTENTION! The character ${c.toString(16).toUpperCase()} is out of bounds!`);
+				console.warn(`ATTENTION! The character ${c.toString(16).toUpperCase()} is out of bounds!`);
 				c = 0x2E; // "."
 			}
 			

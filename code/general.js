@@ -15,10 +15,12 @@
 
 let chars;
 let stack = {};
-let disableDownloading = false;
-let hasOther = false;
+let settings = {
+	disableDownloading: false,
+	hasOther: false,
+	extractPatched: false
+};
 let text = ''; // copy(text) to copy the text-form dialogue.
-let extractPatched = false;
 
 // Common Events Dialogue: path = [event #, page #, pos, length]
 function generatePatchMap(data)
@@ -35,7 +37,7 @@ function generatePatchMap(data)
 		for(let pg in p)
 		{
 			let pg_num = parseInt(pg);
-			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], other, [10140,20140,10610], hasOther);
+			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], other, [10140,20140,10610]);
 		}
 	}
 	
@@ -83,7 +85,7 @@ function generatePatchDatabase(data)
 // So have an extra node for the original text and then the patched lines below,
 // rather than having a separate text file which you'll then have to update both.
 // Also, the if all indents of a node are the same, it'll be just one number.
-function generatePatchEvent(patch, cmd, path, other, filter, hasOther)
+function generatePatchEvent(patch, cmd, path, other, filter)
 {
 	// 10110 as A
 	// 20110 as B
@@ -148,7 +150,7 @@ function generatePatchEvent(patch, cmd, path, other, filter, hasOther)
 			if(prm.length != 0)
 				hasParams = true;
 		}
-		else if(other && ((hasOther && str) || (filter && filter.includes(code))))
+		else if(other && ((settings.hasOther && str) || (filter && filter.includes(code))))
 		{
 			other.push({
 				path: [...path, i],
@@ -182,7 +184,7 @@ function extractDialogue(patch)
 		p += compressLines(entry.lines) + '\n';
 	}
 	
-	return (extractPatched ? (orig + '\n\n\n' + p) : orig).trimStart().trimEnd();
+	return (settings.extractPatched ? (orig + '\n\n\n' + p) : orig).trimStart().trimEnd();
 }
 
 function compressLines(lines)
@@ -320,7 +322,7 @@ function upload(e)
 					let map = parseStart(new Uint8Array(this.result), MAP);
 					console.log(map);
 					
-					if(!disableDownloading)
+					if(!settings.disableDownloading)
 					{
 						download(JSON.stringify(map), filename + '.json');
 						download(JSON.stringify(generatePatchMap(map)), filename + '.patch.json');
@@ -341,7 +343,7 @@ function upload(e)
 						if(db[11][c][1])
 							chars[c] = db[11][c][1];
 					
-					if(!disableDownloading)
+					if(!settings.disableDownloading)
 					{
 						download(JSON.stringify(db), 'database.json');
 						download(JSON.stringify(generatePatchDatabase(db)), 'database.patch.json');
@@ -391,7 +393,7 @@ function handleData()
 		
 		if(hasData)
 		{
-			if(!disableDownloading)
+			if(!settings.disableDownloading)
 			{
 				if(allowSplicing)
 				{

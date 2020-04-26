@@ -158,7 +158,7 @@ function generatePatchEvent(patch, cmd, path, choices, other)
 			});
 		}
 		
-		if(code === 10140 || code === 20140)
+		if(code === 10140 || code === 20140 || code === 10610)
 		{
 			choices.push({
 				path: [...path, i],

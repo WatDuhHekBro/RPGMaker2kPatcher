@@ -25,7 +25,6 @@ function generatePatchMap(data)
 {
 	let dialogue = [];
 	let other = [];
-	let choices = [];
 	let e = data[81];
 	
 	for(let ev in e)
@@ -36,16 +35,14 @@ function generatePatchMap(data)
 		for(let pg in p)
 		{
 			let pg_num = parseInt(pg);
-			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], choices, hasOther ? other : undefined);
+			generatePatchEvent(dialogue, p[pg][52], [ev_num, pg_num], other, [10140,20140,10610], hasOther);
 		}
 	}
 	
 	let out = {dialogue: dialogue};
 	
-	if(hasOther)
+	if(other.length > 0)
 		out.other = other;
-	else if(choices.length > 0)
-		out.other = choices;
 	
 	return out;
 }
@@ -54,37 +51,39 @@ function generatePatchMap(data)
 // Common Events Dialogue: path = [global_id, event #, pos, length]
 function generatePatchDatabase(data)
 {
-	let vocab = [];
 	let dialogue = [];
-	let choices = [];
-	let e = data[21];
+	let other = [];
+	let e = data[25];
+	
+	for(let ev in e)
+	{
+		let ev_num = parseInt(ev);
+		generatePatchEvent(dialogue, e[ev][22], [ev_num], other, [10140,20140,10610]);
+	}
+	
+	for(let choice of other)
+		choice.path = [25, choice.path[0], 22, choice.path[1], 2];
+	
+	e = data[21];
 	
 	for(let id in e)
 	{
 		id = parseInt(id);
-		vocab.push({
+		other.push({
 			path: [21, id],
 			original: e[id],
 			patch: e[id]
 		});
 	}
 	
-	e = data[25];
-	
-	for(let ev in e)
-	{
-		let ev_num = parseInt(ev);
-		generatePatchEvent(dialogue, e[ev][22], [25, ev_num], choices);
-	}
-	
-	return {dialogue: dialogue, other: choices, vocabulary: vocab};
+	return {dialogue: dialogue, other: other};
 }
 
 // My goal with the new patch format is to avoid duplicating text.
 // So have an extra node for the original text and then the patched lines below,
 // rather than having a separate text file which you'll then have to update both.
 // Also, the if all indents of a node are the same, it'll be just one number.
-function generatePatchEvent(patch, cmd, path, choices, other)
+function generatePatchEvent(patch, cmd, path, other, filter, hasOther)
 {
 	// 10110 as A
 	// 20110 as B
@@ -149,18 +148,9 @@ function generatePatchEvent(patch, cmd, path, choices, other)
 			if(prm.length != 0)
 				hasParams = true;
 		}
-		else if(other && str)
+		else if(other && ((hasOther && str) || (filter && filter.includes(code))))
 		{
 			other.push({
-				path: [...path, i],
-				original: str,
-				patch: str
-			});
-		}
-		
-		if(code === 10140 || code === 20140 || code === 10610)
-		{
-			choices.push({
 				path: [...path, i],
 				original: str,
 				patch: str
@@ -259,13 +249,19 @@ function applyPatchMap(data, patch)
 
 function applyPatchDatabase(data, patch)
 {
-	if(patch.vocabulary)
-		for(let entry of patch.vocabulary)
-			data[entry.path[0]][entry.path[1]] = entry.patch;
-	
 	if(patch.other)
+	{
 		for(let entry of patch.other)
-			data[entry.path[0]][entry.path[1]][22][entry.path[2]][2] = entry.patch;
+		{
+			let ref = data;
+			let path = entry.path;
+			
+			for(let i = 0; i < path.length-1; i++)
+				ref = ref[path[i]];
+			
+			ref[path[path.length-1]] = entry.patch;
+		}
+	}
 	
 	if(patch.dialogue)
 	{
@@ -277,7 +273,7 @@ function applyPatchDatabase(data, patch)
 			if(ev !== entry.path[1])
 				offset = 0;
 			ev = entry.path[1];
-			data[entry.path[0]][entry.path[1]][22].splice(entry.path[2] + offset, entry.path[3], ...getPatchedCommands(entry));
+			data[25][entry.path[0]][22].splice(entry.path[1] + offset, entry.path[2], ...getPatchedCommands(entry));
 			offset += entry.lines.length - entry.path[3];
 		}
 	}

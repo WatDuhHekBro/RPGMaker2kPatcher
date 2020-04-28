@@ -74,7 +74,8 @@ function stepRead(data, reader, definitions)
 			data[id] = val;
 	}
 	
-	console.log('Key', id, 'added with a value of', val, 'at position', reader.pos, 'with an endpoint of', reader.end);
+	if(settings.showReaderLog)
+		console.log('Key', id, 'added with a value of', val, 'at position', reader.pos, 'with an endpoint of', reader.end);
 	
 	return id;
 }

@@ -18,9 +18,12 @@ let stack = {};
 let settings = {
 	disableDownloading: false,
 	hasOther: false,
-	extractPatched: false
+	extractPatched: false,
+	immediateDownloads: false,
+	showReaderLog: false
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
+let scheduler = new Scheduler();
 
 // Common Events Dialogue: path = [event #, page #, pos, length]
 function generatePatchMap(data)
@@ -295,11 +298,13 @@ function getPatchedCommands(entry)
 
 function download(contents, filename = '')
 {
-	const dlink = document.createElement('a');
-	dlink.download = filename;
-	dlink.href = window.URL.createObjectURL(new Blob([contents]));
-	dlink.click();
-	dlink.remove();
+	scheduler.add(() => {
+		const dlink = document.createElement('a');
+		dlink.download = filename;
+		dlink.href = window.URL.createObjectURL(new Blob([contents]));
+		dlink.click();
+		dlink.remove();
+	}, settings.immediateDownloads ? 1 : 250);
 }
 
 function upload(e)
@@ -320,7 +325,7 @@ function upload(e)
 				{
 					let filename = curateName(file.name);
 					let map = parseStart(new Uint8Array(this.result), MAP);
-					console.log(map);
+					console.log(file.name, 'has been converted.');
 					
 					if(!settings.disableDownloading)
 					{
@@ -336,7 +341,7 @@ function upload(e)
 				reader.onload = function()
 				{
 					let db = parseStart(new Uint8Array(this.result), DATABASE);
-					console.log(db);
+					console.log(file.name, 'has been converted.');
 					chars = {};
 					
 					for(let c in db[11])

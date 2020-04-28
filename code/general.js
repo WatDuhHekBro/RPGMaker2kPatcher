@@ -275,11 +275,11 @@ function applyPatchDatabase(data, patch)
 		
 		for(let entry of patch.dialogue)
 		{
-			if(ev !== entry.path[1])
+			if(ev !== entry.path[0])
 				offset = 0;
-			ev = entry.path[1];
+			ev = entry.path[0];
 			data[25][entry.path[0]][22].splice(entry.path[1] + offset, entry.path[2], ...getPatchedCommands(entry));
-			offset += entry.lines.length - entry.path[3];
+			offset += entry.lines.length - entry.path[2];
 		}
 	}
 	

@@ -20,7 +20,8 @@ let settings = {
 	hasOther: false,
 	extractPatched: false,
 	immediateDownloads: false,
-	showReaderLog: false
+	showReaderLog: false,
+	delay: 300
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
 let scheduler = new Scheduler();
@@ -304,7 +305,7 @@ function download(contents, filename = '')
 		dlink.href = window.URL.createObjectURL(new Blob([contents]));
 		dlink.click();
 		dlink.remove();
-	}, settings.immediateDownloads ? 1 : 250);
+	}, settings.immediateDownloads ? 1 : settings.delay);
 }
 
 function upload(e)

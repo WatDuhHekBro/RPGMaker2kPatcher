@@ -431,6 +431,47 @@ function curateName(name)
 		return name.substring(0, name.lastIndexOf('.'));
 }
 
+/*
+-= Example =-
+copy(JSON.stringify(transpose(stack["Map0148.patch.json"], 12, `Cibon: We finally made it!\\. This city
+is called Gencorin, right?
+
+Soko: Overall, we got here a little
+faster than expected,\\. despite all
+the events on the way.`, {'Kento': '\\c[1]\\n[1]\\c[0]', 'Cibon': '\\c[2]\\n[2]\\c[0]', 'Soko': '\\c[13]\\n[3]\\c[0]'})))
+
+-= Template =-
+copy(JSON.stringify(transpose(stack["Map0.patch.json"], 0, {
+	'Kento': '\\c[1]\\n[1]\\c[0]',
+	'Cibon': '\\c[2]\\n[2]\\c[0]',
+	'Soko': '\\c[13]\\n[3]\\c[0]'
+}, ``)))
+*/
+// Returns the patch and modifies it as a side effect of not cloning it. Use with copy().
+// Also, this'll inevitably cause any other ':' to be affected. But they're few enough to make it easier to just manually fix that.
+function transpose(patch, offset, dictionary, text)
+{
+	if(patch)
+	{
+		if(dictionary)
+			for(let key in dictionary)
+				text = text.split(key + ':').join(dictionary[key] + ':');
+		
+		text = text.replace(/([^(\n\\c\[0\]]+?):/g, '\\c[10]$1\\c[0]:');
+		text = text.split('\n\n');
+		
+		for(let i = 0; i < text.length; i++)
+			text[i] = text[i].split('\n');
+		
+		offset = offset || 0;
+		
+		for(let i = 0; i < text.length; i++)
+			patch.dialogue[i + offset].lines = text[i];
+		
+		return patch;
+	}
+}
+
 // There aren't named keys for this reason: Don't expand out what you don't need to expand.
 // Leave it as 8 bit arrays unless you actually need to modify what's in it.
 // This is first and foremost patching dialogue, not changing the game.

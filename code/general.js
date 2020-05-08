@@ -401,6 +401,17 @@ function handleData()
 		{
 			if(!settings.disableDownloading)
 			{
+				// Automated string replacement
+				if(!!patch.replace)
+				{
+					let s = JSON.stringify(data);
+					
+					for(let key in patch.replace)
+						s = s.replace(key, patch.replace[key]);
+					
+					data = JSON.parse(s);
+				}
+				
 				if(allowSplicing)
 				{
 					if(isDatabase)

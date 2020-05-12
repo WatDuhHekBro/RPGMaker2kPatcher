@@ -402,7 +402,7 @@ function handleData()
 			if(!settings.disableDownloading)
 			{
 				// Automated string replacement
-				if(!!patch.replace)
+				if(hasPatch && !!patch.replace)
 				{
 					let s = JSON.stringify(data);
 					

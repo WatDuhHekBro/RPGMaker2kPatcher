@@ -7,17 +7,11 @@
 		<script src="code/class.js" defer></script>
 		<script src="code/scheduler.js" defer></script>
 		<script src="code/general.js" defer></script>
+		<script src="code/preview.js" defer></script>
 		<script src="code/reader.js" defer></script>
 		<script src="code/writer.js" defer></script>
 		<script src="code/canvas.js" defer></script>
-		<style type="text/css">
-		html, body
-		{
-			height: 100%;
-			margin: 0;
-			text-align: center;
-		}
-		</style>
+		<link rel="stylesheet" type="text/css" href="style.css">
 	</head>
 	<body ondrop="upload(event)" ondragover="event.preventDefault()">
 		<h1>Instructions</h1>
@@ -31,7 +25,22 @@
 		<p>Info about which maps got patched and which ones didn't will be in the console. The text will also be available in the console.</p>
 		<p>Generate <code>chars.json</code> by parsing a database. Use that <code>chars.json</code> file before working with anything.</p>
 		<div><button onclick="handleData()">Handle Data &amp; Patches</button></div>
-		<br><br><br>
+		
+		<h1>Text Preview</h1>
+		<button>-</button>
+		<input type="number" style="width: 50px;">
+		<button>+</button>
+		<div class="dialogue">
+			<code id="line-0" style="background-color: white;"></code>
+			<code id="line-1"></code>
+			<code id="line-2"></code>
+			<code id="line-3"></code>
+			<code id="line-4"></code>
+		</div>
+		<code id="line-overflow" class="overflow"></code><br>
+		<input type="checkbox"><span>Portrait Mode</span>
+		
+		<h1>Graphical Text Generator</h1>
 		<div><canvas id="canvas" width="750" height="500" style="border: black 1px solid"></canvas></div>
 		<div><textarea id="text" rows="10" cols="50"></textarea></div>
 		<div><button onclick="generateText()">Button</button></div>

@@ -21,12 +21,14 @@ let settings = {
 	extractPatched: false,
 	immediateDownloads: false,
 	showReaderLog: false,
-	delay: 300
+	delay: 300,
+	legacyDialogue: false
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
 let scheduler = new Scheduler();
 
 // Common Events Dialogue: path = [event #, page #, pos, length]
+// join by \n when reading in strings
 function generatePatchMap(data)
 {
 	let dialogue = [];
@@ -114,7 +116,10 @@ function generatePatchEvent(patch, cmd, path, other, filter)
 			if(hasParams)
 				entry.parameters = params;
 			entry.original = compressLines(lines);
-			entry.lines = lines;
+			if(settings.legacyDialogue)
+				entry.lines = lines;
+			else
+				entry.patch = lines.join('\n');
 			patch.push(entry);
 			lines = [];
 			indent = [];

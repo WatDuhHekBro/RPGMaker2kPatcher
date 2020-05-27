@@ -24,21 +24,13 @@
 		<p><code>.patch.json</code> files will display dialogue info in the console if no corresponding map exists and patch a map file if it exists. It'll also show copy-paste-ready text for Google Translate.</p>
 		<p>Info about which maps got patched and which ones didn't will be in the console. The text will also be available in the console.</p>
 		<p>Generate <code>chars.json</code> by parsing a database. Use that <code>chars.json</code> file before working with anything.</p>
-		<div><button onclick="handleData()">Handle Data &amp; Patches</button></div>
+		<div><button id="handler" onclick="handleData()" disabled>Handle Data &amp; Patches</button></div>
+		<p><code id="chars" style="background-color:red; color:white; padding:3px;">chars.json</code></p>
 		
-		<h1>Text Preview</h1>
-		<button>-</button>
-		<input type="number" style="width: 50px;">
-		<button>+</button>
-		<div class="dialogue">
-			<code id="line-0" style="background-color: white;"></code>
-			<code id="line-1"></code>
-			<code id="line-2"></code>
-			<code id="line-3"></code>
-			<code id="line-4"></code>
-		</div>
-		<code id="line-overflow" class="overflow"></code><br>
-		<input type="checkbox"><span>Portrait Mode</span>
+		<h1>Dialogue Preview</h1>
+		<input id="map" type="number" placeholder="Map #" style="width: 40px;" disabled>
+		<button id="load" onclick="loadDialogue(document.getElementById('map'))" disabled>Load Dialogue</button>
+		<div id="preview"></div>
 		
 		<h1>Graphical Text Generator</h1>
 		<div><canvas id="canvas" width="750" height="500" style="border: black 1px solid"></canvas></div>

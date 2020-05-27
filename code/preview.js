@@ -1,26 +1,92 @@
 'use strict';
 
-const color = ['ffffff','21a0d7','ff784b','65cb41','99cdfc','ccc0ff','ffff9f','808080','bfbfbf','1f81cc','ff360d','00a110','3e9be0','9f97fe','ffcb1f','000000','84aaff','ffff3d','ff2024','202044','df8040','f3c242','3d7ebe','40bef0','81ff81','c17f80','827fff','fe80fd','02a041','00e05f','a25fe0','c180fe'];
-const doclines = [
-	document.getElementById('line-0'),
-	document.getElementById('line-1'),
-	document.getElementById('line-2'),
-	document.getElementById('line-3'),
-	document.getElementById('line-4'),
-	document.getElementById('line-overflow')
-];
+const PREVIEW = document.getElementById('preview');
 
-function setDisplay(set, line, portrait = false)
+/*
+<div class="dialogue">
+	<code class="check"></code>
+	<div class="lines">
+		<code></code>
+		<code></code>
+		<code></code>
+		<code></code>
+	</div>
+	<code class="overflow"></code>
+</div>
+*/
+function createDialogueElement()
 {
-	if(set && line)
+	let dialogue = document.createElement('div');
+	dialogue.classList.add('dialogue');
+	let check = document.createElement('code');
+	check.classList.add('check');
+	let lines = document.createElement('div');
+	lines.classList.add('lines');
+	let overflow = document.createElement('overflow');
+	overflow.classList.add('overflow');
+	
+	for(let amount = 4; amount--;)
+		lines.appendChild(document.createElement('code'));
+	
+	dialogue.appendChild(check);
+	dialogue.appendChild(lines);
+	dialogue.appendChild(overflow);
+	
+	return dialogue;
+}
+
+function setPreviewLength(length = 0)
+{
+	if(length < 0)
+		length = 0;
+	
+	while(PREVIEW.firstChild)
+		PREVIEW.removeChild(PREVIEW.firstChild);
+	
+	for(;length--;)
+		PREVIEW.appendChild(createDialogueElement());
+}
+
+// I decided to not include colors because they're way too much work for too little gain. The important part here is to check for line endings and if they look nice, not replicating text, which can just be done in-game.
+// entry.lines always overrides entry.patch since it's more specific.
+function setDisplay(set, line, portrait = false, overrideLines)
+{
+	if(!chars)
 	{
-		let lines = splitLine(line, portrait);
-		set[0].innerHTML = ''.padEnd(portrait ? 38 : 50).split(' ').join(String.fromCharCode(0xA0));
+		setPreviewLength(0);
+		let message = document.createElement('p');
+		message.innerHTML = "<code>chars.json</code> is required!";
+		PREVIEW.appendChild(message);
+	}
+	else if(set)
+	{
+		let length = portrait ? 38 : 50;
 		
-		for(let i = 1; i < set.length-1; i++)
-			set[i].innerHTML = activateSpecials(lines[i-1]) || String.fromCharCode(0xA0);
-		
-		set[set.length-1].innerHTML = lines[4];
+		if(overrideLines)
+		{
+			set.children[0].innerText = ''.padEnd(length, String.fromCharCode(0xA0));
+			
+			for(let i = 0, display = set.children[1].children; i < display.length; i++)
+			{
+				display[i].innerText = handleSpecials(overrideLines[i] || '');
+				display[i].innerText += ''.padEnd(length - display[i].innerText.length, String.fromCharCode(0xA0));
+			}
+			
+			set.children[2].innerText = overrideLines.slice(4).join(' ');
+		}
+		else if(line)
+		{
+			let lines = splitLine(line, portrait, false);
+			set.children[0].innerText = ''.padEnd(length, String.fromCharCode(0xA0));
+			
+			for(let i = 0, display = set.children[1].children; i < display.length; i++)
+			{
+				display[i].innerText = handleSpecials(lines[i]);
+				display[i].innerText += ''.padEnd(length - display[i].innerText.length, String.fromCharCode(0xA0));
+			}
+			
+			set.children[2].innerText = handleSpecials(lines[4]);
+		}
 	}
 }
 
@@ -36,13 +102,16 @@ function setDisplay(set, line, portrait = false)
 - ' I just wanted to te' --> length = 38 (portrait mode)
 */
 // input string, output array of strings
-function splitLine(line, portrait = false)
+function splitLine(line, portrait = false, trim = true)
 {
 	let lines = ['','','','',''];
 	let index = 0;
 	let length = 0; // the actual length of the string
 	let space = -1;
 	let line_index = 0;
+	
+	if(!chars)
+		throw "Error: Requires chars.json!";
 	
 	while(index < line.length)
 	{
@@ -60,15 +129,19 @@ function splitLine(line, portrait = false)
 		{
 			if(c === '\\')
 			{
-				let action = line[index+1];
+				let action = line[index+1].toLowerCase();
 				
-				if(['C','c','I','i','N','n','P','p','V','v'].includes(action))
+				if(['c','i','n','p','s','v'].includes(action))
 				{
 					let brackets = '';
 					let tmp = index+2;
 					
 					while(line[tmp-1] !== ']')
 						brackets += line[tmp++];
+					
+					// You have to make sure that \\n[#] is counted because of the backslash rule, otherwise, it skews line endings.
+					if(action === 'n')
+						length += chars[brackets.substring(1, brackets.length-1)].length;
 					
 					index += 2 + brackets.length;
 				}
@@ -102,48 +175,44 @@ function splitLine(line, portrait = false)
 	
 	lines[line_index] = line;
 	
+	if(trim)
+	{
+		if(lines[4] === '')
+		{
+			let split = -1;
+			
+			for(let i = 0; i < lines.length-1; i++)
+			{
+				if(lines[i] === '')
+				{
+					split = i;
+					break;
+				}
+			}
+			
+			lines = lines.slice(0, split);
+		}
+	}
+	
 	return lines;
 }
 
-function activateSpecials(line)
+function loadDialogue(e)
 {
-	let index = 0;
-	let colors = [];
+	let map = stack[`Map${e.value.padStart(4,'0')}.patch.json`];
+	e.value = '';
 	
-	while(index < line.length)
+	if(map && map.dialogue)
 	{
-		let c = line[index];
+		let list = map.dialogue;
+		setPreviewLength(list.length);
 		
-		if(c === '\\')
+		for(let i = 0; i < list.length; i++)
 		{
-			let action = line[index+1];
-			
-			if(['C','c','I','i','N','n','P','p','V','v'].includes(action))
-			{
-				let brackets = '';
-				let tmp = index+2;
-				
-				while(line[tmp-1] !== ']')
-					brackets += line[tmp++];
-				
-				colors.push(parseInt(brackets.substring(1, brackets.length-1)));
-				line = line.substring(0, index) + String.fromCharCode(0) + line.substring(index + 2 + brackets.length);
-				index++;
-			}
-			else
-			{
-				line = line.substring(0, index) + line.substring(action === '\\' ? index+1 : index+2);
-				index++;
-			}
+			let entry = list[i];
+			setDisplay(PREVIEW.children[i], entry.patch, !!entry.portrait, entry.lines);
 		}
-		else
-			index++;
 	}
-	
-	for(let x of colors)
-		line = line.replace(String.fromCharCode(0), x === 0 ? '</span>' : `<span style="color:#${color[x]};">`);
-	
-	return line;
+	else
+		setPreviewLength(0);
 }
-
-setDisplay(doclines, '\\c[13]Cibon\\c[0]: Not really.\\. I just wanted to tear you away from your little nap!', true);

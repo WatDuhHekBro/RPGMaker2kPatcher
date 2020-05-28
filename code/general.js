@@ -45,11 +45,17 @@ let settings = {
 	delay: 300,
 	legacyDialogue: false,
 	retainOriginalLineEndings: false,
-	hasPortraitCondition(entry) {return true;}
+	hasPortraitCondition(entry) {return true;},
+	downloadDialoguelessMaps: false,
+	downloadBatchedText: true,
+	manualPortraits: false,
+	deleteFalseInPortraits: true,
+	downloadAsZip: true
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
 let scheduler = new Scheduler();
 let filter = [10140,20140,10610]; // Event commands to extract when not extracting all strings.
+let zip = new JSZip();
 
 // Removes all escape characters and replaces \\n[#] with characters if "chars.json" is provided.
 function handleSpecials(line)
@@ -160,7 +166,7 @@ function generatePatchEvent(patch, cmd, path, other)
 	// A B --> [A,B]
 	// A B B --> [A,B,B]
 	// A B A --> [A,B] [A]
-	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0, mainIndent = 0; i < len; i++)
+	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0, mainIndent = 0, portrait = true; i < len; i++)
 	{
 		let code = cmd[i][0];
 		let ind = cmd[i][1];
@@ -175,13 +181,15 @@ function generatePatchEvent(patch, cmd, path, other)
 				entry.indent = mainIndent !== -1 ? mainIndent : indent;
 			if(hasParams)
 				entry.parameters = params;
-			entry.portrait = true; // I want the order to be a certain way, so I'm declaring it true here then changing it afterwards if need be.
+			entry.portrait = portrait; // I want the order to be a certain way, so I'm declaring it true here then changing it afterwards if need be.
 			entry.original = handleSpecials(compressLines(lines));
 			if(settings.legacyDialogue)
 				entry.lines = lines;
 			else
 				entry.patch = compressLines(lines);
-			if(!settings.hasPortraitCondition(entry) || settings.legacyDialogue) // But if you're generating a legacy patch, don't include it because it wasn't part of that format.
+			if(settings.manualPortraits)
+				entry.portrait = settings.hasPortraitCondition(entry);
+			if((settings.deleteFalseInPortraits && !entry.portrait) || settings.legacyDialogue) // But if you're generating a legacy patch, don't include it because it wasn't part of that format.
 				delete entry.portrait;
 			patch.push(entry);
 			lines = [];
@@ -223,6 +231,9 @@ function generatePatchEvent(patch, cmd, path, other)
 			if(prm.length != 0)
 				hasParams = true;
 		}
+		// The "Change Face Graphic" command seems to automatically determine the size of the text box. And I think that having an empty string removes any face graphic.
+		else if(code === 10130)
+			portrait = str !== '';
 		else if(other && ((settings.hasOther && str) || (filter && filter.includes(code))))
 		{
 			other.push({
@@ -243,21 +254,39 @@ function extractDialogue(patch, isDatabase)
 	let path1;
 	let path2;
 	
-	for(let entry of patch.dialogue)
+	if(patch.dialogue)
 	{
-		if(entry.path[0] !== path1 || (!isDatabase && entry.path[1] !== path2))
+		for(let entry of patch.dialogue)
 		{
-			orig += '\n';
-			p += '\n';
+			if(entry.path[0] !== path1 || (!isDatabase && entry.path[1] !== path2))
+			{
+				orig += '\n';
+				p += '\n';
+			}
+			
+			path1 = entry.path[0];
+			path2 = entry.path[1];
+			orig += (entry.original || '') + '\n';
+			p += handleSpecials(entry.lines ? compressLines(entry.lines) : entry.patch) + '\n';
 		}
-		
-		path1 = entry.path[0];
-		path2 = entry.path[1];
-		orig += (entry.original || '') + '\n';
-		p += handleSpecials(entry.lines ? compressLines(entry.lines) : entry.patch) + '\n';
 	}
 	
-	return (orig + '\n\n\n' + p).trimStart().trimEnd();
+	if(patch.other)
+	{
+		orig += '\n-= Other =-\n\n';
+		p += '\n-= Other =-\n\n';
+		
+		for(let entry of patch.other)
+		{
+			orig += (entry.original || '') + '\n';
+			p += (entry.patch || '') + '\n';
+		}
+		
+		orig = orig.trimEnd();
+		p = p.trimEnd();
+	}
+	
+	return (settings.extractPatched ? (orig + '\n\n\n' + p) : orig).trimStart().trimEnd();
 }
 
 function applyPatchMap(data, patch)
@@ -347,15 +376,20 @@ function getPatchedCommands(entry)
 	return commands;
 }
 
-function download(contents, filename = '')
+function download(contents, filename = '', override = false)
 {
-	scheduler.add(() => {
-		const dlink = document.createElement('a');
-		dlink.download = filename;
-		dlink.href = window.URL.createObjectURL(new Blob([contents]));
-		dlink.click();
-		dlink.remove();
-	}, settings.immediateDownloads ? 1 : settings.delay);
+	if(settings.downloadAsZip && !override)
+		zip.file(filename, contents);
+	else
+	{
+		scheduler.add(() => {
+			const dlink = document.createElement('a');
+			dlink.download = filename;
+			dlink.href = window.URL.createObjectURL(new Blob([contents]));
+			dlink.click();
+			dlink.remove();
+		}, settings.immediateDownloads ? 1 : settings.delay);
+	}
 }
 
 function upload(e)
@@ -376,15 +410,17 @@ function upload(e)
 				{
 					let filename = curateName(file.name);
 					let map = parseStart(new Uint8Array(this.result), MAP);
-					console.log(file.name, 'has been converted.');
+					console.log(file.name, 'has been converted. When every file has been processed, execute downloadZipFile() to download the generated zip file.');
 					
 					if(!settings.disableDownloading)
 					{
-						download(JSON.stringify(map), filename + '.json');
-						let patch = JSON.stringify(generatePatchMap(map));
+						let patch = generatePatchMap(map);
+						let hasDialogue = Object.keys(patch).length !== 0;
 						
-						if(patch !== '{}')
-							download(patch, filename + '.patch.json');
+						if(hasDialogue || settings.downloadDialoguelessMaps)
+							download(JSON.stringify(map), filename + '.json');
+						if(hasDialogue)
+							download(JSON.stringify(patch), filename + '.patch.json');
 					}
 				};
 			}
@@ -395,7 +431,7 @@ function upload(e)
 				reader.onload = function()
 				{
 					let db = parseStart(new Uint8Array(this.result), DATABASE);
-					console.log(file.name, 'has been converted.');
+					console.log(file.name, 'has been converted. When every file has been processed, execute downloadZipFile() to download the generated zip file.');
 					chars = {};
 					
 					for(let c in db[11])
@@ -408,17 +444,18 @@ function upload(e)
 						download(JSON.stringify(generatePatchDatabase(db)), 'database.patch.json');
 						download(JSON.stringify(chars), 'chars.json');
 					}
+					
+					showCharsEnabled();
 				};
 			}
 			else if(file.name === 'chars.json')
 			{
 				let reader = new FileReader();
 				reader.readAsText(file, 'UTF-8');
-				reader.onload = function() {chars = JSON.parse(this.result)};
-				document.getElementById('chars').style['background-color'] = 'green';
-				document.getElementById('handler').disabled = false;
-				document.getElementById('map').disabled = false;
-				document.getElementById('load').disabled = false;
+				reader.onload = function() {
+					chars = JSON.parse(this.result);
+					showCharsEnabled();
+				};
 			}
 			else if(file.name.includes('.json'))
 			{
@@ -432,6 +469,9 @@ function upload(e)
 
 function handleData()
 {
+	let mapDialogue = {};
+	let text = '';
+	
 	for(let filename in stack)
 	{
 		filename = curateName(filename);
@@ -450,7 +490,12 @@ function handleData()
 				allowSplicing = !!patch.allowManualEditing;
 			}
 			else
-				download(extractDialogue(patch, isDatabase), filename + '.txt');
+			{
+				if(settings.downloadBatchedText)
+					mapDialogue[filename] = extractDialogue(patch, isDatabase);
+				else
+					download(extractDialogue(patch, isDatabase), filename + '.txt');
+			}
 		}
 		
 		if(hasData)
@@ -489,6 +534,49 @@ function handleData()
 		delete stack[filename + '.json'];
 		delete stack[filename + '.patch.json'];
 	}
+	
+	for(let map in mapDialogue)
+		text += "###########\n# " + map + " #\n###########\n" + mapDialogue[map] + '\n\n\n\n';
+	
+	if(text !== '')
+		download(text.trimStart().trimEnd(), 'dump.txt');
+}
+
+function downloadZipFile()
+{
+	zip.generateAsync({type: 'uint8array'}).then((blob) => {
+		let size = blob.length;
+		let unit = 'byte(s)';
+		let divisor;
+		
+		if(size >= (divisor = 1000000000))
+		{
+			size = Math.round(size / divisor);
+			unit = 'gigabyte(s)';
+		}
+		else if(size >= (divisor = 1000000))
+		{
+			size = Math.round(size / divisor);
+			unit = 'megabytes(s)';
+		}
+		else if(size >= (divisor = 1000))
+		{
+			size = Math.round(size / divisor);
+			unit = 'kilobytes(s)';
+		}
+		
+		console.log(`The size of the content you're downloading is around ${size} ${unit}.`);
+		download(blob, 'result.zip', true);
+		zip = new JSZip();
+	});
+}
+
+function showCharsEnabled()
+{
+	document.getElementById('chars').style['background-color'] = 'green';
+	document.getElementById('handler').disabled = false;
+	document.getElementById('map').disabled = false;
+	document.getElementById('load').disabled = false;
 }
 
 function curateName(name)
@@ -535,6 +623,35 @@ function transpose(patch, offset, dictionary, text)
 		
 		for(let i = 0; i < text.length; i++)
 			patch.dialogue[i + offset].lines = text[i];
+		
+		return patch;
+	}
+}
+
+// Transpose the new patch format.
+function transposeDynamic(patch, offset, dictionary, text, other)
+{
+	if(patch)
+	{
+		if(dictionary)
+			for(let key in dictionary)
+				text = text.split(key + ':').join(dictionary[key] + ':');
+		
+		text = text.replace(/\n+/g, '\n');
+		text = text.split('\n');
+		
+		offset = offset || 0;
+		
+		for(let i = 0; i < text.length; i++)
+			patch.dialogue[i + offset].patch = text[i];
+		
+		if(patch.other)
+		{
+			other = other.replace(/\n+/g, '\n');
+			
+			for(let i = 0; i < patch.other.length; i++)
+				patch.other[i].patch = other[i];
+		}
 		
 		return patch;
 	}

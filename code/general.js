@@ -50,7 +50,8 @@ let settings = {
 	downloadBatchedText: true,
 	manualPortraits: false,
 	deleteFalseInPortraits: true,
-	downloadAsZip: true
+	downloadAsZip: true,
+	suspendErrors: false
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
 let scheduler = new Scheduler();
@@ -364,7 +365,7 @@ function getPatchedCommands(entry)
 	let mainIndent = entry.indent || 0;
 	let prm = entry.parameters || [];
 	
-	if(length > 4)
+	if(length > 4 && !settings.suspendErrors)
 	{
 		console.error(entry);
 		throw "Error: The amount of lines for this entry is greater than 4!";

@@ -141,7 +141,7 @@ function splitLine(line, portrait = false, trim = true)
 					
 					// You have to make sure that \\n[#] is counted because of the backslash rule, otherwise, it skews line endings.
 					if(action === 'n')
-						length += chars[brackets.substring(1, brackets.length-1)].length;
+						length += chars[parseInt(brackets.substring(1, brackets.length-1))].length;
 					
 					index += 2 + brackets.length;
 				}

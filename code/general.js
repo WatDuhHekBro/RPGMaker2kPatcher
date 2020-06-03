@@ -51,7 +51,8 @@ let settings = {
 	manualPortraits: false,
 	deleteFalseInPortraits: true,
 	downloadAsZip: true,
-	suspendErrors: false
+	suspendErrors: false,
+	convertDataToPatches: false
 };
 let text = ''; // copy(text) to copy the text-form dialogue.
 let scheduler = new Scheduler();
@@ -167,7 +168,7 @@ function generatePatchEvent(patch, cmd, path, other)
 	// A B --> [A,B]
 	// A B B --> [A,B,B]
 	// A B A --> [A,B] [A]
-	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0, mainIndent = 0, portrait = true; i < len; i++)
+	for(let i = 0, len = cmd.length, last = null, lines = [], indent = [], params = [], hasIndent = false, hasParams = false, start = 0, mainIndent = 0, portrait = false; i < len; i++)
 	{
 		let code = cmd[i][0];
 		let ind = cmd[i][1];
@@ -232,7 +233,7 @@ function generatePatchEvent(patch, cmd, path, other)
 			if(prm.length != 0)
 				hasParams = true;
 		}
-		// The "Change Face Graphic" command seems to automatically determine the size of the text box. And I think that having an empty string removes any face graphic.
+		// The "Change Face Graphic" command seems to automatically determine the size of the text box. And I think that having an empty string removes any face graphic. And the portrait setting should be false by default since you only need to show it if there's a call for a face graphic.
 		else if(code === 10130)
 			portrait = str !== '';
 		else if(other && ((settings.hasOther && str) || (filter && filter.includes(code))))
@@ -520,6 +521,13 @@ function handleData()
 						download(JSON.stringify(data), 'database.json');
 					else
 						download(JSON.stringify(data), filename + '.json');
+				}
+				else if(settings.convertDataToPatches)
+				{
+					if(isDatabase)
+						download(JSON.stringify(generatePatchDatabase(data)), 'database.patch.json');
+					else
+						download(JSON.stringify(generatePatchMap(data)), filename + '.patch.json');
 				}
 				else
 				{

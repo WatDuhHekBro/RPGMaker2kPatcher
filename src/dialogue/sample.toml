@@ -1,0 +1,5 @@
+test1 = '''\c[13]Rothaarige Frau\c[0]:\s[6] S...\.Seldan...\.
+Glaube mir,\....es ist besser so
+für mich...\.\.\^'''
+is_portrait = true
+test2 = '''\c[13]Rothaarige Frau\c[0]:\s[6] S...\.Seldan...\.Glaube mir,\....es ist besser so für mich...\.\.\^'''

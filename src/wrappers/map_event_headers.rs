@@ -1,13 +1,13 @@
-use crate::structs::map::LcfMapUnitHeader;
+use crate::structs::map::LcfMapUnitEventHeader;
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
 
 #[derive(Debug)]
-pub struct MapMainWrapper(Vec<LcfMapUnitHeader>);
+pub struct MapEventHeadersWrapper(Vec<LcfMapUnitEventHeader>);
 
-impl BinRead for MapMainWrapper {
+impl BinRead for MapEventHeadersWrapper {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -18,20 +18,20 @@ impl BinRead for MapMainWrapper {
         let mut headers = vec![];
 
         loop {
-            let header = <LcfMapUnitHeader>::read_options(reader, endian, ())?;
+            let header = <LcfMapUnitEventHeader>::read_options(reader, endian, ())?;
 
-            if let LcfMapUnitHeader::End = header {
+            if let LcfMapUnitEventHeader::End = header {
                 break;
             } else {
                 headers.push(header);
             }
         }
 
-        Ok(MapMainWrapper(headers))
+        Ok(MapEventHeadersWrapper(headers))
     }
 }
 
-impl BinWrite for MapMainWrapper {
+impl BinWrite for MapEventHeadersWrapper {
     type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
@@ -46,15 +46,15 @@ impl BinWrite for MapMainWrapper {
     }
 }
 
-impl std::ops::Deref for MapMainWrapper {
-    type Target = Vec<LcfMapUnitHeader>;
+impl std::ops::Deref for MapEventHeadersWrapper {
+    type Target = Vec<LcfMapUnitEventHeader>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl std::ops::DerefMut for MapMainWrapper {
+impl std::ops::DerefMut for MapEventHeadersWrapper {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

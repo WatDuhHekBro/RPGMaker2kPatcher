@@ -1,5 +1,5 @@
 pub mod dynamic_integer;
-pub mod events_wrapper;
+pub mod null_terminated_list;
 pub mod pascal_string;
 pub mod u8_array;
 

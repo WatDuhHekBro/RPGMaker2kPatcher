@@ -1,15 +1,18 @@
-// Wrapper: Vec<LcfMapUnitHeader> (null-terminated)
+// Vec<LcfMapUnitPageHeader> (null-terminated)
+// -----
+// Copy of map_event_headers without the Pages recursion
+// TODO: Figure out a smarter way for less redundancy
 
-use crate::structs::map::LcfMapUnitHeader;
+use crate::structs::map::LcfMapUnitPageHeader;
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
 
 #[derive(Debug)]
-pub struct MapMainWrapper(pub Vec<LcfMapUnitHeader>);
+pub struct MapPageHeadersWrapper(Vec<LcfMapUnitPageHeader>);
 
-impl BinRead for MapMainWrapper {
+impl BinRead for MapPageHeadersWrapper {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -20,20 +23,20 @@ impl BinRead for MapMainWrapper {
         let mut headers = vec![];
 
         loop {
-            let header = <LcfMapUnitHeader>::read_options(reader, endian, ())?;
+            let header = <LcfMapUnitPageHeader>::read_options(reader, endian, ())?;
 
-            if let LcfMapUnitHeader::End = header {
+            if let LcfMapUnitPageHeader::End = header {
                 break;
             } else {
                 headers.push(header);
             }
         }
 
-        Ok(MapMainWrapper(headers))
+        Ok(MapPageHeadersWrapper(headers))
     }
 }
 
-impl BinWrite for MapMainWrapper {
+impl BinWrite for MapPageHeadersWrapper {
     type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
@@ -48,15 +51,15 @@ impl BinWrite for MapMainWrapper {
     }
 }
 
-impl std::ops::Deref for MapMainWrapper {
-    type Target = Vec<LcfMapUnitHeader>;
+impl std::ops::Deref for MapPageHeadersWrapper {
+    type Target = Vec<LcfMapUnitPageHeader>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl std::ops::DerefMut for MapMainWrapper {
+impl std::ops::DerefMut for MapPageHeadersWrapper {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

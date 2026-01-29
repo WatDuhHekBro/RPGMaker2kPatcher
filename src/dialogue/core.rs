@@ -1,42 +1,10 @@
-use crossterm::{
-    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-    ExecutableCommand,
-};
 use std::io::{stdout, Result, Stdout};
-
-pub fn main() -> Result<()> {
-    stdout()
-        .execute(SetForegroundColor(Color::White))?
-        .execute(SetBackgroundColor(Color::Blue))?
-        .execute(Print("Styled text here.   "))?
-        .execute(ResetColor)?;
-    stdout()
-        .execute(SetForegroundColor(Color::White))?
-        .execute(SetBackgroundColor(Color::Blue))?
-        .execute(Print("Styled text here.   \n"))?
-        .execute(ResetColor)?;
-
-    do_dialogue_testing();
-
-    Ok(())
-}
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DataMap {
     test1: String,
     test2: String,
-}
-
-fn do_dialogue_testing() {
-    let map = toml::from_str::<DataMap>(include_str!("sample.toml")).unwrap();
-    let textbox = Dialogue::from(&map.test2);
-    println!(
-        "{textbox:?}\n\n{}\n\n{}",
-        textbox.render_plain(),
-        toml::to_string(&map).unwrap()
-    );
 }
 
 // https://rpgmaker.net/tutorials/43/

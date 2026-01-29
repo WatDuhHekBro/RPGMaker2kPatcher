@@ -16,6 +16,10 @@ impl PascalString {
     pub fn from<S: Into<String>>(string: S) -> PascalString {
         PascalString(string.into())
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl BinRead for PascalString {
@@ -176,5 +180,27 @@ mod tests {
         let mut writer = Cursor::new(Vec::<u8>::new());
         writer.write_le(&data).unwrap();
         assert_eq!(writer.into_inner(), b"\x81\x00Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed a elementum lorem. Curabitur auctor, justo nec fringilla porttitor.");
+    }
+
+    #[test]
+    fn is_empty_should_succeed() {
+        let mut reader = Cursor::new(b"\x00");
+        let data = TestStructure::read(&mut reader).unwrap();
+        assert_eq!(data.0.is_empty(), true);
+    }
+
+    #[test]
+    fn is_empty_should_fail() {
+        let mut reader = Cursor::new(b"\x05Hello");
+        let data = TestStructure::read(&mut reader).unwrap();
+        assert_eq!(data.0.is_empty(), false);
+    }
+
+    #[test]
+    fn write_empty_success() {
+        let data = TestStructure(PascalString::from(""));
+        let mut writer = Cursor::new(Vec::<u8>::new());
+        writer.write_le(&data).unwrap();
+        assert_eq!(writer.into_inner(), b"\x00");
     }
 }

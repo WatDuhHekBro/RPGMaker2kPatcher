@@ -1,3 +1,5 @@
+// Vec<LcfMapUnitEventHeader> (null-terminated)
+
 use crate::structs::map::LcfMapUnitEventHeader;
 use binrw::{
     io::{Read, Seek, Write},

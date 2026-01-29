@@ -3,29 +3,12 @@ mod structs; // Main structures
 mod types; // Custom data types
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
+use std::fs::File;
 use crate::structs::{patch::Dialogue, LcfMapUnit, LegacyPatch, Patch};
 use binrw::{
     io::{Cursor, Seek, Write},
     BinRead, BinWrite, BinWriterExt,
 };
-//use raster::{editor, BlendMode, Color, Image, PositionMode};
-
-use image::{imageops, DynamicImage};
-
-fn h_concat(mut base: DynamicImage, imgs: &[DynamicImage]) -> DynamicImage {
-    for img in imgs {
-        imageops::overlay(&mut base, img, 0, 0);
-    }
-    base
-}
-
-fn maintest() {
-    let base: DynamicImage = image::open("font.png").unwrap();
-
-    h_concat(base, &[image::open("font.png").unwrap()])
-        .save("yeet.png")
-        .unwrap();
-}
 
 fn main() {
     /*let a = Patch {
@@ -43,43 +26,19 @@ fn main() {
 
     //return crate::dialogue::core::main().unwrap();
 
-    // Image Processing
-    /*let font = raster::open("font.png").unwrap();
-    let mut canvas = Image::blank(150, 100);
-    editor::fill(&mut canvas, Color::rgba(0, 0, 0, 0)).unwrap();
-    let result = editor::blend(
-        &canvas,
-        &font,
-        BlendMode::Normal,
-        1.0,
-        PositionMode::Center,
-        0,
-        0,
-    )
-    .unwrap();
-    return raster::save(&result, "yeet.png").unwrap();*/
-
-    /*use image::{imageops::overlay, GenericImage, GenericImageView, ImageBuffer, RgbImage};
-
-    // Construct a new RGB ImageBuffer with the specified width and height.
-    let mut img1: RgbImage = ImageBuffer::new(512, 512);
-    let img2 = image::open("yeet.png").unwrap();
-    //let view = img2.view(0, 0, 10, 10);
-    let img2 = img2.as_rgb8().unwrap();
-    overlay(&mut img1, img2, 0, 0);
-    img1.save("yeet.png").unwrap();*/
-    maintest();
-    return;
-
     let mut reader = Cursor::new(include_bytes!(
         "/home/watduhhekbro/external/workspace/Map0134.lmu"
     ));
     let servers = LcfMapUnit::read(&mut reader).unwrap();
-    println!("{servers:?}\n");
+    //println!("{servers:?}\n");
+    println!("{:?}\n", servers.headers.0);
 
     let mut writer = Cursor::new(Vec::<u8>::new());
     writer.write_be(&servers).unwrap();
-    println!("{:02X?}", writer.into_inner());
+    //println!("{:02X?}", writer.into_inner());
+    // Output binary file, TEST whether or not binary identical
+    let mut output_file = File::create_new("/home/watduhhekbro/external/workspace/Map0134-gen.lmu").unwrap();
+    output_file.write_be(&servers).unwrap();
 
     // stream & map_stream test
     let mut out = Cursor::new(vec![]);
@@ -94,7 +53,7 @@ fn main() {
     }
     .write(&mut out)
     .unwrap();
-    println!("\n{:?}", out.into_inner());
+    println!("\nHexdump = {:?}", out.into_inner());
 }
 
 // The only example use of map_stream and stream is from a unit test

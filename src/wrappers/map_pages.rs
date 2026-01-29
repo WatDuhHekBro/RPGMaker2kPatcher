@@ -1,15 +1,18 @@
-// Wrapper: Byte Count (DynamicInteger), # of Events Count (DynamicInteger), Vec<LcfMapUnitEvent>
+// Wrapper: Byte Count (DynamicInteger), # of Pages Count (DynamicInteger), Vec<LcfMapUnitPage>
+// -----
+// Copy of map_events without the Events recursion
+// TODO: Figure out a smarter way for less redundancy
 
-use crate::{structs::map::LcfMapUnitEvent, types::DynamicInteger};
+use crate::{structs::map::LcfMapUnitPage, types::DynamicInteger};
 use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
 };
 
 #[derive(Debug)]
-pub struct MapEventsWrapper(Vec<LcfMapUnitEvent>);
+pub struct MapPagesWrapper(Vec<LcfMapUnitPage>);
 
-impl BinRead for MapEventsWrapper {
+impl BinRead for MapPagesWrapper {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -28,22 +31,22 @@ impl BinRead for MapEventsWrapper {
 
         // This entire section will now operate on this section of bytes
         let mut reader = Cursor::new(&bytes);
-        let mut events = Vec::<LcfMapUnitEvent>::new();
+        let mut pages = Vec::<LcfMapUnitPage>::new();
 
         // The first byte of the sub-section will be the event count.
         // Do not put it before the loop to gather the sub-section.
-        let event_count = <DynamicInteger>::read_options(&mut reader, endian, ())?;
+        let page_count = <DynamicInteger>::read_options(&mut reader, endian, ())?;
 
-        for _ in 0..*event_count {
-            let event = LcfMapUnitEvent::read(&mut reader).unwrap();
-            events.push(event);
+        for _ in 0..*page_count {
+            let page = LcfMapUnitPage::read(&mut reader).unwrap();
+            pages.push(page);
         }
 
-        Ok(MapEventsWrapper(events))
+        Ok(MapPagesWrapper(pages))
     }
 }
 
-impl BinWrite for MapEventsWrapper {
+impl BinWrite for MapPagesWrapper {
     type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
@@ -72,15 +75,15 @@ impl BinWrite for MapEventsWrapper {
     }
 }
 
-impl std::ops::Deref for MapEventsWrapper {
-    type Target = Vec<LcfMapUnitEvent>;
+impl std::ops::Deref for MapPagesWrapper {
+    type Target = Vec<LcfMapUnitPage>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl std::ops::DerefMut for MapEventsWrapper {
+impl std::ops::DerefMut for MapPagesWrapper {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

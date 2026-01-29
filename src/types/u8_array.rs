@@ -1,3 +1,5 @@
+// A dynamic integer (count) followed by # of bytes as a u8 array
+
 use crate::types::DynamicInteger;
 use binrw::{
     io::{Read, Seek, Write},

@@ -3,7 +3,12 @@
 // Copy of map_event_headers without the Pages recursion
 // TODO: Figure out a smarter way for less redundancy
 
-use crate::structs::map::LcfMapUnitPageHeader;
+use crate::{
+    structs::map::{LcfMapUnitPageHeader, LcfMapUnitPageHeaderGeneric},
+    types::{DynamicInteger, PascalString, U8Array},
+    wrappers::MapCommandsWrapper,
+    ERROR_BINRW_READ,
+};
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
@@ -23,12 +28,29 @@ impl BinRead for MapPageHeadersWrapper {
         let mut headers = vec![];
 
         loop {
-            let header = <LcfMapUnitPageHeader>::read_options(reader, endian, ())?;
+            // For some reason, "#[brw(magic = 51u8)]" doesn't seem to reroute the page header, so it looks like you'll need to sort this out.
+            //let header = LcfMapUnitPageHeader::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
+            let id = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
 
-            if let LcfMapUnitPageHeader::End = header {
+            if id.0 == 0 {
                 break;
+            } else if id.0 == 21 {
+                headers.push(LcfMapUnitPageHeader::Name(
+                    PascalString::read_options(reader, endian, ()).expect(ERROR_BINRW_READ),
+                ));
+            }
+            // 0x33 contains redundant byte count, immediately followed by 0x34 which contains the commands
+            // Wrapper: Byte Count Length (DynamicInteger) (DISCARD), Byte Count (DynamicInteger) (DISCARD), 0x34 (52)
+            // Byte Count (DynamicInteger), # of Pages Count (DynamicInteger), Vec<LcfMapUnitCommand> (null-terminated by a 4-set of zeroes)
+            else if id.0 == 51 {
+                headers.push(LcfMapUnitPageHeader::Commands(
+                    MapCommandsWrapper::read_options(reader, endian, ()).expect(ERROR_BINRW_READ),
+                ));
             } else {
-                headers.push(header);
+                headers.push(LcfMapUnitPageHeader::Generic(LcfMapUnitPageHeaderGeneric {
+                    id,
+                    value: U8Array::read_options(reader, endian, ()).expect(ERROR_BINRW_READ),
+                }));
             }
         }
 

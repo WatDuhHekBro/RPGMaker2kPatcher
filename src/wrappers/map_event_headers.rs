@@ -1,6 +1,10 @@
 // Vec<LcfMapUnitEventHeader> (null-terminated)
 
-use crate::structs::map::LcfMapUnitEventHeader;
+use crate::{
+    structs::map::LcfMapUnitEventHeader,
+    wrappers::{MapPageHeadersWrapper, MapPagesWrapper},
+    ERROR_BINRW_READ,
+};
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
@@ -8,6 +12,22 @@ use binrw::{
 
 #[derive(Debug)]
 pub struct MapEventHeadersWrapper(Vec<LcfMapUnitEventHeader>);
+
+impl MapEventHeadersWrapper {
+    pub fn get_pages(&self) -> Option<&MapPagesWrapper> {
+        for entry in &self.0 {
+            if let LcfMapUnitEventHeader::Pages(pages) = entry {
+                return Some(&pages);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_page(&self, id: i32) -> Option<&MapPageHeadersWrapper> {
+        self.get_pages().and_then(|pages| pages.get_page(id))
+    }
+}
 
 impl BinRead for MapEventHeadersWrapper {
     type Args<'a> = ();
@@ -20,7 +40,8 @@ impl BinRead for MapEventHeadersWrapper {
         let mut headers = vec![];
 
         loop {
-            let header = <LcfMapUnitEventHeader>::read_options(reader, endian, ())?;
+            let header =
+                LcfMapUnitEventHeader::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
 
             if let LcfMapUnitEventHeader::End = header {
                 break;

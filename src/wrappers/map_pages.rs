@@ -3,7 +3,10 @@
 // Copy of map_events without the Events recursion
 // TODO: Figure out a smarter way for less redundancy
 
-use crate::{structs::map::LcfMapUnitPage, types::DynamicInteger};
+use crate::{
+    structs::map::LcfMapUnitPage, types::DynamicInteger, wrappers::MapPageHeadersWrapper,
+    ERROR_BINRW_READ,
+};
 use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
@@ -11,6 +14,18 @@ use binrw::{
 
 #[derive(Debug)]
 pub struct MapPagesWrapper(Vec<LcfMapUnitPage>);
+
+impl MapPagesWrapper {
+    pub fn get_page(&self, id: i32) -> Option<&MapPageHeadersWrapper> {
+        for page in &self.0 {
+            if page.id.0 == id {
+                return Some(&page.headers);
+            }
+        }
+
+        None
+    }
+}
 
 impl BinRead for MapPagesWrapper {
     type Args<'a> = ();
@@ -22,10 +37,10 @@ impl BinRead for MapPagesWrapper {
     ) -> BinResult<Self> {
         // Unless you can read the amount of bytes of a struct, just operate on a separate pool of bytes
         let mut bytes = Vec::<u8>::new();
-        let byte_count = <DynamicInteger>::read_options(reader, endian, ())?;
+        let byte_count = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
 
         for _ in 0..*byte_count {
-            let byte = <u8>::read_options(reader, endian, ())?;
+            let byte = <u8>::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
             bytes.push(byte);
         }
 
@@ -35,7 +50,8 @@ impl BinRead for MapPagesWrapper {
 
         // The first byte of the sub-section will be the event count.
         // Do not put it before the loop to gather the sub-section.
-        let page_count = <DynamicInteger>::read_options(&mut reader, endian, ())?;
+        let page_count =
+            DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
 
         for _ in 0..*page_count {
             let page = LcfMapUnitPage::read(&mut reader).unwrap();

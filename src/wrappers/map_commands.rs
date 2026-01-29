@@ -3,7 +3,11 @@
 // Wrapper: Byte Count Length (DynamicInteger) (DISCARD), Byte Count (DynamicInteger) (DISCARD), 0x34 (52)
 // Byte Count (DynamicInteger), Vec<LcfMapUnitCommand> (null-terminated by a 4-set of zeroes)
 
-use crate::{structs::map::LcfMapUnitCommand, types::{DynamicInteger, DynamicIntegerArray, PascalString}};
+use crate::{
+    structs::map::LcfMapUnitCommand,
+    types::{DynamicInteger, DynamicIntegerArray, PascalString},
+    ERROR_BINRW_READ,
+};
 use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
@@ -20,16 +24,16 @@ impl BinRead for MapCommandsWrapper {
         endian: Endian,
         (): Self::Args<'_>,
     ) -> BinResult<Self> {
-        let _ = DynamicInteger::read_options(reader, endian, ())?; // 0x33 byte count length (DISCARD)
-        let _ = DynamicInteger::read_options(reader, endian, ())?; // 0x33 byte count (DISCARD)
-        let _ = DynamicInteger::read_options(reader, endian, ())?; // 0x34 identifier (DISCARD)
+        let _ = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ); // 0x33 byte count length (DISCARD)
+        let _ = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ); // 0x33 byte count (DISCARD)
+        let _ = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ); // 0x34 identifier (DISCARD)
 
         // Unless you can read the amount of bytes of a struct, just operate on a separate pool of bytes
         let mut bytes = Vec::<u8>::new();
-        let byte_count = DynamicInteger::read_options(reader, endian, ())?;
+        let byte_count = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
 
         for _ in 0..*byte_count {
-            let byte = <u8>::read_options(reader, endian, ())?;
+            let byte = <u8>::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
             bytes.push(byte);
         }
 
@@ -40,12 +44,20 @@ impl BinRead for MapCommandsWrapper {
         loop {
             // No idea why this doesn't work, so just read each field manually.
             //let command = LcfMapUnitCommand::read(&mut reader).unwrap();
-            let event = DynamicInteger::read_options(&mut reader, endian, ())?;
-            let indent = DynamicInteger::read_options(&mut reader, endian, ())?;
-            let text = PascalString::read_options(&mut reader, endian, ())?;
-            let parameters = DynamicIntegerArray::read_options(&mut reader, endian, ())?;
+            let event =
+                DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
+            let indent =
+                DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
+            let text = PascalString::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
+            let parameters =
+                DynamicIntegerArray::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
 
-            let command = LcfMapUnitCommand {event, indent, text, parameters};
+            let command = LcfMapUnitCommand {
+                event,
+                indent,
+                text,
+                parameters,
+            };
 
             if command.is_terminating() {
                 break;

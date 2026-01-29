@@ -115,7 +115,10 @@ mod tests {
         ]));
         let mut writer = Cursor::new(Vec::<u8>::new());
         writer.write_le(&data).unwrap();
-        assert_eq!(writer.into_inner(), b"\x07\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04");
+        assert_eq!(
+            writer.into_inner(),
+            b"\x07\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04"
+        );
     }
 
     #[test]
@@ -132,7 +135,10 @@ mod tests {
         ]));
         let mut writer = Cursor::new(Vec::<u8>::new());
         writer.write_le(&data).unwrap();
-        assert_eq!(writer.into_inner(), b"\x08\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04\x69");
+        assert_eq!(
+            writer.into_inner(),
+            b"\x08\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04\x69"
+        );
     }
 
     #[test]

@@ -1,5 +1,5 @@
-use std::io::{stdout, Result, Stdout};
 use serde::{Deserialize, Serialize};
+use std::io::{stdout, Result, Stdout};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DataMap {

@@ -1,6 +1,9 @@
 // Wrapper: Byte Count (DynamicInteger), # of Events Count (DynamicInteger), Vec<LcfMapUnitEvent>
 
-use crate::{structs::map::LcfMapUnitEvent, types::DynamicInteger};
+use crate::{
+    structs::map::LcfMapUnitEvent, types::DynamicInteger, wrappers::MapEventHeadersWrapper,
+    ERROR_BINRW_READ,
+};
 use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
@@ -8,6 +11,18 @@ use binrw::{
 
 #[derive(Debug)]
 pub struct MapEventsWrapper(Vec<LcfMapUnitEvent>);
+
+impl MapEventsWrapper {
+    pub fn get_event(&self, id: i32) -> Option<&MapEventHeadersWrapper> {
+        for event in &self.0 {
+            if event.id.0 == id {
+                return Some(&event.headers);
+            }
+        }
+
+        None
+    }
+}
 
 impl BinRead for MapEventsWrapper {
     type Args<'a> = ();
@@ -19,10 +34,10 @@ impl BinRead for MapEventsWrapper {
     ) -> BinResult<Self> {
         // Unless you can read the amount of bytes of a struct, just operate on a separate pool of bytes
         let mut bytes = Vec::<u8>::new();
-        let byte_count = <DynamicInteger>::read_options(reader, endian, ())?;
+        let byte_count = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
 
         for _ in 0..*byte_count {
-            let byte = <u8>::read_options(reader, endian, ())?;
+            let byte = <u8>::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
             bytes.push(byte);
         }
 
@@ -32,10 +47,11 @@ impl BinRead for MapEventsWrapper {
 
         // The first byte of the sub-section will be the event count.
         // Do not put it before the loop to gather the sub-section.
-        let event_count = <DynamicInteger>::read_options(&mut reader, endian, ())?;
+        let event_count =
+            DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
 
         for _ in 0..*event_count {
-            let event = LcfMapUnitEvent::read(&mut reader).unwrap();
+            let event = LcfMapUnitEvent::read(&mut reader).expect(ERROR_BINRW_READ);
             events.push(event);
         }
 

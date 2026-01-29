@@ -15,7 +15,7 @@ Would the image processing and live TUI that you never got done be nice? Absolut
 
 ### Current Status
 
-For easier indexing, probably better to convert all those Vec's to HashMaps. Man...
+For easier indexing, probably better to convert all those Vec's to HashMaps. Man... But on second thought, the array guarantees the same structure, so it remains as close to the original binary as possible, so just use less efficient helper functions to loop through the arrays.
 
 And the `LcfMapUnitCommands` aren't showing up for some reason, they're remaining as `Generic` 51 and 52. UGH
 

@@ -80,19 +80,28 @@ impl BinWrite for MapCommandsWrapper {
         args: Self::Args<'_>,
     ) -> BinResult<()> {
         let mut subsection_writer = Cursor::new(Vec::<u8>::new());
-        // Write back the event count before writing the rest of the bytes
-        DynamicInteger(self.0.len().try_into().unwrap()).write_options(
-            &mut subsection_writer,
-            endian,
-            args,
-        )?;
-        // Write the rest of the bytes
+        // Write the initial command bytes
         subsection_writer.write_be(&self.0).unwrap();
+        // Add a null-terminating command set
+        0u32.write_options(&mut subsection_writer, endian, args)?;
+
+        // Then count the bytes for the main slice
         let bytes = subsection_writer.into_inner();
+        let bytes_count = DynamicInteger(bytes.len().try_into().unwrap());
         //println!("{:02X?}", bytes);
 
-        // Then write the sub-section into the main section of bytes
-        DynamicInteger(bytes.len().try_into().unwrap()).write_options(writer, endian, args)?;
+        // First write 0x33 as the redundant byte count ID
+        // NOTE: Actually you DON'T, it's already there from the binrw magic number.
+        //0x33u8.write_options(writer, endian, args)?;
+        // Then write the size of the bytes count (I know)
+        bytes_count.size().write_options(writer, endian, args)?;
+        // Then the byte count (I know)
+        bytes_count.write_options(writer, endian, args)?;
+        // Then 0x34
+        0x34u8.write_options(writer, endian, args)?;
+        // Then the byte count again (Yep... I know)
+        bytes_count.write_options(writer, endian, args)?;
+        // Then finally write the sub-section into the main section of bytes
         bytes.write_options(writer, endian, args)?;
 
         Ok(())

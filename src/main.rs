@@ -35,9 +35,9 @@ fn main() {
         "/home/watduhhekbro/external/workspace/Map0134.lmu"
     ));
     let servers = LcfMapUnit::read(&mut reader).unwrap();
-    //println!("{servers:?}\n");
-    let blob = servers.get_event(53).unwrap().get_page(1).unwrap();
-    println!("{:?}\n", blob);
+    println!("{servers:?}\n");
+    //let blob = servers.get_event(53).unwrap().get_page(1).unwrap();
+    //println!("{:?}\n", blob);
 
     let mut writer = Cursor::new(Vec::<u8>::new());
     writer.write_be(&servers).unwrap();

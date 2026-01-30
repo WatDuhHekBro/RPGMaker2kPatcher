@@ -17,7 +17,11 @@ Would the image processing and live TUI that you never got done be nice? Absolut
 
 For easier indexing, probably better to convert all those Vec's to HashMaps. Man... But on second thought, the array guarantees the same structure, so it remains as close to the original binary as possible, so just use less efficient helper functions to loop through the arrays.
 
-**Right now:** You were working on custom-formatted TOML representations & patches. And sample database TOML.
+-----
+
+**Right now:** You were testing out TOML bidi to see if it stands up properly, serde(flatten) doesn't work on custom wrapper structs, so is it possible to manually flatten wrappers into the `LcfMapUnit`? No need for two layers if so.
+
+You were working on custom-formatted TOML representations & patches. And sample database TOML.
 
 - `rpgmaker2kpatcher generatePatches`
 - `.env` file for easy runtime config

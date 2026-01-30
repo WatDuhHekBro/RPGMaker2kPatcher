@@ -1,4 +1,4 @@
 # Serialized only for easier debugging, not used by the program
 
 [header]
-type = 'LcfDataBase'
+type = '''LcfDataBase'''

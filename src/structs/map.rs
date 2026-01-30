@@ -1,6 +1,6 @@
 use crate::{
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
-    util::{generate_toml_patch, generate_toml_representation},
+    util::{generate_toml_map, generate_toml_patch},
     wrappers::{
         MapCommandsWrapper, MapEventHeadersWrapper, MapEventsWrapper, MapMainWrapper,
         MapPageHeadersWrapper, MapPagesWrapper,
@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 #[brw(big, magic = b"\x0ALcfMapUnit")]
 pub struct LcfMapUnit {
+    #[serde(flatten)]
     pub headers: MapMainWrapper, // Wrapper: Vec<LcfMapUnitHeader> (null-terminated)
 }
 
@@ -27,8 +28,8 @@ impl LcfMapUnit {
         self.get_events().and_then(|events| events.get_event(id))
     }
 
-    pub fn generate_toml_representation(&self) -> String {
-        generate_toml_representation(&self)
+    pub fn generate_toml_map(&self) -> String {
+        generate_toml_map(&self)
     }
 
     pub fn generate_toml_patch(&self) -> String {

@@ -1,5 +1,8 @@
 # Seems to be the same patch format for both database and maps.
 
+# NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all, neither backslashes nor single quotes. So in order to be safe, you must use the multiline literals (triple single quotes)! That'll take care of any problems with apostrophes.
+# Multiline displays are still reserved for dialogue only, as other text never spans multiple lines.
+
 # Only dialogue has the triple single quotes, because it's treated differently (actually spanning multiple commands)
 [[dialogue]]
 event = 32
@@ -13,6 +16,7 @@ original = '''
 Glaube mir,\....es ist besser so 
 für mich...\.\.\^
 '''
+# NOTE: Just in case the original has an empty line (meaning an extra command), it'll display here as an extra newline. Leave that there. Only trim off the first/last newlines (be exact, do NOT use any trim() commands).
 patched = '''
 \c[13]Red-Haired Woman\c[0]:\s[6] S...\. Seldan...\.
 It's...\. better this way...\.\.\^
@@ -40,8 +44,8 @@ These...\. endless battles...\.\.\^
 event = 84
 page = 1
 command = 5
-original = 'Auf in die Arena!/Moment, noch nicht!'
-patched = 'All set!/Wait, not yet!'
+original = '''Auf in die Arena!/Moment, noch nicht!'''
+patched = '''All set!/Wait, not yet!'''
 
 # Generic insert function
 [[insert]]
@@ -49,15 +53,15 @@ event = 1
 page = 2
 command = 3
 index = 3 # Optional specifier for arbitrary operations
-patched = 'test-output'
+patched = '''test-output'''
 
 # Generic replace function
 [[replace]]
 event = 1
 page = 2
 command = 3
-original = 'test-input'
-patched = 'test-output'
+original = '''test-input'''
+patched = '''test-output'''
 
 # Generic delete function
 [[delete]]

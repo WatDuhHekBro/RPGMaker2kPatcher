@@ -1,16 +1,18 @@
 use crate::{
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
+    util::{generate_toml_patch, generate_toml_representation},
     wrappers::{
         MapCommandsWrapper, MapEventHeadersWrapper, MapEventsWrapper, MapMainWrapper,
         MapPageHeadersWrapper, MapPagesWrapper,
     },
 };
 use binrw::binrw;
+use serde::{Deserialize, Serialize};
 
-// Make sure to place this #[derive(Debug)] below #[binrw], or it'll throw errors for temporary fields.
+// Make sure to place this #[derive(Debug, Deserialize, Serialize)] below #[binrw], or it'll throw errors for temporary fields.
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[brw(big, magic = b"\x0ALcfMapUnit")]
 pub struct LcfMapUnit {
     pub headers: MapMainWrapper, // Wrapper: Vec<LcfMapUnitHeader> (null-terminated)
@@ -24,10 +26,18 @@ impl LcfMapUnit {
     pub fn get_event(&self, id: i32) -> Option<&MapEventHeadersWrapper> {
         self.get_events().and_then(|events| events.get_event(id))
     }
+
+    pub fn generate_toml_representation(&self) -> String {
+        generate_toml_representation(&self)
+    }
+
+    pub fn generate_toml_patch(&self) -> String {
+        generate_toml_patch(&self)
+    }
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum LcfMapUnitHeader {
     // Stop if the next byte read is 0x00, that indicates the end.
     #[brw(magic = 0u8)]
@@ -40,14 +50,14 @@ pub enum LcfMapUnitHeader {
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LcfMapUnitHeaderGeneric {
     pub id: DynamicInteger,
     pub value: U8Array,
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[brw(big)]
 pub struct LcfMapUnitEvent {
     pub id: DynamicInteger,
@@ -55,7 +65,7 @@ pub struct LcfMapUnitEvent {
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum LcfMapUnitEventHeader {
     // Stop if the next byte read is 0x00, that indicates the end.
     #[brw(magic = 0u8)]
@@ -68,14 +78,14 @@ pub enum LcfMapUnitEventHeader {
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LcfMapUnitEventHeaderGeneric {
     pub id: DynamicInteger,
     pub value: U8Array,
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[brw(big)]
 pub struct LcfMapUnitPage {
     pub id: DynamicInteger,
@@ -83,7 +93,7 @@ pub struct LcfMapUnitPage {
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum LcfMapUnitPageHeader {
     // Stop if the next byte read is 0x00, that indicates the end.
     #[brw(magic = 0u8)]
@@ -99,14 +109,14 @@ pub enum LcfMapUnitPageHeader {
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LcfMapUnitPageHeaderGeneric {
     pub id: DynamicInteger,
     pub value: U8Array,
 }
 
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[brw(big)]
 pub struct LcfMapUnitCommand {
     pub event: DynamicInteger,           // 1st

@@ -13,9 +13,10 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct MapPageHeadersWrapper(Vec<LcfMapUnitPageHeader>);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MapPageHeadersWrapper(pub Vec<LcfMapUnitPageHeader>);
 
 impl BinRead for MapPageHeadersWrapper {
     type Args<'a> = ();

@@ -5,8 +5,10 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
+#[derive(Deserialize, Serialize)]
 pub struct U8Array(pub Vec<u8>);
 
 impl BinRead for U8Array {
@@ -56,6 +58,12 @@ impl fmt::Debug for U8Array {
     }
 }
 
+impl fmt::Display for U8Array {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{:?}", self.0)
+    }
+}
+
 impl std::ops::Deref for U8Array {
     type Target = Vec<u8>;
 
@@ -92,5 +100,12 @@ mod tests {
         let mut writer = Cursor::new(Vec::<u8>::new());
         writer.write_le(&data).unwrap();
         assert_eq!(writer.into_inner(), b"\x06Yeetus");
+    }
+
+    #[test]
+    fn can_be_stringified() {
+        let mut reader = Cursor::new(b"\x05Hello");
+        let data = TestStructure::read(&mut reader).unwrap();
+        assert_eq!(format!("{:?}", *data.0), "[72, 101, 108, 108, 111]");
     }
 }

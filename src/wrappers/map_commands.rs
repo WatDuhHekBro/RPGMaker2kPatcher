@@ -12,9 +12,10 @@ use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct MapCommandsWrapper(Vec<LcfMapUnitCommand>);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MapCommandsWrapper(pub Vec<LcfMapUnitCommand>);
 
 impl BinRead for MapCommandsWrapper {
     type Args<'a> = ();

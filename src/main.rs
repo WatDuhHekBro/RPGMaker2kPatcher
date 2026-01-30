@@ -1,6 +1,7 @@
 mod dialogue; // Dialogue line parsing modules
 mod structs; // Main structures
 mod types; // Custom data types
+mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
 use crate::structs::{patch::Dialogue, LcfMapUnit, LegacyPatch, Patch};
@@ -8,7 +9,8 @@ use binrw::{
     io::{Cursor, Seek, Write},
     BinRead, BinWrite, BinWriterExt,
 };
-use std::fs::File;
+use dotenvy::dotenv;
+use std::fs::{self, File};
 
 // The reason this error is thrown in every potential line instead of propagating upwards via "?" is because
 // if you used "?" for all of the DynamicInteger::read()'s, you'll only see the error thrown in your main function.
@@ -16,6 +18,8 @@ use std::fs::File;
 pub const ERROR_BINRW_READ: &str = "Binary read failed!";
 
 fn main() {
+    dotenv().ok();
+
     /*let a = Patch {
         dialogue: vec![Dialogue {
             event: 1,
@@ -34,15 +38,19 @@ fn main() {
     let mut reader = Cursor::new(include_bytes!(
         "/home/watduhhekbro/external/workspace/Map0134.lmu"
     ));
-    let servers = LcfMapUnit::read(&mut reader).unwrap();
-    println!("{servers:?}\n");
-    //let blob = servers.get_event(53).unwrap().get_page(1).unwrap();
+    let map = LcfMapUnit::read(&mut reader).unwrap();
+    println!("{map:?}\n");
+    //let blob = map.get_event(53).unwrap().get_page(1).unwrap();
     //println!("{:?}\n", blob);
+    //fs::write("test/test.toml", toml::to_string(&map).unwrap()).unwrap();
+    //fs::write("test/test.json", serde_json::to_string_pretty(&map).unwrap()).unwrap();
+    fs::write("test.toml", map.generate_toml_representation()).unwrap();
 
     let mut writer = Cursor::new(Vec::<u8>::new());
-    writer.write_be(&servers).unwrap();
+    writer.write_be(&map).unwrap();
     //println!("{:02X?}", writer.into_inner());
+    fs::remove_file("/home/watduhhekbro/external/workspace/Map0134-gen.lmu").ok();
     let mut output_file =
-        File::create_new("/home/watduhhekbro/external/workspace/Map0134-gen.lmu").unwrap();
-    output_file.write_be(&servers).unwrap();
+        File::create("/home/watduhhekbro/external/workspace/Map0134-gen.lmu").unwrap();
+    output_file.write_be(&map).unwrap();
 }

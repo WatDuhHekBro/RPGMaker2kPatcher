@@ -5,8 +5,9 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MapMainWrapper(pub Vec<LcfMapUnitHeader>);
 
 impl MapMainWrapper {

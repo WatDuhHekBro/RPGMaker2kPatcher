@@ -9,9 +9,10 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct MapEventHeadersWrapper(Vec<LcfMapUnitEventHeader>);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MapEventHeadersWrapper(pub Vec<LcfMapUnitEventHeader>);
 
 impl MapEventHeadersWrapper {
     pub fn get_pages(&self) -> Option<&MapPagesWrapper> {

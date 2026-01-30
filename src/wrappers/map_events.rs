@@ -8,9 +8,10 @@ use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct MapEventsWrapper(Vec<LcfMapUnitEvent>);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MapEventsWrapper(pub Vec<LcfMapUnitEvent>);
 
 impl MapEventsWrapper {
     pub fn get_event(&self, id: i32) -> Option<&MapEventHeadersWrapper> {

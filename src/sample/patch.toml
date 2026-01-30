@@ -1,0 +1,68 @@
+# Seems to be the same patch format for both database and maps.
+
+# Only dialogue has the triple single quotes, because it's treated differently (actually spanning multiple commands)
+[[dialogue]]
+event = 32
+page = 3
+command = 21
+#length = 3 # Redundant if the original is left expanded
+# If you want the cleaned up version of either, write a program to extract it.
+is_portrait = true
+original = '''
+\c[13]Rothaarige Frau\c[0]:\s[6] S...\.Seldan...\.
+Glaube mir,\....es ist besser so 
+für mich...\.\.\^
+'''
+patched = '''
+\c[13]Red-Haired Woman\c[0]:\s[6] S...\. Seldan...\.
+It's...\. better this way...\.\.\^
+'''
+
+# (comments go here)
+[[dialogue]]
+event = 32
+page = 3
+command = 24
+#length = 3 # Redundant if the original is left expanded
+is_portrait = true
+original = '''
+\c[13]Rothaarige Frau\c[0]:\s[6] Diese ewigen 
+Kriege,\.... ich kann sie nicht mehr 
+sehen...\. Das...\. ständige Kämpfen...\.\.\^
+'''
+patched = '''
+\c[13]Red-Haired Woman\c[0]:\s[6] This eternal war...\.
+I can't bear to see it any longer...\.
+These...\. endless battles...\.\.\^
+'''
+
+[[other]]
+event = 84
+page = 1
+command = 5
+original = 'Auf in die Arena!/Moment, noch nicht!'
+patched = 'All set!/Wait, not yet!'
+
+# Generic insert function
+[[insert]]
+event = 1
+page = 2
+command = 3
+index = 3 # Optional specifier for arbitrary operations
+patched = 'test-output'
+
+# Generic replace function
+[[replace]]
+event = 1
+page = 2
+command = 3
+original = 'test-input'
+patched = 'test-output'
+
+# Generic delete function
+[[delete]]
+event = 1
+page = 2
+command = 3
+
+# ...somehow keep track of the order?

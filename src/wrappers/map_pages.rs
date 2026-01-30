@@ -11,9 +11,10 @@ use binrw::{
     io::{Cursor, Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct MapPagesWrapper(Vec<LcfMapUnitPage>);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MapPagesWrapper(pub Vec<LcfMapUnitPage>);
 
 impl MapPagesWrapper {
     pub fn get_page(&self, id: i32) -> Option<&MapPageHeadersWrapper> {

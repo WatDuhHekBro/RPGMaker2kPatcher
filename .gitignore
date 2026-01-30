@@ -1,1 +1,5 @@
 /target
+.env
+/test
+/test.toml
+/test.json

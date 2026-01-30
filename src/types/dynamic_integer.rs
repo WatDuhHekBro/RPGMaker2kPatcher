@@ -7,6 +7,7 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 // TODO: Option --> Result? unwrap in the class itself
@@ -100,6 +101,7 @@ fn write_dynamic_integer(number: i32) -> Vec<u8> {
 
 // TODO: Maybe find a way to pass args from DynamicInteger? (# of bytes as u8 (1-5))
 
+#[derive(Deserialize, Serialize)]
 pub struct DynamicInteger(pub i32);
 
 impl DynamicInteger {
@@ -348,5 +350,12 @@ mod tests {
         let mut reader = Cursor::new(b"\x80");
         let data = TestStructure::read(&mut reader).unwrap();
         assert_eq!(*data.0, 128);
+    }
+
+    #[test]
+    fn can_be_stringified() {
+        let mut reader = Cursor::new(b"\x81\xAF\x0A");
+        let data = TestStructure::read(&mut reader).unwrap();
+        assert_eq!(format!("{}", *data.0), "22410");
     }
 }

@@ -5,8 +5,10 @@ use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
+#[derive(Deserialize, Serialize)]
 pub struct DynamicIntegerArray(pub Vec<DynamicInteger>);
 
 impl DynamicIntegerArray {
@@ -57,6 +59,12 @@ impl BinWrite for DynamicIntegerArray {
 }
 
 impl fmt::Debug for DynamicIntegerArray {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{:?}", self.0)
+    }
+}
+
+impl fmt::Display for DynamicIntegerArray {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter, "{:?}", self.0)
     }
@@ -153,5 +161,12 @@ mod tests {
         let mut reader = Cursor::new(b"\x07\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04\x69");
         let data = TestStructure::read(&mut reader).unwrap();
         assert_eq!(data.0.is_empty(), false);
+    }
+
+    #[test]
+    fn can_be_stringified() {
+        let mut reader = Cursor::new(b"\x07\x00\x86\x0E\x86\x0E\x00\x06\xCE\x15\x04\x69");
+        let data = TestStructure::read(&mut reader).unwrap();
+        assert_eq!(format!("{}", data.0), "[0, 782, 782, 0, 6, 10005, 4]");
     }
 }

@@ -17,6 +17,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MapCommandsWrapper(pub Vec<LcfMapUnitCommand>);
 
+impl MapCommandsWrapper {
+    pub fn get_mut(&mut self) -> &mut Vec<LcfMapUnitCommand> {
+        &mut self.0
+    }
+}
+
 impl BinRead for MapCommandsWrapper {
     type Args<'a> = ();
 

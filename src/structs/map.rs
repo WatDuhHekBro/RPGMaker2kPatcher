@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::{
-    structs::Patch,
+    structs::{patch::Dialogue, Patch},
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
     util::{generate_toml_map, generate_toml_patch},
     wrappers::{
@@ -36,6 +38,76 @@ impl LcfMapUnit {
     pub fn generate_toml_patch(&self) -> String {
         let patch = Patch::generate_from_map(&self);
         generate_toml_patch(&patch)
+    }
+
+    pub fn apply_patch(&mut self, patch: &Patch) {
+        println!("{patch:?}");
+        // Since Array.splice is a dynamic function, you need to adjust for things that'll change the index.
+        // The offset tracked will be different for every event-page pair.
+        // Targeted command index also must be in order, if you want this simplified offset method to work (and not have to use a HashMap of references).
+        // -----
+        // Or just forget the above. Use the HashMap method to keep track of where everything is.
+        // This method provides resilience against out-of-order TOML. The patch order isn't dependent on user-edited TOML.
+        // -----
+        // HashMap<(event, page), HashMap<original_index, shifted_index>>
+        let mut offsets_table: HashMap<(i32, i32), HashMap<usize, usize>> = HashMap::new();
+
+        if let Some(dialogues) = &patch.dialogue {
+            for dialogue in dialogues {
+                let Dialogue {
+                    event,
+                    page,
+                    command,
+                    original,
+                    patched,
+                } = dialogue;
+                let key = (*event, *page);
+
+                // Create offset entry if it hasn't worked on this key yet
+                if !offsets_table.contains_key(&key) {
+                    let commands = &self
+                        .get_event(*event)
+                        .expect("Event should exist!")
+                        .get_page(*page)
+                        .expect("Page should exist!")
+                        .get_commands()
+                        .expect("Commands should exist!")
+                        .0;
+                    let mut offsets: HashMap<usize, usize> = HashMap::new();
+
+                    for index in 0..commands.len() {
+                        offsets.insert(index, index);
+                    }
+
+                    offsets_table.insert(key, offsets);
+                }
+
+                // Then work off the existing offsets table.
+                let mut offsets = offsets_table
+                    .get_mut(&key)
+                    .expect("Offsets HashMap should exist by this point!");
+
+                /*let commands = &mut self
+                    .get_event(*event)
+                    .expect("Event should exist!")
+                    .get_page(*page)
+                    .expect("Page should exist!")
+                    .get_commands()
+                    .expect("Commands should exist!");
+                    //.0;
+                let a = commands.get_mut();*/
+
+                /*commands.insert(
+                    0,
+                    LcfMapUnitCommand {
+                        code: DynamicInteger(1),
+                        indent: DynamicInteger(0),
+                        text: PascalString("test".into()),
+                        parameters: DynamicIntegerArray(vec![]),
+                    },
+                );*/
+            }
+        }
     }
 }
 

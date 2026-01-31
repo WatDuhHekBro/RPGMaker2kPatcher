@@ -38,7 +38,7 @@ fn main() {
     let mut reader = Cursor::new(include_bytes!(
         "/home/watduhhekbro/external/workspace/Map0134.lmu"
     ));
-    let map = LcfMapUnit::read(&mut reader).unwrap();
+    let mut map = LcfMapUnit::read(&mut reader).unwrap();
     //println!("{map:?}\n");
     //let blob = map.get_event(53).unwrap().get_page(1).unwrap();
     //println!("{:?}\n", blob);
@@ -62,4 +62,8 @@ fn main() {
     let mut output_file =
         File::create("/home/watduhhekbro/external/workspace/Map0133-gen2.lmu").unwrap();
     output_file.write_be(&new).unwrap();*/
+
+    let mut read_patch: Patch = toml::from_str(&fs::read_to_string("test.toml").unwrap()).unwrap();
+    read_patch.trim_dialogue_ending_newline();
+    map.apply_patch(&read_patch);
 }

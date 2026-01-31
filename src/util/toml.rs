@@ -119,38 +119,42 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
 pub fn generate_toml_patch(patch: &Patch) -> String {
     let mut output = String::new();
 
-    for Dialogue {
-        event,
-        page,
-        command,
-        original,
-        patched,
-    } in &patch.dialogue
-    {
-        output.push_str("[[dialogue]]\n");
-        output.push_str(&format!("event = {event}\n"));
-        output.push_str(&format!("page = {page}\n"));
-        output.push_str(&format!("command = {command}\n"));
-        // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
-        // Be sure to keep this in mind when reading the patch files!
-        output.push_str(&format!("original = '''{original}\n'''\n"));
-        output.push_str(&format!("patched = '''{patched}\n'''\n\n"));
+    if let Some(dialogue) = &patch.dialogue {
+        for Dialogue {
+            event,
+            page,
+            command,
+            original,
+            patched,
+        } in dialogue
+        {
+            output.push_str("[[dialogue]]\n");
+            output.push_str(&format!("event = {event}\n"));
+            output.push_str(&format!("page = {page}\n"));
+            output.push_str(&format!("command = {command}\n"));
+            // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
+            // Be sure to keep this in mind when reading the patch files!
+            output.push_str(&format!("original = '''\n{original}\n'''\n"));
+            output.push_str(&format!("patched = '''\n{patched}\n'''\n\n"));
+        }
     }
 
-    for Replace {
-        event,
-        page,
-        command,
-        original,
-        patched,
-    } in &patch.replace
-    {
-        output.push_str("[[replace]]\n");
-        output.push_str(&format!("event = {event}\n"));
-        output.push_str(&format!("page = {page}\n"));
-        output.push_str(&format!("command = {command}\n"));
-        output.push_str(&format!("original = '''{original}'''\n"));
-        output.push_str(&format!("patched = '''{patched}'''\n\n"));
+    if let Some(replace) = &patch.replace {
+        for Replace {
+            event,
+            page,
+            command,
+            original,
+            patched,
+        } in replace
+        {
+            output.push_str("[[replace]]\n");
+            output.push_str(&format!("event = {event}\n"));
+            output.push_str(&format!("page = {page}\n"));
+            output.push_str(&format!("command = {command}\n"));
+            output.push_str(&format!("original = '''{original}'''\n"));
+            output.push_str(&format!("patched = '''{patched}'''\n\n"));
+        }
     }
 
     // Cleanup

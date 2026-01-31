@@ -12,8 +12,9 @@ const COMMAND_SAVE_POINT_NAME: i32 = 10610;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Patch {
-    pub dialogue: Vec<Dialogue>,
-    pub replace: Vec<Replace>,
+    // These have to be made optional in order for serde to be able to read the TOML file directly
+    pub dialogue: Option<Vec<Dialogue>>,
+    pub replace: Option<Vec<Replace>>,
 }
 
 impl Patch {
@@ -106,7 +107,56 @@ impl Patch {
             patched: String::from("testout"),
         });*/
 
+        let dialogue = {
+            if dialogue.len() > 0 {
+                Some(dialogue)
+            } else {
+                None
+            }
+        };
+
+        let replace = {
+            if replace.len() > 0 {
+                Some(replace)
+            } else {
+                None
+            }
+        };
+
         Patch { dialogue, replace }
+    }
+
+    // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
+    pub fn trim_dialogue_ending_newline(&mut self) {
+        if let Some(dialogues) = &mut self.dialogue {
+            for dialogue in dialogues {
+                let char_that_should_be_newline_original = &dialogue.original.pop();
+                let char_that_should_be_newline_patched = &dialogue.patched.pop();
+
+                if let Some(c) = char_that_should_be_newline_original {
+                    if *c != '\n' {
+                        println!("WARNING: Character of original line should end with newline! Found '{c}' instead!\n{}", dialogue.original);
+                    }
+                }
+                if let Some(c) = char_that_should_be_newline_patched {
+                    if *c != '\n' {
+                        println!("WARNING: Character of patched line should end with newline! Found '{c}' instead!\n{}", dialogue.patched);
+                    }
+                }
+                if let None = char_that_should_be_newline_original {
+                    println!(
+                        "WARNING: No character was popped from original line! Was it empty?\n{}",
+                        dialogue.original
+                    );
+                }
+                if let None = char_that_should_be_newline_patched {
+                    println!(
+                        "WARNING: No character was popped from patched line! Was it empty?\n{}",
+                        dialogue.patched
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -127,29 +177,4 @@ pub struct Replace {
     pub command: i32,
     pub original: String,
     pub patched: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct LegacyPatch {
-    dialogue: Vec<LegacyPatchDialogue>,
-    other: Vec<LegacyPatchOther>,
-}
-
-#[derive(Debug, Deserialize)]
-struct LegacyPatchDialogue {
-    // A 4-tuple integer array consisting of: [event #, page #, command start, command length]
-    // Note that the command length is for the original lines, not the patched lines.
-    path: [u16; 4],
-    original: String,
-    lines: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct LegacyPatchOther {}
-
-impl LegacyPatch {
-    pub fn convert_to_toml_patch(self) /*-> Patch*/
-    {
-        //Patch { dialogue: () }
-    }
 }

@@ -1,4 +1,7 @@
-use crate::{structs::map::*, wrappers::*};
+use crate::{
+    structs::{map::*, Patch},
+    wrappers::*,
+};
 
 // NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all,
 // neither backslashes nor single quotes. So in order to be safe, you must use the multiline literals
@@ -64,13 +67,13 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                     let mut index = 0;
 
                                                     for LcfMapUnitCommand {
-                                                        event,
+                                                        code,
                                                         indent,
                                                         text,
                                                         parameters,
                                                     } in commands
                                                     {
-                                                        output_current_page.push_str(&format!("\t[{event}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                                        output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
                                                         index += 1;
                                                     }
 
@@ -108,8 +111,10 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
     output
 }
 
-pub fn generate_toml_patch(data: &LcfMapUnit) -> String {
+// Although the default toml::to_string() actually does what I want quite well, it just isn't quite there yet.
+pub fn generate_toml_patch(patch: &Patch) -> String {
     let mut output = String::new();
 
-    output
+    //output
+    toml::to_string(patch).unwrap()
 }

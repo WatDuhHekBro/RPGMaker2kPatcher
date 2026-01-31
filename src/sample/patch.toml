@@ -16,6 +16,12 @@ original = '''
 Glaube mir,\....es ist besser so 
 für mich...\.\.\^
 '''
+# Not used by the program, meant for end user ease-of-use.
+# Can't decide between "original-filtered", "filtered", "displayed", etc.
+# Then again, do you *really* need this as part of the patch file?
+# If you want to utilize the text via copy/paste, wouldn't it be easier to use a quick script to bulk extract all lines so it's easier to work with? You can customize the format too, whether or not newlines are kept intact, etc.
+# In that sense, this is a nice to have feature that absolutely should not be the in the patch file itself. You don't want to mess with version control diffs just because.
+filtered = '''Rothaarige Frau: S...Seldan... Glaube mir,...es ist besser so für mich...'''
 # NOTE: Just in case the original has an empty line (meaning an extra command), it'll display here as an extra newline. Leave that there. Only trim off the first/last newlines (be exact, do NOT use any trim() commands).
 patched = '''
 \c[13]Red-Haired Woman\c[0]:\s[6] S...\. Seldan...\.
@@ -34,6 +40,7 @@ original = '''
 Kriege,\.... ich kann sie nicht mehr 
 sehen...\. Das...\. ständige Kämpfen...\.\.\^
 '''
+filtered = '''Rothaarige Frau: Diese ewigen Kriege,... ich kann sie nicht mehr sehen... Das... ständige Kämpfen...'''
 patched = '''
 \c[13]Red-Haired Woman\c[0]:\s[6] This eternal war...\.
 I can't bear to see it any longer...\.

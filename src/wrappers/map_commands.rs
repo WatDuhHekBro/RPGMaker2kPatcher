@@ -45,7 +45,7 @@ impl BinRead for MapCommandsWrapper {
         loop {
             // No idea why this doesn't work, so just read each field manually.
             //let command = LcfMapUnitCommand::read(&mut reader).unwrap();
-            let event =
+            let code =
                 DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
             let indent =
                 DynamicInteger::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
@@ -54,7 +54,7 @@ impl BinRead for MapCommandsWrapper {
                 DynamicIntegerArray::read_options(&mut reader, endian, ()).expect(ERROR_BINRW_READ);
 
             let command = LcfMapUnitCommand {
-                event,
+                code,
                 indent,
                 text,
                 parameters,

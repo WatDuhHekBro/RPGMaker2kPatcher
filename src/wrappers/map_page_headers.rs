@@ -18,6 +18,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MapPageHeadersWrapper(pub Vec<LcfMapUnitPageHeader>);
 
+impl MapPageHeadersWrapper {
+    pub fn get_commands(&self) -> Option<&MapCommandsWrapper> {
+        for entry in &self.0 {
+            if let LcfMapUnitPageHeader::Commands(commands) = entry {
+                return Some(&commands);
+            }
+        }
+
+        None
+    }
+}
+
 impl BinRead for MapPageHeadersWrapper {
     type Args<'a> = ();
 

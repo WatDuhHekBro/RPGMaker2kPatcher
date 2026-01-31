@@ -184,6 +184,12 @@ impl std::ops::DerefMut for DynamicInteger {
     }
 }
 
+/*impl PartialEq for DynamicInteger {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}*/
+
 #[cfg(test)]
 mod tests {
     use super::*;

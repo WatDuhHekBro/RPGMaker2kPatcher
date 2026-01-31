@@ -1,4 +1,5 @@
 use crate::{
+    structs::Patch,
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
     util::{generate_toml_map, generate_toml_patch},
     wrappers::{
@@ -33,7 +34,8 @@ impl LcfMapUnit {
     }
 
     pub fn generate_toml_patch(&self) -> String {
-        generate_toml_patch(&self)
+        let patch = Patch::generate_from_map(&self);
+        generate_toml_patch(&patch)
     }
 }
 
@@ -120,7 +122,7 @@ pub struct LcfMapUnitPageHeaderGeneric {
 #[derive(Debug, Deserialize, Serialize)]
 #[brw(big)]
 pub struct LcfMapUnitCommand {
-    pub event: DynamicInteger,           // 1st
+    pub code: DynamicInteger,            // 1st
     pub indent: DynamicInteger,          // 2nd
     pub text: PascalString,              // 3rd
     pub parameters: DynamicIntegerArray, // 4th
@@ -128,10 +130,7 @@ pub struct LcfMapUnitCommand {
 
 impl LcfMapUnitCommand {
     pub fn is_terminating(&self) -> bool {
-        self.event.0 == 0
-            && self.indent.0 == 0
-            && self.text.is_empty()
-            && self.parameters.is_empty()
+        self.code.0 == 0 && self.indent.0 == 0 && self.text.is_empty() && self.parameters.is_empty()
     }
 }
 
@@ -142,7 +141,7 @@ mod tests {
     #[test]
     fn empty_command_should_terminate() {
         let command = LcfMapUnitCommand {
-            event: DynamicInteger(0),
+            code: DynamicInteger(0),
             indent: DynamicInteger(0),
             text: PascalString::from(""),
             parameters: DynamicIntegerArray(vec![]),

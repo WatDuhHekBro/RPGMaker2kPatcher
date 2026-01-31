@@ -19,10 +19,14 @@ For easier indexing, probably better to convert all those Vec's to HashMaps. Man
 
 -----
 
-**Right now:** You were testing out TOML bidi to see if it stands up properly, serde(flatten) doesn't work on custom wrapper structs, so is it possible to manually flatten wrappers into the `LcfMapUnit`? No need for two layers if so.
+**Right now:** You just finished the TOML patch gen, now it's time to actually test it out and build the patching functionality.
 
-You were working on custom-formatted TOML representations & patches. And sample database TOML.
+Your next goals after that are:
+- Database parsing & TOML
+- Setup bulk functions (e.g. `util::generate_patches("/path/to/folder")`)
+- Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
 
+Dump
 - `rpgmaker2kpatcher generatePatches`
 - `.env` file for easy runtime config
 

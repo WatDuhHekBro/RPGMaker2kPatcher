@@ -12,7 +12,7 @@ use std::fmt;
 // Before using a font patch, Windows-1251 is used by default
 // If you wanted to, you could encode Cyrillic characters during the serialization step, but for simplicity, I won't
 #[derive(Deserialize, Serialize)]
-pub struct PascalString(String);
+pub struct PascalString(pub String);
 
 impl PascalString {
     pub fn from<S: Into<String>>(string: S) -> PascalString {

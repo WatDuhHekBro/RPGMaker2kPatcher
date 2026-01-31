@@ -18,7 +18,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 #[brw(big, magic = b"\x0ALcfMapUnit")]
 pub struct LcfMapUnit {
-    #[serde(flatten)]
     pub headers: MapMainWrapper, // Wrapper: Vec<LcfMapUnitHeader> (null-terminated)
 }
 
@@ -26,9 +25,16 @@ impl LcfMapUnit {
     pub fn get_events(&self) -> Option<&MapEventsWrapper> {
         self.headers.get_events()
     }
+    pub fn get_events_mut(&mut self) -> Option<&mut MapEventsWrapper> {
+        self.headers.get_events_mut()
+    }
 
     pub fn get_event(&self, id: i32) -> Option<&MapEventHeadersWrapper> {
         self.get_events().and_then(|events| events.get_event(id))
+    }
+
+    pub fn get_event_mut(&mut self, id: i32) -> Option<&mut MapEventHeadersWrapper> {
+        self.get_events_mut().and_then(|events| events.get_event_mut(id))
     }
 
     pub fn generate_toml_map(&self) -> String {
@@ -41,7 +47,8 @@ impl LcfMapUnit {
     }
 
     pub fn apply_patch(&mut self, patch: &Patch) {
-        println!("{patch:?}");
+        //println!("{patch:?}");
+
         // Since Array.splice is a dynamic function, you need to adjust for things that'll change the index.
         // The offset tracked will be different for every event-page pair.
         // Targeted command index also must be in order, if you want this simplified offset method to work (and not have to use a HashMap of references).
@@ -49,8 +56,8 @@ impl LcfMapUnit {
         // Or just forget the above. Use the HashMap method to keep track of where everything is.
         // This method provides resilience against out-of-order TOML. The patch order isn't dependent on user-edited TOML.
         // -----
-        // HashMap<(event, page), HashMap<original_index, shifted_index>>
-        let mut offsets_table: HashMap<(i32, i32), HashMap<usize, usize>> = HashMap::new();
+        // HashMap<(event, page), Vec<(original_index), shifted_index>>
+        let mut offsets_table: HashMap<(i32, i32), Vec<usize>> = HashMap::new();
 
         if let Some(dialogues) = &patch.dialogue {
             for dialogue in dialogues {
@@ -73,10 +80,11 @@ impl LcfMapUnit {
                         .get_commands()
                         .expect("Commands should exist!")
                         .0;
-                    let mut offsets: HashMap<usize, usize> = HashMap::new();
+                    let commands_len = commands.len();
+                    let mut offsets: Vec<usize> = Vec::with_capacity(commands.len());
 
-                    for index in 0..commands.len() {
-                        offsets.insert(index, index);
+                    for index in 0..commands_len {
+                        offsets.push(index);
                     }
 
                     offsets_table.insert(key, offsets);
@@ -86,26 +94,27 @@ impl LcfMapUnit {
                 let mut offsets = offsets_table
                     .get_mut(&key)
                     .expect("Offsets HashMap should exist by this point!");
+                //println!("{offsets:?}");
 
-                /*let commands = &mut self
-                    .get_event(*event)
+                let commands = &mut self
+                    .get_event_mut(*event)
                     .expect("Event should exist!")
-                    .get_page(*page)
+                    .get_page_mut(*page)
                     .expect("Page should exist!")
-                    .get_commands()
+                    .get_commands_mut()
                     .expect("Commands should exist!");
-                    //.0;
-                let a = commands.get_mut();*/
 
                 /*commands.insert(
                     0,
                     LcfMapUnitCommand {
                         code: DynamicInteger(1),
                         indent: DynamicInteger(0),
-                        text: PascalString("test".into()),
+                        text: PascalString("LMAOTEST-LMAOTEST-LMAOTEST".into()),
                         parameters: DynamicIntegerArray(vec![]),
                     },
                 );*/
+
+                //println!("{commands:?}");
             }
         }
     }

@@ -20,6 +20,15 @@ impl MapMainWrapper {
 
         None
     }
+    pub fn get_events_mut(&mut self) -> Option<&mut MapEventsWrapper> {
+        for header in &mut self.0 {
+            if let LcfMapUnitHeader::Events(events) = header {
+                return Some(events);
+            }
+        }
+
+        None
+    }
 }
 
 impl BinRead for MapMainWrapper {

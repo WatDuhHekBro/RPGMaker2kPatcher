@@ -24,9 +24,22 @@ impl MapEventHeadersWrapper {
 
         None
     }
+    pub fn get_pages_mut(&mut self) -> Option<&mut MapPagesWrapper> {
+        for entry in &mut self.0 {
+            if let LcfMapUnitEventHeader::Pages(ref mut pages) = entry {
+                return Some(pages);
+            }
+        }
+
+        None
+    }
 
     pub fn get_page(&self, id: i32) -> Option<&MapPageHeadersWrapper> {
         self.get_pages().and_then(|pages| pages.get_page(id))
+    }
+
+    pub fn get_page_mut(&mut self, id: i32) -> Option<&mut MapPageHeadersWrapper> {
+        self.get_pages_mut().and_then(|pages| pages.get_page_mut(id))
     }
 }
 

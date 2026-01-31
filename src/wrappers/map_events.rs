@@ -23,6 +23,15 @@ impl MapEventsWrapper {
 
         None
     }
+    pub fn get_event_mut(&mut self, id: i32) -> Option<&mut MapEventHeadersWrapper> {
+        for event in &mut self.0 {
+            if event.id.0 == id {
+                return Some(&mut event.headers);
+            }
+        }
+
+        None
+    }
 }
 
 impl BinRead for MapEventsWrapper {

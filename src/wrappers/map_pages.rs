@@ -26,6 +26,15 @@ impl MapPagesWrapper {
 
         None
     }
+    pub fn get_page_mut(&mut self, id: i32) -> Option<&mut MapPageHeadersWrapper> {
+        for page in &mut self.0 {
+            if page.id.0 == id {
+                return Some(&mut page.headers);
+            }
+        }
+
+        None
+    }
 }
 
 impl BinRead for MapPagesWrapper {

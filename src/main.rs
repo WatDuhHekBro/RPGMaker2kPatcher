@@ -66,4 +66,8 @@ fn main() {
     let mut read_patch: Patch = toml::from_str(&fs::read_to_string("test.toml").unwrap()).unwrap();
     read_patch.trim_dialogue_ending_newline();
     map.apply_patch(&read_patch);
+    fs::remove_file("/home/watduhhekbro/external/workspace/patched.lmu").ok();
+    let mut output_file =
+        File::create("/home/watduhhekbro/external/workspace/patched.lmu").unwrap();
+    output_file.write_be(&map).unwrap();
 }

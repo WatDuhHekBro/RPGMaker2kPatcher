@@ -28,6 +28,15 @@ impl MapPageHeadersWrapper {
 
         None
     }
+    pub fn get_commands_mut(&mut self) -> Option<&mut MapCommandsWrapper> {
+        for entry in &mut self.0 {
+            if let LcfMapUnitPageHeader::Commands(ref mut commands) = entry {
+                return Some(commands);
+            }
+        }
+
+        None
+    }
 }
 
 impl BinRead for MapPageHeadersWrapper {

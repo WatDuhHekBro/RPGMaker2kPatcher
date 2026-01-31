@@ -12,9 +12,8 @@ const COMMAND_SAVE_POINT_NAME: i32 = 10610;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Patch {
-    // These are made optional for the default TOML serializer
-    pub dialogue: Option<Vec<Dialogue>>,
-    pub replace: Option<Vec<Replace>>,
+    pub dialogue: Vec<Dialogue>,
+    pub replace: Vec<Replace>,
 }
 
 impl Patch {
@@ -59,7 +58,7 @@ impl Patch {
                                 if was_single_line_dialogue || was_dialogue_terminated {
                                     // NOTE: This ending newline is to make the dialogue lines pretty for manual editing.
                                     // Be sure to keep this in mind when reading the patch files!
-                                    current_dialogue_text.push_str("\n");
+                                    //current_dialogue_text.push_str("\n");
 
                                     dialogue.push(Dialogue {
                                         event: event.id.0,
@@ -98,21 +97,14 @@ impl Patch {
             }
         }
 
-        let dialogue = {
-            if dialogue.len() > 0 {
-                Some(dialogue)
-            } else {
-                None
-            }
-        };
-
-        let replace = {
-            if replace.len() > 0 {
-                Some(replace)
-            } else {
-                None
-            }
-        };
+        // TODO: Testing quotes
+        /*replace.push(Replace {
+            event: 1,
+            page: 2,
+            command: 3,
+            original: String::from("test"),
+            patched: String::from("testout"),
+        });*/
 
         Patch { dialogue, replace }
     }

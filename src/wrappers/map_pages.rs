@@ -4,8 +4,8 @@
 // TODO: Figure out a smarter way for less redundancy
 
 use crate::{
-    structs::map::LcfMapUnitPage, types::DynamicInteger, wrappers::MapPageHeadersWrapper,
-    ERROR_BINRW_READ,
+    structs::map::LcfMapUnitPage, types::DynamicInteger, util::constants::*,
+    wrappers::MapPageHeadersWrapper,
 };
 use binrw::{
     io::{Cursor, Read, Seek, Write},

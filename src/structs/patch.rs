@@ -1,14 +1,5 @@
-use crate::structs::{map::*, LcfMapUnit};
+use crate::{structs::LcfMapUnit, util::constants::*};
 use serde::{Deserialize, Serialize};
-
-// Dialogue-related commands
-const COMMAND_DIALOGUE_START: i32 = 10110;
-const COMMAND_DIALOGUE_CONTINUE: i32 = 20110;
-const COMMAND_CHANGE_FACE_GRAPHIC: i32 = 10130;
-// Other commands
-const COMMAND_MULTIPLE_CHOICE_PROMPT: i32 = 10140;
-const COMMAND_MULTIPLE_CHOICE_SELECTION: i32 = 20140;
-const COMMAND_SAVE_POINT_NAME: i32 = 10610;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Patch {
@@ -57,10 +48,6 @@ impl Patch {
                                     || current_command_code == COMMAND_SAVE_POINT_NAME;
 
                                 if was_single_line_dialogue || was_dialogue_terminated {
-                                    // NOTE: This ending newline is to make the dialogue lines pretty for manual editing.
-                                    // Be sure to keep this in mind when reading the patch files!
-                                    //current_dialogue_text.push_str("\n");
-
                                     dialogue.push(Dialogue {
                                         event: event.id.0,
                                         page: page.id.0,
@@ -74,7 +61,6 @@ impl Patch {
 
                                 if current_command_code == COMMAND_DIALOGUE_START {
                                     start_index = command_index;
-                                    //current_dialogue_text = command.text.0.clone();
                                     current_dialogue_text.push_str(command.text.0.as_str());
                                 } else if current_command_code == COMMAND_DIALOGUE_CONTINUE {
                                     current_dialogue_text.push_str("\n");
@@ -97,15 +83,6 @@ impl Patch {
                 }
             }
         }
-
-        // TODO: Testing quotes
-        /*replace.push(Replace {
-            event: 1,
-            page: 2,
-            command: 3,
-            original: String::from("test"),
-            patched: String::from("testout"),
-        });*/
 
         let dialogue = {
             if dialogue.len() > 0 {
@@ -178,3 +155,15 @@ pub struct Replace {
     pub original: String,
     pub patched: String,
 }
+
+/*
+Patch Splicing Dump
+-------------------
+Rpg2kpatcher Splicing Indexes Solution: Hashmap of original index to Option(current index)
+    - If 1234567 has dialogue lines 345 and your patched lines take up 3 (reduced by 2), then the key to value are 11,22,33,4-,5-,64,75
+    - - for None (Option) means find the nearest neighbor, append to index 3 or smth
+    - Append after index 5 now means append after index 3, delete index 4 does nothing, replace index 6 now means replace index 4
+Or maybe just create another array as a replacement?
+
+Or maybe splicing solution is, pre-group all same event/page, then use same offset function in js code. Hashmap of vecs. Offsets only work if presorted command list. Do that so you don't have to use a moving ref vec.
+*/

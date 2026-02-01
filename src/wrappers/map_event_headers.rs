@@ -2,8 +2,8 @@
 
 use crate::{
     structs::map::LcfMapUnitEventHeader,
+    util::constants::*,
     wrappers::{MapPageHeadersWrapper, MapPagesWrapper},
-    ERROR_BINRW_READ,
 };
 use binrw::{
     io::{Read, Seek, Write},
@@ -39,7 +39,8 @@ impl MapEventHeadersWrapper {
     }
 
     pub fn get_page_mut(&mut self, id: i32) -> Option<&mut MapPageHeadersWrapper> {
-        self.get_pages_mut().and_then(|pages| pages.get_page_mut(id))
+        self.get_pages_mut()
+            .and_then(|pages| pages.get_page_mut(id))
     }
 }
 

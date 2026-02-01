@@ -77,3 +77,5 @@ page = 2
 command = 3
 
 # ...somehow keep track of the order?
+
+# Add/insert command asks for a command array of arrays `[[1 2 3 4], [...]]`

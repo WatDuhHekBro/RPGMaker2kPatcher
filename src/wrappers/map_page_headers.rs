@@ -6,8 +6,8 @@
 use crate::{
     structs::map::{LcfMapUnitPageHeader, LcfMapUnitPageHeaderGeneric},
     types::{DynamicInteger, PascalString, U8Array},
+    util::constants::*,
     wrappers::MapCommandsWrapper,
-    ERROR_BINRW_READ,
 };
 use binrw::{
     io::{Read, Seek, Write},

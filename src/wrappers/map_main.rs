@@ -1,6 +1,6 @@
 // Wrapper: Vec<LcfMapUnitHeader> (null-terminated)
 
-use crate::{structs::map::LcfMapUnitHeader, wrappers::MapEventsWrapper, ERROR_BINRW_READ};
+use crate::{structs::map::LcfMapUnitHeader, util::constants::*, wrappers::MapEventsWrapper};
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,

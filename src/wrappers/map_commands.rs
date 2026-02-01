@@ -6,7 +6,7 @@
 use crate::{
     structs::map::LcfMapUnitCommand,
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
-    ERROR_BINRW_READ,
+    util::constants::*,
 };
 use binrw::{
     io::{Cursor, Read, Seek, Write},
@@ -16,24 +16,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MapCommandsWrapper(pub Vec<LcfMapUnitCommand>);
-
-impl MapCommandsWrapper {
-    pub fn get_mut(&mut self) -> &mut Vec<LcfMapUnitCommand> {
-        &mut self.0
-    }
-
-    /*pub fn test(&mut self) {
-        self.0.insert(
-            0,
-            LcfMapUnitCommand {
-                code: DynamicInteger(1),
-                indent: DynamicInteger(0),
-                text: PascalString("test".into()),
-                parameters: DynamicIntegerArray(vec![]),
-            },
-        );
-    }*/
-}
 
 impl BinRead for MapCommandsWrapper {
     type Args<'a> = ();

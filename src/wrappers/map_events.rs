@@ -1,8 +1,8 @@
 // Wrapper: Byte Count (DynamicInteger), # of Events Count (DynamicInteger), Vec<LcfMapUnitEvent>
 
 use crate::{
-    structs::map::LcfMapUnitEvent, types::DynamicInteger, wrappers::MapEventHeadersWrapper,
-    ERROR_BINRW_READ,
+    structs::map::LcfMapUnitEvent, types::DynamicInteger, util::constants::*,
+    wrappers::MapEventHeadersWrapper,
 };
 use binrw::{
     io::{Cursor, Read, Seek, Write},

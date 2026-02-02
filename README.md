@@ -28,7 +28,7 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Work on legacy patch conversion
+**Right now:** Find out why patched binaries are not identical
 - Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
 
 Your next goals after that are:

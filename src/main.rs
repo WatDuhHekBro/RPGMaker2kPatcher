@@ -1,24 +1,32 @@
-mod dialogue; // Dialogue line parsing modules
+//mod dialogue; // Dialogue line parsing modules
 mod structs; // Main structures
 mod types; // Custom data types
 mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
-use crate::util::file_operations;
+use crate::{
+    structs::{LegacyPatch, Patch},
+    util::file_operations,
+};
 use dotenvy::dotenv;
-use std::env;
+use std::{env, fs};
 
 fn main() {
     dotenv().ok();
-    let args = env::args().collect::<Vec<String>>();
 
+    // Environment Variables
     let path_to_original = env::var("PATH_TO_ORIGINAL").unwrap();
     let path_to_workspace = env::var("PATH_TO_WORKSPACE").unwrap();
     let path_to_reference = env::var("PATH_TO_REFERENCE").unwrap();
     let path_to_patched = env::var("PATH_TO_PATCHED").unwrap();
     let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY").unwrap();
 
-    match args.get(1) {
+    // CLI Arguments
+    let args = env::args().collect::<Vec<String>>();
+    let command = args.get(1);
+    //let command = Some(&String::from("convertLegacyPatches"));
+
+    match command {
         Some(command) => match command.as_str() {
             "decompileMaps" => {
                 file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference)
@@ -43,9 +51,44 @@ fn main() {
                 )
                 .unwrap();
             }
+            "testHexdump" => {
+                let path = args.get(2);
+
+                match path {
+                    Some(path) => {
+                        let map = file_operations::read_lcfmapunit(path).unwrap();
+                        let hexdump = file_operations::hexdump(map);
+                        fs::write(format!("{path}.txt"), hexdump).unwrap();
+                    }
+                    None => {
+                        println!("Enter in a valid path!");
+                    }
+                }
+            }
             "testLMUSerialization" => {
                 file_operations::bulk_serialize_lcfmapunits(&path_to_original, &path_to_reference)
                     .unwrap();
+            }
+            "test" => {
+                // Read patch
+                let patch_file_string = &fs::read_to_string(
+                    "/home/watduhhekbro/external/workspace/dev2/Map0134.patch.toml",
+                )
+                .unwrap();
+                let mut patch = toml::from_str::<Patch>(patch_file_string).unwrap();
+                patch.trim_dialogue_ending_newline();
+
+                // Read legacy patch
+                let text = fs::read_to_string("/home/watduhhekbro/programming/modding/VelsarborEnglish/patch/Map0134.patch.json").unwrap();
+                let legacy_patch: LegacyPatch = serde_json::from_str(&text).unwrap();
+
+                // Patch and write
+                legacy_patch.import_lines_to_toml_patch(&mut patch, &String::from("TESTING"));
+                fs::write(
+                    "/home/watduhhekbro/external/workspace/dev/Map0134.patch.toml",
+                    util::generate_toml_patch(&patch),
+                )
+                .unwrap();
             }
             _ => {
                 println!("Unknown command.");

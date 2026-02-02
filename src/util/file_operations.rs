@@ -1,4 +1,7 @@
-use crate::structs::{LcfMapUnit, Patch};
+use crate::{
+    structs::{LcfMapUnit, LegacyPatch, Patch},
+    util,
+};
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
 use std::{
     fs::{self, File},
@@ -193,6 +196,50 @@ pub fn bulk_convert_legacy_patches<S: AsRef<Path>>(
     path_to_legacy_workspace: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk converting legacy patches...");
+
+    for entry in fs::read_dir(path_to_legacy_workspace)? {
+        let entry = entry?;
+        // "/path/to/path_to_legacy_workspace/Map0134.patch.json"
+        let path = entry.path();
+        // "json"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "json" {
+                // "Map0134"
+                let file_prefix = path
+                    .file_prefix()
+                    .expect("If Some(extension) exists, why doesn't file_prefix exist?!");
+                let map_name = file_prefix
+                    .to_str()
+                    .expect("OsStr conversion to String failed!")
+                    .to_string();
+
+                // "/path/to/workspace/Map0134.patch.toml"
+                let mut toml_path = path_to_workspace.as_ref().join(file_prefix);
+                toml_path.set_extension("patch.toml");
+
+                // Read patch
+                let patch_file_string = &fs::read_to_string(&toml_path);
+
+                // Just in case there's an added legacy patch with no generated equivalent:
+                if let Ok(patch_file_string) = patch_file_string {
+                    let mut patch = toml::from_str::<Patch>(patch_file_string)?;
+                    patch.trim_dialogue_ending_newline();
+
+                    // Read legacy patch
+                    let text = fs::read_to_string(path)?;
+                    let legacy_patch: LegacyPatch = serde_json::from_str(&text)?;
+
+                    // Patch and write
+                    legacy_patch.import_lines_to_toml_patch(&mut patch, &map_name);
+                    fs::write(&toml_path, util::generate_toml_patch(&patch))?;
+                } else {
+                    println!("ERROR: Error on reading TOML patch file for {map_name}!");
+                }
+            }
+        }
+    }
 
     Ok(())
 }

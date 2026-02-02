@@ -6,7 +6,8 @@ pub const ERROR_BINRW_READ: &str = "Binary read failed!";
 // Dialogue-related commands
 pub const COMMAND_DIALOGUE_START: i32 = 10110;
 pub const COMMAND_DIALOGUE_CONTINUE: i32 = 20110;
-pub const COMMAND_CHANGE_FACE_GRAPHIC: i32 = 10130;
+//pub const COMMAND_CHANGE_FACE_GRAPHIC: i32 = 10130;
+
 // Other commands
 pub const COMMAND_MULTIPLE_CHOICE_PROMPT: i32 = 10140;
 pub const COMMAND_MULTIPLE_CHOICE_SELECTION: i32 = 20140;

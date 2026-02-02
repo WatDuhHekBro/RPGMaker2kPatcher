@@ -3,7 +3,7 @@ use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
 use std::{
     fs::{self, File},
     io,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 pub fn overwrite<S: AsRef<Path>>(path: S) -> io::Result<File> {
@@ -53,4 +53,171 @@ pub fn read_lcfmapunit_and_patch<S: AsRef<Path>>(
     patched_output_file.write_be(&map)?;
 
     Ok(map)
+}
+
+// Actually, these operations are so fast that I don't even need to worry about implementing concurrency at all.
+
+pub fn bulk_generate_toml_maps<S: AsRef<Path>>(
+    path_to_original: S,
+    path_to_reference: S,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // NOTE: Don't forget to create the leading directories if needed!
+    fs::create_dir_all(&path_to_reference)?;
+
+    for entry in fs::read_dir(path_to_original)? {
+        let entry = entry?;
+        // "/path/to/original/Map0134.lmu"
+        let path = entry.path();
+        // "lmu"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "lmu" {
+                // "Map0134"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                let map = read_lcfmapunit(&path)?;
+
+                // "/path/to/reference/Map0134.toml"
+                let mut toml_path = path_to_reference.as_ref().join(file_stem);
+                toml_path.set_extension("toml");
+
+                // Write
+                fs::write(toml_path, map.generate_toml_map())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn bulk_generate_toml_patches<S: AsRef<Path>>(
+    path_to_original: S,
+    path_to_workspace: S,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // NOTE: Don't forget to create the leading directories if needed!
+    fs::create_dir_all(&path_to_workspace)?;
+
+    for entry in fs::read_dir(path_to_original)? {
+        let entry = entry?;
+        // "/path/to/original/Map0134.lmu"
+        let path = entry.path();
+        // "lmu"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "lmu" {
+                // "Map0134"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                let map = read_lcfmapunit(&path)?;
+
+                // "/path/to/workspace/Map0134.patch.toml"
+                let mut toml_path = path_to_workspace.as_ref().join(file_stem);
+                toml_path.set_extension("patch.toml");
+
+                // Only write the patch if it isn't an empty file.
+                let stringified_patch = map.generate_toml_patch();
+
+                if stringified_patch.len() > 1 {
+                    fs::write(toml_path, stringified_patch)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn bulk_apply_toml_patches<S: AsRef<Path>>(
+    path_to_original: S,
+    path_to_workspace: S,
+    path_to_patched: S,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // NOTE: Don't forget to create the leading directories if needed!
+    fs::create_dir_all(&path_to_workspace)?;
+    fs::create_dir_all(&path_to_patched)?;
+
+    for entry in fs::read_dir(path_to_original)? {
+        let entry = entry?;
+        // "/path/to/original/Map0134.lmu"
+        let path = entry.path();
+        // "lmu"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "lmu" {
+                // "Map0134"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                // "/path/to/workspace/Map0134.patch.toml"
+                let mut toml_path = path_to_workspace.as_ref().join(file_stem);
+                toml_path.set_extension("patch.toml");
+
+                // NOTE: You MUST check if a TOML patch exists, because it might not!
+                // Path::exists() is used over fs::exists() because I'm only concerned about whether or not the file is accessible.
+                // TODO: Fix TOCTOU error... but oh well.
+                if toml_path.exists() {
+                    // "/path/to/patched/Map0134.lmu"
+                    let mut patched_path = path_to_patched.as_ref().join(file_stem);
+                    patched_path.set_extension("lmu");
+
+                    // Write
+                    read_lcfmapunit_and_patch(&path, &toml_path, &patched_path)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn bulk_convert_legacy_patches<S: AsRef<Path>>(
+    path_to_legacy_workspace: S,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+// Purpose: Test if the LcfMapUnit in memory is identical to the raw binary output.
+pub fn bulk_serialize_lcfmapunits<S: AsRef<Path>>(
+    path_to_original: S,
+    path_to_reference: S,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // NOTE: Don't forget to create the leading directories if needed!
+    fs::create_dir_all(&path_to_reference)?;
+
+    for entry in fs::read_dir(path_to_original)? {
+        let entry = entry?;
+        // "/path/to/original/Map0134.lmu"
+        let path = entry.path();
+        // "lmu"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "lmu" {
+                // "Map0134"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                let map = read_lcfmapunit(&path)?;
+
+                // "/path/to/reference/Map0134.lmu"
+                let mut new_lmu_path = path_to_reference.as_ref().join(file_stem);
+                new_lmu_path.set_extension("lmu");
+
+                // Write
+                let mut output_file = overwrite(new_lmu_path)?;
+                output_file.write_be(&map)?;
+            }
+        }
+    }
+
+    Ok(())
 }

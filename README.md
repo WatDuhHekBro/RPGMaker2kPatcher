@@ -1,36 +1,37 @@
 # RPGMaker2kPatcher
 
-## Rewrite & Goals
+## Usage
 
-If you don't want this to be stuck in development hell yet again, **SCALE DOWN YOUR PROJECT**.
+- `rpgmaker2kpatcher`: Shows the help menu
+- `rpgmaker2kpatcher decompileMaps`: Generates TOML representations for `LcfMapUnit`s
+    - Uses `PATH_TO_ORIGINAL` and `PATH_TO_REFERENCE`
+- `rpgmaker2kpatcher generatePatches`: Generates TOML patches to apply to `LcfMapUnit`s
+    - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE`
+- `rpgmaker2kpatcher applyPatches`: Applies TOML patches to `LcfMapUnit`s and generates patched files in another directory
+    - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE` and `PATH_TO_PATCHED`
+    - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
+- `rpgmaker2kpatcher convertLegacyPatches`: Convert old JSON patches to the new TOML patches
 
-- [X] LMU to JSON (readable intermediary, should not be used in patching) - bindiff bidirectional to test
-- [X] LMU to TOML patch
-    - Don't even *think* about automatic line wrapping right now if it means you get stuck in development hell!
-- [X] LMU + TOML patch = Patched LMU
-- [ ] `rpgmaker2kpatcher`: Generates a `config.toml` file for setting up file paths before proceeding. Running this command with all file paths filled automatically generates a new patched version in the file path you specify. e.g. `BaseGame` fetches `../Workspace` to generate `PatchedGame`, where `../Workspace/*.lmu` and `../Workspace/Picture/*.png` exist.
-    - It'll also warn you of any lines over the character limit instead of trying to come up with a fancy TUI that I never got done originally.
-
-Would the image processing and live TUI that you never got done be nice? Absolutely. Will it grind this project to a halt? It already did. Do NOT let scope creep kill this round again.
-
-### Current Status
-
-**Right now:** Bulk file processing
-
-Your next goals after that are:
-- Database parsing & TOML
-- Setup bulk functions (e.g. `util::generate_patches("/path/to/folder")`)
-- Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
-
-Dump
-- `rpgmaker2kpatcher generatePatches`
-- `.env` file for easy runtime config
-
-The next release will only have the pre-patched release, no dev stuff or separate patch generated.
-- Source and destination folders.
+`.env` Variables
+- `PATH_TO_ORIGINAL`: Root folder of the original RPGMaker2000 game.
+- `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
+- `PATH_TO_REFERENCE`: Location of TOML maps. Do not commit this to version control.
+- `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
 
 ## Organization
 
 - `structs/`: The main folder to look at to understand each decoded structure
 - `types/`: Assistant binrw types for `structs/`, notably 1-5 byte dynamic integer
 - `wrappers/`: Assistant structures for `structs/` for complex operations (such as a u8 preceded by a 1-5 byte dynamic integer)
+
+## Clipboard / Current Status
+
+**Right now:**
+- Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
+- Rename `[[replace]]` to `[[other]]`, as `[[other]]` is specifically for replacing text, no flexibility for anything else.
+
+Your next goals after that are:
+- Database parsing & TOML
+
+The next release will only have the pre-patched release, no dev stuff or separate patch generated.
+- Source and destination folders.

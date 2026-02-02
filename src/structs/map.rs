@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    structs::{patch::Dialogue, Patch},
+    structs::{Patch, patch::{Dialogue, Text}},
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
     util::{constants::*, generate_toml_map, generate_toml_patch},
     wrappers::{
@@ -177,6 +177,60 @@ impl LcfMapUnit {
                 for offsets_index in stop_index..offsets.len() {
                     offsets[offsets_index] += length_difference;
                 }
+            }
+        }
+
+        if let Some(texts) = &patch.text {
+            for text in texts {
+                let Text {
+                    event,
+                    page,
+                    command: command_index,
+                    original: _,
+                    patched,
+                } = text;
+                let key = (*event, *page);
+
+                // Create offset entry if it hasn't worked on this key yet
+                if !offsets_table.contains_key(&key) {
+                    let commands = &self
+                        .get_event(*event)
+                        .expect("Event should exist!")
+                        .get_page(*page)
+                        .expect("Page should exist!")
+                        .get_commands()
+                        .expect("Commands should exist!")
+                        .0;
+                    let commands_len = commands.len();
+                    let mut offsets: Vec<isize> = Vec::with_capacity(commands.len());
+
+                    for _ in 0..commands_len {
+                        offsets.push(0);
+                    }
+
+                    offsets_table.insert(key, offsets);
+                }
+
+                // Then work off the existing offsets table.
+                let offsets = offsets_table
+                    .get_mut(&key)
+                    .expect("Offsets HashMap should exist by this point!");
+
+                let commands = &mut self
+                    .get_event_mut(*event)
+                    .expect("Event should exist!")
+                    .get_page_mut(*page)
+                    .expect("Page should exist!")
+                    .get_commands_mut()
+                    .expect("Commands should exist!");
+
+                // Get explicit indent if available or assume previous indent
+                let command_index = *command_index as usize;
+                let start_index =
+                    ((command_index as isize) + (offsets[command_index])).max(0) as usize;
+
+                // Replace text
+                commands[start_index].text = PascalString::from(patched);
             }
         }
     }

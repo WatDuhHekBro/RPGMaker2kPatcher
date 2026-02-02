@@ -1,7 +1,7 @@
 use crate::{
     structs::{
         map::*,
-        patch::{Dialogue, Replace},
+        patch::{Dialogue, Text},
         Patch,
     },
     wrappers::*,
@@ -124,6 +124,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             event,
             page,
             command,
+            indent: explicitly_defined_indent,
             original,
             patched,
         } in dialogue
@@ -132,6 +133,11 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             output.push_str(&format!("event = {event}\n"));
             output.push_str(&format!("page = {page}\n"));
             output.push_str(&format!("command = {command}\n"));
+
+            if let Some(indent) = explicitly_defined_indent {
+                output.push_str(&format!("indent = {indent}\n"));
+            }
+
             // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
             // Be sure to keep this in mind when reading the patch files!
             output.push_str(&format!("original = '''\n{original}\n'''\n"));
@@ -139,8 +145,8 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         }
     }
 
-    if let Some(replace) = &patch.replace {
-        for Replace {
+    if let Some(replace) = &patch.text {
+        for Text {
             event,
             page,
             command,
@@ -148,7 +154,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             patched,
         } in replace
         {
-            output.push_str("[[replace]]\n");
+            output.push_str("[[text]]\n");
             output.push_str(&format!("event = {event}\n"));
             output.push_str(&format!("page = {page}\n"));
             output.push_str(&format!("command = {command}\n"));

@@ -19,17 +19,17 @@ fn main() {
     let path_to_patched = env::var("PATH_TO_PATCHED").unwrap();
 
     file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference).unwrap();
-    file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace).unwrap();
+    /*file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace).unwrap();
     file_operations::bulk_apply_toml_patches(
         &path_to_original,
         &path_to_workspace,
         &path_to_patched,
     )
-    .unwrap();
-    file_operations::bulk_serialize_lcfmapunits(
+    .unwrap();*/
+    /*file_operations::bulk_serialize_lcfmapunits(
         &path_to_original,
         &"/home/watduhhekbro/external/workspace/dev2/".to_string(),
     )
-    .unwrap();
+    .unwrap();*/
     //file_operations::bulk_convert_legacy_patches(&path_to_legacy_workspace).unwrap();
 }

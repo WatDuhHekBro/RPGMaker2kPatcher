@@ -26,9 +26,10 @@
 
 ## Clipboard / Current Status
 
-**Right now:**
+**Right now:** Fix indents (not always 0)
 - Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
-- Rename `[[replace]]` to `[[other]]`, as `[[other]]` is specifically for replacing text, no flexibility for anything else.
+    - So 0 (original) and 1 (in-memory to lmu) appears identical, but 2 (patched lmu) does not. Using TOML diffs, it's because of dialogue indents.
+- Make sure that direct text replacement works
 
 Your next goals after that are:
 - Database parsing & TOML

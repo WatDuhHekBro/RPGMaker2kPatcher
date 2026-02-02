@@ -3,7 +3,7 @@ use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
 use std::{
     fs::{self, File},
     io,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 pub fn overwrite<S: AsRef<Path>>(path: S) -> io::Result<File> {
@@ -121,7 +121,11 @@ pub fn bulk_generate_toml_patches<S: AsRef<Path>>(
                 toml_path.set_extension("patch.toml");
 
                 // Only write the patch if it isn't an empty file.
-                let stringified_patch = map.generate_toml_patch();
+                let map_name = file_stem
+                    .to_str()
+                    .expect("OsStr conversion to String failed!")
+                    .to_string();
+                let stringified_patch = map.generate_toml_patch(Some(&map_name));
 
                 if stringified_patch.len() > 1 {
                     fs::write(toml_path, stringified_patch)?;

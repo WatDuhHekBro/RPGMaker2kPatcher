@@ -46,8 +46,8 @@ impl LcfMapUnit {
         generate_toml_map(&self)
     }
 
-    pub fn generate_toml_patch(&self) -> String {
-        let patch = Patch::generate_from_map(&self);
+    pub fn generate_toml_patch(&self, map_name: Option<&String>) -> String {
+        let patch = Patch::generate_from_map(&self, map_name);
         generate_toml_patch(&patch)
     }
 
@@ -69,6 +69,7 @@ impl LcfMapUnit {
                     event,
                     page,
                     command: command_index,
+                    indent: explicitly_defined_indent,
                     original,
                     patched,
                 } = dialogue;
@@ -107,6 +108,23 @@ impl LcfMapUnit {
                     .get_commands_mut()
                     .expect("Commands should exist!");
 
+                // Get explicit indent if available or assume previous indent
+                let command_index = *command_index as usize;
+                let start_index =
+                    ((command_index as isize) + (offsets[command_index])).max(0) as usize;
+
+                let previous_indent = {
+                    if let Some(indent) = explicitly_defined_indent {
+                        indent.0
+                    } else {
+                        if start_index > 0 {
+                            commands[start_index - 1].indent.0
+                        } else {
+                            0
+                        }
+                    }
+                };
+
                 // Generate patched commands
                 let mut patched_commands: Vec<LcfMapUnitCommand> = Vec::new();
                 let patched_lines = patched.split("\n").collect::<Vec<&str>>();
@@ -121,7 +139,7 @@ impl LcfMapUnit {
                     if is_first_line {
                         patched_commands.push(LcfMapUnitCommand {
                             code: DynamicInteger(COMMAND_DIALOGUE_START),
-                            indent: DynamicInteger(0),
+                            indent: DynamicInteger(previous_indent),
                             text: PascalString::from(line),
                             parameters: DynamicIntegerArray(Vec::new()),
                         });
@@ -130,7 +148,7 @@ impl LcfMapUnit {
                     } else {
                         patched_commands.push(LcfMapUnitCommand {
                             code: DynamicInteger(COMMAND_DIALOGUE_CONTINUE),
-                            indent: DynamicInteger(0),
+                            indent: DynamicInteger(previous_indent),
                             text: PascalString::from(line),
                             parameters: DynamicIntegerArray(Vec::new()),
                         });
@@ -140,9 +158,6 @@ impl LcfMapUnit {
                 // Splice
                 let original_lines = original.split("\n").collect::<Vec<&str>>();
                 let original_lines_count = original_lines.len();
-                let command_index = *command_index as usize;
-                let start_index =
-                    ((command_index as isize) + (offsets[command_index])).max(0) as usize;
                 let stop_index = start_index + original_lines_count;
                 let splice_range = start_index..stop_index;
                 commands.splice(splice_range, patched_commands);

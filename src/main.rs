@@ -10,34 +10,49 @@ use std::env;
 
 fn main() {
     dotenv().ok();
-    //let args = env::args().collect::<Vec<String>>();
-    //if let Some(port) = args.get(1)
+    let args = env::args().collect::<Vec<String>>();
 
     let path_to_original = env::var("PATH_TO_ORIGINAL").unwrap();
     let path_to_workspace = env::var("PATH_TO_WORKSPACE").unwrap();
     let path_to_reference = env::var("PATH_TO_REFERENCE").unwrap();
     let path_to_patched = env::var("PATH_TO_PATCHED").unwrap();
+    let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY").unwrap();
 
-    //file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference).unwrap();
-    //file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace).unwrap();
-    /*file_operations::bulk_apply_toml_patches(
-        &path_to_original,
-        &path_to_workspace,
-        &path_to_patched,
-    )
-    .unwrap();*/
-
-    /*file_operations::bulk_serialize_lcfmapunits(
-        &path_to_original,
-        &"/home/watduhhekbro/external/workspace/dev2/".to_string(),
-    )
-    .unwrap();*/
-
-    file_operations::bulk_generate_toml_maps(
-        "/home/watduhhekbro/external/workspace/diff/2/",
-        "/home/watduhhekbro/external/workspace/diff/2-toml/",
-    )
-    .unwrap();
-
-    //file_operations::bulk_convert_legacy_patches(&path_to_legacy_workspace).unwrap();
+    match args.get(1) {
+        Some(command) => match command.as_str() {
+            "decompileMaps" => {
+                file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference)
+                    .unwrap();
+            }
+            "generatePatches" => {
+                file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace)
+                    .unwrap();
+            }
+            "applyPatches" => {
+                file_operations::bulk_apply_toml_patches(
+                    &path_to_original,
+                    &path_to_workspace,
+                    &path_to_patched,
+                )
+                .unwrap();
+            }
+            "convertLegacyPatches" => {
+                file_operations::bulk_convert_legacy_patches(
+                    &path_to_workspace,
+                    &path_to_legacy_workspace,
+                )
+                .unwrap();
+            }
+            "testLMUSerialization" => {
+                file_operations::bulk_serialize_lcfmapunits(&path_to_original, &path_to_reference)
+                    .unwrap();
+            }
+            _ => {
+                println!("Unknown command.");
+            }
+        },
+        None => {
+            println!("Available commands: decompileMaps, generatePatches, applyPatches, convertLegacyPatches, testLMUSerialization");
+        }
+    }
 }

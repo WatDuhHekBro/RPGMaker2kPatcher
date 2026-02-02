@@ -11,12 +11,14 @@
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE` and `PATH_TO_PATCHED`
     - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
 - `rpgmaker2kpatcher convertLegacyPatches`: Convert old JSON patches to the new TOML patches
+    - Uses `PATH_TO_WORKSPACE` and `PATH_TO_WORKSPACE_LEGACY`
 
 `.env` Variables
 - `PATH_TO_ORIGINAL`: Root folder of the original RPGMaker2000 game.
 - `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
 - `PATH_TO_REFERENCE`: Location of TOML maps. Do not commit this to version control.
 - `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
+- `PATH_TO_WORKSPACE_LEGACY`: Root folder of the patched RPGMaker2000 game.
 
 ## Organization
 
@@ -26,13 +28,11 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Fix indents (not always 0)
+**Right now:** Work on legacy patch conversion
 - Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
-    - So 0 (original) and 1 (in-memory to lmu) appears identical, but 2 (patched lmu) does not. Using TOML diffs, it's because of dialogue indents.
-- Make sure that direct text replacement works
 
 Your next goals after that are:
-- Database parsing & TOML
+- Database parsing & DB TOML
 
 The next release will only have the pre-patched release, no dev stuff or separate patch generated.
 - Source and destination folders.

@@ -61,6 +61,8 @@ pub fn bulk_generate_toml_maps<S: AsRef<Path>>(
     path_to_original: S,
     path_to_reference: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk generating TOML maps...");
+
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
 
@@ -97,6 +99,8 @@ pub fn bulk_generate_toml_patches<S: AsRef<Path>>(
     path_to_original: S,
     path_to_workspace: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk generating TOML patches...");
+
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_workspace)?;
 
@@ -142,6 +146,8 @@ pub fn bulk_apply_toml_patches<S: AsRef<Path>>(
     path_to_workspace: S,
     path_to_patched: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk applying TOML patches...");
+
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_workspace)?;
     fs::create_dir_all(&path_to_patched)?;
@@ -183,8 +189,11 @@ pub fn bulk_apply_toml_patches<S: AsRef<Path>>(
 }
 
 pub fn bulk_convert_legacy_patches<S: AsRef<Path>>(
+    path_to_workspace: S,
     path_to_legacy_workspace: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk converting legacy patches...");
+
     Ok(())
 }
 
@@ -193,6 +202,8 @@ pub fn bulk_serialize_lcfmapunits<S: AsRef<Path>>(
     path_to_original: S,
     path_to_reference: S,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk serializing in-memory LcfMapUnits...");
+
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
 

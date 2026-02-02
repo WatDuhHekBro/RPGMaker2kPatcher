@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    structs::{Patch, patch::{Dialogue, Text}},
+    structs::{
+        patch::{Dialogue, Text},
+        Patch,
+    },
     types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
     util::{constants::*, generate_toml_map, generate_toml_patch},
     wrappers::{

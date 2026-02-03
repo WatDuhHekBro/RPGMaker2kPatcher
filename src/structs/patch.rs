@@ -1,4 +1,8 @@
-use crate::{structs::LcfMapUnit, types::DynamicInteger, util::constants::*};
+use crate::{
+    structs::{map::LcfMapUnitCommand, LcfMapUnit},
+    types::DynamicInteger,
+    util::constants::*,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -6,6 +10,7 @@ pub struct Patch {
     // These have to be made optional in order for serde to be able to read the TOML file directly
     pub dialogue: Option<Vec<Dialogue>>,
     pub text: Option<Vec<Text>>,
+    pub insert_commands: Option<Vec<InsertCommands>>,
 }
 
 impl Patch {
@@ -140,7 +145,11 @@ impl Patch {
             }
         };
 
-        Patch { dialogue, text }
+        Patch {
+            dialogue,
+            text,
+            insert_commands: None,
+        }
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
@@ -207,6 +216,14 @@ pub struct Text {
     pub command: i32,
     pub original: String,
     pub patched: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InsertCommands {
+    pub event: i32,
+    pub page: i32,
+    pub command: i32,
+    pub commands: Vec<LcfMapUnitCommand>,
 }
 
 /*

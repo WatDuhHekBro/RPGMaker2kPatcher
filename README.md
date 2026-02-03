@@ -28,11 +28,18 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Find out why patched binaries are not identical
-- Use `bindiff` to verify that your new patch format can take in your old data and successfully patch it identically
+**Right now:** Port over manual patches functionality
 
 Your next goals after that are:
-- Database parsing & DB TOML
+
+Database
+- Parsing
+- TOML representation
+- TOML map
+- Insert into bulk functions (before map parsing etc.), assume one database only, always with the same name `RPG_RT.ldb`
+- Add TOML comments for `\n[1]`, basically replace functionality of `chars.json` via `LcfDataBase::get_character_name(id: i32) -> String` (when generating patches)
+
+-----
 
 The next release will only have the pre-patched release, no dev stuff or separate patch generated.
 - Source and destination folders.
@@ -48,4 +55,32 @@ Map0227
 Map0240
 Map0242
 Map0245
+Map0250 (Added)
+```
+
+```
+Delete?
+Map0006
+Map0007
+Map0011
+Map0012
+Map0014
+Map0143
+Map0144
+Map0213
+```
+
+```
+Bulk converting legacy patches...
+WARNING: [map.Map0074.event.7.page.1.command.94] found no equivalent dialogue in its legacy patch!
+WARNING: [map.Map0074.event.7.page.1.command.144] found no equivalent dialogue in its legacy patch!
+WARNING: [map.Map0084.event.12.page.1.command.24] found no equivalent dialogue in its legacy patch!
+WARNING: [map.Map0084.event.15.page.1.command.9] found no equivalent dialogue in its legacy patch!
+WARNING: [map.Map0084.event.15.page.1.command.54] found no equivalent dialogue in its legacy patch!
+WARNING: Some legacy entries weren't used in the conversion process for Map0179!
+{(25, 2, 157): "Bedrohung_von_oben"}
+WARNING: Some legacy entries weren't used in the conversion process for Map0208!
+{(34, 10, 187): "2003MaximumBattle"}
+ERROR: Error on reading TOML patch file for Map0250!
+ERROR: Error on reading TOML patch file for database!
 ```

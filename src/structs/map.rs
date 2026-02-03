@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     structs::{
         patch::{Dialogue, Text},
@@ -14,6 +12,7 @@ use crate::{
 };
 use binrw::binrw;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Make sure to place this #[derive(Debug, Deserialize, Serialize)] below #[binrw], or it'll throw errors for temporary fields.
 

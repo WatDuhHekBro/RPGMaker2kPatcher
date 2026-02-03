@@ -4,12 +4,10 @@ mod types; // Custom data types
 mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
-use crate::{
-    structs::{LegacyPatch, Patch},
-    util::file_operations,
-};
+use crate::{structs::database::LcfDataBase, util::file_operations};
+use binrw::BinRead;
 use dotenvy::dotenv;
-use std::{env, fs};
+use std::{env, fs, io::Cursor};
 
 fn main() {
     dotenv().ok();
@@ -70,25 +68,12 @@ fn main() {
                     .unwrap();
             }
             "test" => {
-                // Read patch
-                let patch_file_string = &fs::read_to_string(
-                    "/home/watduhhekbro/external/workspace/dev2/Map0134.patch.toml",
-                )
-                .unwrap();
-                let mut patch = toml::from_str::<Patch>(patch_file_string).unwrap();
-                patch.trim_dialogue_ending_newline();
-
-                // Read legacy patch
-                let text = fs::read_to_string("/home/watduhhekbro/programming/modding/VelsarborEnglish/patch/Map0134.patch.json").unwrap();
-                let legacy_patch: LegacyPatch = serde_json::from_str(&text).unwrap();
-
-                // Patch and write
-                legacy_patch.import_lines_to_toml_patch(&mut patch, &String::from("TESTING"));
-                fs::write(
-                    "/home/watduhhekbro/external/workspace/dev/Map0134.patch.toml",
-                    util::generate_toml_patch(&patch),
-                )
-                .unwrap();
+                // Read database
+                let db =
+                    fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.ldb").unwrap();
+                let mut reader = Cursor::new(db);
+                let db = LcfDataBase::read_be(&mut reader).unwrap();
+                println!("{db:?}");
             }
             _ => {
                 println!("Unknown command.");

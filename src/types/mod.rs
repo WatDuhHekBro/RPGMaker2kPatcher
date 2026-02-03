@@ -1,3 +1,4 @@
+pub mod byte_counted;
 pub mod dynamic_integer;
 pub mod dynamic_integer_array;
 pub mod null_terminated_list;

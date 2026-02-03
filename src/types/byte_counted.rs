@@ -1,7 +1,4 @@
-use crate::{
-    types::DynamicInteger,
-    util::constants::*,
-};
+use crate::{types::DynamicInteger, util::constants::*};
 use binrw::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, BinWriterExt, Endian,
@@ -9,6 +6,7 @@ use binrw::{
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 
+// NOTE: Cannot use Vec's directly, must use a wrapper like DynamicIntegerArray!
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ByteCounted<T: BinRead>(pub T);
 
@@ -46,7 +44,7 @@ where
     /*T: for<'a> BinRead + for<'a> BinWrite,
     for<'a> T::Args<'a>: Default,*/
     for<'a> T: BinRead + BinWrite,
-    for<'a> <T as BinRead>::Args<'a>: Default,   // disambiguates Args from BinRead
+    for<'a> <T as BinRead>::Args<'a>: Default,
     for<'a> <T as BinWrite>::Args<'a>: Default,
 {
     type Args<'a> = ();
@@ -87,12 +85,14 @@ impl<T: BinRead + BinWrite> std::ops::DerefMut for ByteCounted<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::DynamicIntegerArray;
     use binrw::{binrw, io::Cursor};
 
     #[binrw]
+    #[derive(Debug)]
     struct TestStructure {
         pub id: DynamicInteger,
-        pub value: ByteCounted<Vec<DynamicInteger>>,
+        pub value: ByteCounted<DynamicIntegerArray>,
     }
 
     #[test]
@@ -108,6 +108,29 @@ mod tests {
         let data = ByteCounted::<i32>::read_le(&mut reader).unwrap();
         assert_eq!(data.0, 0x04030201);
     }
+
+    #[test]
+    fn read_complex() {
+        let mut reader = Cursor::new(b"\x01\x04\x03\x04\x05\x06\x07\x08\x09\x0A");
+        let data = TestStructure::read_be(&mut reader).unwrap();
+        println!("{data:?}");
+    }
+
+    #[test]
+    #[should_panic]
+    fn read_complex_byte_count_lower_than_should_be() {
+        let mut reader = Cursor::new(b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A");
+        let data = TestStructure::read_be(&mut reader).unwrap();
+        println!("{data:?}");
+    }
+
+    /*#[test]
+    #[should_panic]
+    fn read_complex_byte_count_higher_than_should_be() {
+        let mut reader = Cursor::new(b"\x01\x05\x03\x04\x05\x06\x07\x08\x09\x0A");
+        let data = TestStructure::read_be(&mut reader).unwrap();
+        println!("{data:?}");
+    }*/
 
     #[test]
     fn write_i32_be() {

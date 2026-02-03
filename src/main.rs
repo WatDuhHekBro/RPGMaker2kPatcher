@@ -4,20 +4,10 @@ mod types; // Custom data types
 mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
-use crate::{
-    types::{
-        byte_counted::ByteCounted,
-    },
-    util::file_operations,
-};
-use binrw::BinRead;
+use crate::util::file_operations;
+//use binrw::BinRead;
 use dotenvy::dotenv;
-/*use lcf::{
-    lmu::LcfMapUnit,
-    raw::ldb::RawLcfDataBase,
-    ConvertExt,
-};*/
-use std::{env, fs, io::Cursor};
+use std::{env, fs};
 
 fn main() {
     dotenv().ok();
@@ -82,24 +72,9 @@ fn main() {
                 let db =
                     fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.ldb").unwrap();
                 let mut reader = Cursor::new(db);
-                let db = RawLcfDataBase::read(&mut reader).unwrap();
+                let db = LcfDataBase::read_be(&mut reader).unwrap();
                 println!("{db:?}");
-            }
-            "test2" => {
-                let map = fs::read("/home/watduhhekbro/external/workspace/Velsarbor/Map0134.lmu")
-                    .unwrap();
-                let mut reader = Cursor::new(map);
-                let map = LcfMapUnit::read(&mut reader).unwrap();
-                println!("{map:?}");
             }*/
-            "test3" => {
-                //let slice = b"\x06\x05Hello";
-                let slice = b"\x04\x01\x02\x03\x04";
-                let mut reader = Cursor::new(slice);
-                //let blob = Chunk::<PascalString>::read(&mut reader).unwrap();
-                let blob = ByteCounted::<i32>::read_le(&mut reader).unwrap();
-                println!("{blob:?}");
-            }
             _ => {
                 println!("Unknown command.");
             }

@@ -169,17 +169,29 @@ impl LcfMapUnit {
                 // ----- Add -----
                 // [0, 1, [2, 3, 4], [5, 6], 7, 8, 9] => index=2, len=3->4
                 // [0, 1, [2, 3, 4, 5], [6, 7], 8, 9] => index=5+1, len=2
-                // [+0 +0 +0 +0 +0  +1  +1 +1  +1 +1]
+                // [+0 +0 +0 +0 +0  +1  +1 +1  +1 +1] => start new offset at index=5
                 // ----- Remove -----
                 // [0, 1, [2, 3, 4], [5, 6], 7, 8, 9] => index=2, len=3->1
                 // [0, 1, [2], [3, 4], 5, 6, 7, 8, 9] => index=5-2, len=2
                 // [+0 +0 +0  +0 +0  -2 -2  -2 -2 -2]
+                // ----- Map0150 -----
+                // [0, 1, [2, 3, 4], [5, 6, 7, 8], 9, 10, 11, 12, 13, 14, [15, 16], 17, [18], 19, [20, 21, 22], [23, 24, 25, 26], 27, [28, 29], 30, 31, ...]
+                //                  +1
+                // [0, 1, [2, 3, 4, 5], [6, 7, 8, 9], 10, 11, 12, 13, 14, 15, [16, 17], 18, [19], 20, [21, 22, 23], [24, 25, 26, 27], 28, [29, 30], 31, ...]
+                //                                                                      +1
+                // [0, 1, [2, 3, 4, 5], [6, 7, 8, 9], 10, 11, 12, 13, 14, 15, [16, 17, 18], 19, [20], 21, [22, 23, 24], [25, 26, 27, 28], 29, [30, 31], ...]
+                //                                                                                                 -1
+                // [0, 1, [2, 3, 4, 5], [6, 7, 8, 9], 10, 11, 12, 13, 14, 15, [16, 17, 18], 19, [20], 21, [22, 23], [24, 25, 26, 27], 28, [29, 30], 31, ...]
+                // But stop_index=25. You set offsets from index=25. But the original_index=23. So it's 23+2 starting at 25, not 24.
+                // Should you use the original_index?
                 let length_difference =
                     (patched_lines_count as isize) - (original_lines_count as isize);
 
-                for offsets_index in stop_index..offsets.len() {
+                for offsets_index in command_index..offsets.len() {
                     offsets[offsets_index] += length_difference;
                 }
+
+                //println!("{offsets:?} <== {length_difference}");
             }
         }
 

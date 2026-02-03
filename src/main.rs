@@ -24,7 +24,7 @@ fn main() {
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
     let command = args.get(1);
-    //let command = Some(&String::from("convertLegacyPatches"));
+    //let command = Some(&String::from("applyPatches"));
 
     match command {
         Some(command) => match command.as_str() {

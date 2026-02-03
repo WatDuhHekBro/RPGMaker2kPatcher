@@ -36,3 +36,16 @@ Your next goals after that are:
 
 The next release will only have the pre-patched release, no dev stuff or separate patch generated.
 - Source and destination folders.
+
+```
+Manual Patches
+Map0081
+Map0093
+Map0179
+Map0208
+Map0224
+Map0227
+Map0240
+Map0242
+Map0245
+```

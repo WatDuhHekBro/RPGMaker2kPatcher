@@ -3,7 +3,10 @@ mod structs; // Main structures
 mod types; // Custom data types
 mod util;
 
-use crate::{structs::LcfDataBase, util::file_operations};
+use crate::{
+    structs::LcfDataBase,
+    util::{file_operations, generate_toml_database},
+};
 use binrw::{BinRead, BinWriterExt};
 use dotenvy::dotenv;
 use std::{env, fs, io::Cursor, path::Path};
@@ -20,8 +23,8 @@ fn main() {
 
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
-    //let command = args.get(1);
-    let command = Some(&String::from("test"));
+    let command = args.get(1);
+    //let command = Some(&String::from("test"));
 
     match command {
         Some(command) => match command.as_str() {
@@ -116,7 +119,7 @@ fn main() {
                     fs::read("/home/watduhhekbro/external/workspace/debug/db/RPG_RT.ldb").unwrap();
                 let mut reader = Cursor::new(db);
                 let db = LcfDataBase::read_be(&mut reader).unwrap();
-                //println!("{db:?}");
+                fs::write("test.toml", generate_toml_database(&db)).unwrap();
 
                 let mut file = file_operations::overwrite(
                     "/home/watduhhekbro/external/workspace/debug/db/out/RPG_RT.ldb",

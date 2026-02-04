@@ -3,4 +3,4 @@ pub mod file_operations;
 pub mod patching_operations;
 pub mod toml;
 
-pub use toml::{generate_toml_map, generate_toml_patch};
+pub use toml::{generate_toml_database, generate_toml_map, generate_toml_patch};

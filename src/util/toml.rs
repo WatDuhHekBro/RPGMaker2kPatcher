@@ -1,15 +1,26 @@
-use crate::structs::{
-    map::*,
-    patch::{Dialogue, Text},
-    LcfCommand, ListEntryHeaderGeneric, Patch,
+use crate::{
+    structs::{
+        database::{
+            LcfDataBaseCharacterHeader, LcfDataBaseConditionsHeader, LcfDataBaseDoubleTextHeader,
+            LcfDataBaseGlobalEventHeader, LcfDataBaseHeader, LcfDataBaseSingleTextHeader,
+        },
+        map::*,
+        patch::{Dialogue, Text},
+        LcfCommand, LcfDataBase, ListEntryHeaderGeneric, Patch,
+    },
+    types::PascalString,
 };
 
 // NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all,
 // neither backslashes nor single quotes. So in order to be safe, you must use the multiline literals
 // (triple single quotes)! That'll take care of any problems with apostrophes.
 
+const DISCLAIMER_TEXT: &str = "# This binary representation has been serialized for easier debugging/patching.\n# It will not be used by the program to actually patch anything, so feel free to delete this.\n\n";
+const HEADER_SIGNPOST_START: &str = "#############\n# Header ";
+const HEADER_SIGNPOST_END: &str = " #\n#############\n\n";
+
 pub fn generate_toml_map(map: &LcfMapUnit) -> String {
-    let mut output = String::from("# This binary representation has been serialized for easier debugging/patching.\n# It will not be used by the program to actually patch anything, so feel free to delete this.\n\n");
+    let mut output = String::from(DISCLAIMER_TEXT);
 
     ////////////
     // Header //
@@ -101,6 +112,432 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
     output.push_str(&output_header);
     output.push_str("\n\n\n");
     output.push_str(&output_events);
+
+    // Cleanup
+    let mut output = output.trim_end().to_string();
+    output.push_str("\n");
+
+    output
+}
+
+pub fn generate_toml_database(database: &LcfDataBase) -> String {
+    let mut output = String::from(DISCLAIMER_TEXT);
+    output.push_str("[header]\ntype = '''LcfDataBase'''\n\n");
+
+    // Behold! The disgusting nesting & copy pasting.
+    // Maybe I should learn how to create macros...
+    for header in &**database {
+        match header {
+            LcfDataBaseHeader::Characters(characters) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("11");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for character in &***characters {
+                    output.push_str(&format!("[[character.{}]]\n", *character.id));
+
+                    for header in &*character.headers {
+                        let line = match header {
+                            LcfDataBaseCharacterHeader::Name1(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseCharacterHeader::Name2(PascalString(text)) => {
+                                format!("2 = '''{text}'''\n")
+                            }
+                            LcfDataBaseCharacterHeader::Name3(PascalString(text)) => {
+                                format!("3 = '''{text}'''\n")
+                            }
+                            LcfDataBaseCharacterHeader::Face(PascalString(text)) => {
+                                format!("15 = '''{text}'''\n")
+                            }
+                            LcfDataBaseCharacterHeader::Type(PascalString(text)) => {
+                                format!("67 = '''{text}'''\n")
+                            }
+                            LcfDataBaseCharacterHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Skills(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("12");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[skill.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Items(lcf_double_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("13");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_double_text {
+                    output.push_str(&format!("[[item.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseDoubleTextHeader::TextA(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::TextB(PascalString(text)) => {
+                                format!("2 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Enemies(lcf_double_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("14");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_double_text {
+                    output.push_str(&format!("[[enemy.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseDoubleTextHeader::TextA(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::TextB(PascalString(text)) => {
+                                format!("2 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::EnemyGroups(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("15");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[enemy-group.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Terrain(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("16");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[terrain.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Attributes(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("17");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[attribute.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Conditions(conditions) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("18");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for condition in &***conditions {
+                    output.push_str(&format!("[[condition.{}]]\n", *condition.id));
+
+                    for header in &*condition.headers {
+                        let line = match header {
+                            LcfDataBaseConditionsHeader::Name(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseConditionsHeader::Start1(PascalString(text)) => {
+                                format!("51 = '''{text}'''\n")
+                            }
+                            LcfDataBaseConditionsHeader::Start2(PascalString(text)) => {
+                                format!("52 = '''{text}'''\n")
+                            }
+                            LcfDataBaseConditionsHeader::Finish(PascalString(text)) => {
+                                format!("55 = '''{text}'''\n")
+                            }
+                            LcfDataBaseConditionsHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::BattleAnimations(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("19");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[battle-animation.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Chipsets(lcf_double_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("20");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_double_text {
+                    output.push_str(&format!("[[chipset.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseDoubleTextHeader::TextA(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::TextB(PascalString(text)) => {
+                                format!("2 = '''{text}'''\n")
+                            }
+                            LcfDataBaseDoubleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Vocabulary(vocabulary) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("21");
+                output.push_str(HEADER_SIGNPOST_END);
+                output.push_str("[vocabulary]\n");
+
+                for vocab in &***vocabulary {
+                    output.push_str(&format!("{} = '''{}'''\n", *vocab.id, vocab.text));
+                }
+
+                output.push('\n');
+            }
+
+            LcfDataBaseHeader::System(system) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("22");
+                output.push_str(HEADER_SIGNPOST_END);
+                output.push_str("[system]\n");
+
+                for vocab in &***system {
+                    output.push_str(&format!("{} = '''{}'''\n", *vocab.id, vocab.text));
+                }
+
+                output.push('\n');
+            }
+
+            LcfDataBaseHeader::Switches(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("23");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[switch.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::Variables(lcf_single_text) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("24");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for entry in &***lcf_single_text {
+                    output.push_str(&format!("[[variable.{}]]\n", *entry.id));
+
+                    for header in &*entry.headers {
+                        let line = match header {
+                            LcfDataBaseSingleTextHeader::Text(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseSingleTextHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+
+                    output.push('\n');
+                }
+            }
+
+            LcfDataBaseHeader::GlobalEvents(events) => {
+                output.push_str(HEADER_SIGNPOST_START);
+                output.push_str("25");
+                output.push_str(HEADER_SIGNPOST_END);
+
+                for event in &***events {
+                    output.push_str(&format!("[[event.{}]]\n", *event.id));
+
+                    for header in &*event.headers {
+                        let line = match header {
+                            LcfDataBaseGlobalEventHeader::Name(PascalString(text)) => {
+                                format!("1 = '''{text}'''\n")
+                            }
+                            LcfDataBaseGlobalEventHeader::Commands(commands) => {
+                                let commands = &***commands;
+                                let mut output_commands = String::new();
+
+                                if commands.is_empty() {
+                                    output_commands.push_str(&format!("commands = []\n\n"));
+                                } else {
+                                    output_commands.push_str(&format!("commands = [\n"));
+                                    let mut index = 0;
+
+                                    for LcfCommand {
+                                        code,
+                                        indent,
+                                        text,
+                                        parameters,
+                                    } in &**commands
+                                    {
+                                        output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                        index += 1;
+                                    }
+
+                                    output_commands.push_str(&format!("]\n\n"));
+                                }
+
+                                output_commands
+                            }
+                            LcfDataBaseGlobalEventHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => format!("{id} = {value}\n"),
+                        };
+                        output.push_str(&line);
+                    }
+                }
+            }
+
+            LcfDataBaseHeader::Generic(ListEntryHeaderGeneric { id, value }) => {
+                output.push_str(&format!("{id} = {value}\n"));
+            }
+        }
+    }
 
     // Cleanup
     let mut output = output.trim_end().to_string();

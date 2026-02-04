@@ -41,9 +41,9 @@ pub enum LcfDataBaseHeader {
     #[brw(magic = 12u8)]
     Skills(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
     #[brw(magic = 13u8)]
-    Items(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    Items(ByteCounted<PreallocatedList<LcfDataBaseDoubleText>>),
     #[brw(magic = 14u8)]
-    Enemies(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    Enemies(ByteCounted<PreallocatedList<LcfDataBaseDoubleText>>),
     #[brw(magic = 15u8)]
     EnemyGroups(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
     #[brw(magic = 16u8)]
@@ -55,15 +55,15 @@ pub enum LcfDataBaseHeader {
     #[brw(magic = 19u8)]
     BattleAnimations(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
     #[brw(magic = 20u8)]
-    Chipsets(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    Chipsets(ByteCounted<PreallocatedList<LcfDataBaseDoubleText>>),
     #[brw(magic = 21u8)]
     Vocabulary(ByteCounted<NullTerminatedList<LcfDataBaseVocab>>),
     #[brw(magic = 22u8)]
     System(ByteCounted<NullTerminatedList<LcfDataBaseVocab>>),
     #[brw(magic = 23u8)]
-    Switches(ByteCounted<PreallocatedList<ListEntry<LcfDataBaseSingleTextHeader>>>),
+    Switches(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
     #[brw(magic = 24u8)]
-    Variables(ByteCounted<PreallocatedList<ListEntry<LcfDataBaseSingleTextHeader>>>),
+    Variables(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
     #[brw(magic = 25u8)]
     GlobalEvents(ByteCounted<PreallocatedList<LcfDataBaseGlobalEvent>>),
     Generic(ListEntryHeaderGeneric),
@@ -79,11 +79,11 @@ pub enum LcfDataBaseSingleTextHeader {
     Generic(ListEntryHeaderGeneric),
 }
 
-pub type LcfDataBaseDualText = ListEntry<LcfDataBaseDualTextHeader>;
+pub type LcfDataBaseDoubleText = ListEntry<LcfDataBaseDoubleTextHeader>;
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
-pub enum LcfDataBaseDualTextHeader {
+pub enum LcfDataBaseDoubleTextHeader {
     #[brw(magic = 1u8)]
     TextA(PascalString),
     #[brw(magic = 2u8)]

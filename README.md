@@ -30,14 +30,13 @@
 
 **Right now:**
 
-Your next goals after that are:
-- Port over manual patches functionality
-
 Database
-- TOML representation
-- TOML map
+- TOML patch
 - Insert into bulk functions (before map parsing etc.), assume one database only, always with the same name `RPG_RT.ldb`
 - Add TOML comments for `\n[1]`, basically replace functionality of `chars.json` via `LcfDataBase::get_character_name(id: i32) -> String` (when generating patches)
+
+Your next goals after that are:
+- Port over manual patches functionality
 
 -----
 

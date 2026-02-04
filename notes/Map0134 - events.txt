@@ -40,3 +40,21 @@
 05 32 (50 Bytes)
 ...pages
 00
+
+...
+
+82 2B (Event #299)
+0B 01 05
+15 01 04
+16 04
+00 00 00 00
+00
+
+82 2C (Event #300)
+0B 01 05
+15 01 04
+16 04
+00 00 00 00
+00
+
+EOF (LcfDataBase appears to not be null-terminated actually)

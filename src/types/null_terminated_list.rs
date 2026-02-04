@@ -25,14 +25,14 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
 
         loop {
             let mut next_byte = [0u8];
-            reader.read_exact(&mut next_byte)?;
+            reader.read_exact(&mut next_byte).expect(ERROR_BINRW_READ);
 
             if next_byte[0] == 0x00 {
                 // This will mean that the zero byte counts as read by this point
                 break;
             } else {
                 // First rewind because stepping here means there's actual data now
-                reader.seek_relative(-1)?;
+                reader.seek_relative(-1).expect(ERROR_BINRW_READ);
 
                 // Then read the arbitrary data entry
                 let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);

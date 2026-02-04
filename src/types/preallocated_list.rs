@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PreallocatedList<T: BinRead>(pub Vec<T>);
 
-impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for PreallocatedList<T> {
+impl<T: for<'a> BinRead<Args<'a> = ()> /*+ std::fmt::Debug*/> BinRead for PreallocatedList<T> {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -21,7 +21,12 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for PreallocatedList<T> {
 
         for _ in 0..*count {
             let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);
+            //println!("DEBUG = {entry:?}");
             entries.push(entry);
+
+            /*if test == 299 {
+                println!("test");
+            }*/
         }
 
         Ok(PreallocatedList(entries))

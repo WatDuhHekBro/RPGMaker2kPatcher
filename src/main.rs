@@ -5,7 +5,7 @@ mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
 use crate::{structs::LcfDataBase, util::file_operations};
-use binrw::BinRead;
+use binrw::{BinRead, BinWriterExt};
 use dotenvy::dotenv;
 use std::{env, fs, io::Cursor};
 
@@ -22,7 +22,7 @@ fn main() {
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
     let command = args.get(1);
-    let command = Some(&String::from("test"));
+    //let command = Some(&String::from("test"));
 
     match command {
         Some(command) => match command.as_str() {
@@ -68,15 +68,21 @@ fn main() {
                     .unwrap();
             }
             "test" => {
+                println!("Testing...");
+
                 // Read database
                 let db =
                     fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.ldb").unwrap();
                 let mut reader = Cursor::new(db);
                 let db = LcfDataBase::read_be(&mut reader).unwrap();
                 println!("{db:?}");
+
+                let mut file = file_operations::overwrite("/home/watduhhekbro/external/workspace/debug/out/RPG_RT.ldb").unwrap();
+                file.write_be(&db).unwrap();
+                fs::write("/home/watduhhekbro/external/workspace/debug/out/RPG_RT.txt", format!("{db:?}")).unwrap();
             }
             _ => {
-                println!("Unknown command.");
+                println!("Unknown command!");
             }
         },
         None => {

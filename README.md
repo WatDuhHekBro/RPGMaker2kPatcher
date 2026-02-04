@@ -33,6 +33,8 @@
 Your next goals after that are:
 - Port over manual patches functionality
 - Replace `.0` calls with direct comparison Traits
+- Easy bulk operations parallelism with Rayon?
+- Bulk operation to easily generate outputs to test how well your code holds up (binary matching/identical)
 
 Database
 - Parsing

@@ -28,9 +28,11 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Port over manual patches functionality
+**Right now:** CommandList struct
 
 Your next goals after that are:
+- Port over manual patches functionality
+- Replace `.0` calls with direct comparison Traits
 
 Database
 - Parsing

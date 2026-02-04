@@ -22,14 +22,14 @@ impl BinRead for DynamicIntegerArray {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: Endian,
+        _: Endian,
         (): Self::Args<'_>,
     ) -> BinResult<Self> {
-        let mut numbers: Vec<DynamicInteger> = vec![];
-        let count = <DynamicInteger>::read_options(reader, endian, ())?;
+        let count = DynamicInteger::read_be(reader)?;
+        let mut numbers: Vec<DynamicInteger> = Vec::with_capacity(count.0 as usize);
 
         for _ in 0..*count {
-            let num = <DynamicInteger>::read_options(reader, endian, ())?;
+            let num = DynamicInteger::read_be(reader)?;
             numbers.push(num);
         }
 
@@ -51,7 +51,7 @@ impl BinWrite for DynamicIntegerArray {
             self.0
         ));
 
-        DynamicInteger(count).write_options(writer, endian, args)?;
+        DynamicInteger(count).write_be(writer)?;
         self.0.write_options(writer, endian, args)?;
 
         Ok(())

@@ -4,10 +4,10 @@ mod types; // Custom data types
 mod util;
 mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
-use crate::util::file_operations;
-//use binrw::BinRead;
+use crate::{structs::LcfDataBase, util::file_operations};
+use binrw::BinRead;
 use dotenvy::dotenv;
-use std::{env, fs};
+use std::{env, fs, io::Cursor};
 
 fn main() {
     dotenv().ok();
@@ -22,7 +22,7 @@ fn main() {
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
     let command = args.get(1);
-    //let command = Some(&String::from("test"));
+    let command = Some(&String::from("test"));
 
     match command {
         Some(command) => match command.as_str() {
@@ -67,14 +67,14 @@ fn main() {
                 file_operations::bulk_serialize_lcfmapunits(&path_to_original, &path_to_reference)
                     .unwrap();
             }
-            /*"test" => {
+            "test" => {
                 // Read database
                 let db =
                     fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.ldb").unwrap();
                 let mut reader = Cursor::new(db);
                 let db = LcfDataBase::read_be(&mut reader).unwrap();
                 println!("{db:?}");
-            }*/
+            }
             _ => {
                 println!("Unknown command.");
             }

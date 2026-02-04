@@ -16,14 +16,14 @@ impl BinRead for U8Array {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: Endian,
+        _: Endian,
         (): Self::Args<'_>,
     ) -> BinResult<Self> {
-        let mut bytes = vec![];
-        let count = <DynamicInteger>::read_options(reader, endian, ())?;
+        let count = DynamicInteger::read_be(reader)?;
+        let mut bytes: Vec<u8> = Vec::with_capacity(count.0 as usize);
 
         for _ in 0..*count {
-            let byte = <u8>::read_options(reader, endian, ())?;
+            let byte = u8::read_be(reader)?;
             bytes.push(byte);
         }
 

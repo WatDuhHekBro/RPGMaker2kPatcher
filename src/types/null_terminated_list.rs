@@ -1,12 +1,16 @@
-use crate::{
-    types::DynamicInteger, util::constants::ERROR_BINRW_READ,
-};
+// Very nicely modular type that just loops through arbitrary data types, with the
+// list ending if exactly one byte 0x00 is present (and ONLY reading that byte if so).
+// -----
+// Used mainly for top-level file headers and event command lists.
+
+use crate::util::constants::ERROR_BINRW_READ;
 use binrw::{
     io::{Read, Seek, Write},
-    BinRead, BinResult, BinWrite, BinWriterExt, Endian,
+    BinRead, BinResult, BinWrite, Endian,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct NullTerminatedList<T: BinRead>(pub Vec<T>);
 
 impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
@@ -15,18 +19,25 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args<'_>,
+        args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        let mut entries = Vec::<T>::new();
+        let mut entries: Vec<T> = Vec::new();
 
-        // The first byte of the sub-section will be the event count.
-        // Do not put it before the loop to gather the sub-section.
-        let count = DynamicInteger::read_options(reader, endian, ()).expect(ERROR_BINRW_READ);
+        loop {
+            let mut next_byte = [0u8];
+            reader.read_exact(&mut next_byte)?;
 
-        for _ in 0..*count {
-            let entry =
-                T::read_options(reader, endian, Default::default()).expect(ERROR_BINRW_READ);
-            entries.push(entry);
+            if next_byte[0] == 0x00 {
+                // This will mean that the zero byte counts as read by this point
+                break;
+            } else {
+                // First rewind because stepping here means there's actual data now
+                reader.seek_relative(-1)?;
+
+                // Then read the arbitrary data entry
+                let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);
+                entries.push(entry);
+            }
         }
 
         Ok(NullTerminatedList(entries))
@@ -48,11 +59,8 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<()> {
-        // Write back the count before writing the rest
-        DynamicInteger(self.0.len().try_into().unwrap()).write_options(writer, endian, args)?;
-        // Write the rest
-        writer.write_be(&self.0).unwrap();
-        self.0.write_options(writer, endian, Default::default())?;
+        self.0.write_options(writer, endian, args)?;
+        0u8.write_options(writer, endian, args)?;
 
         Ok(())
     }
@@ -74,39 +82,39 @@ impl<T: BinRead + BinWrite> std::ops::DerefMut for NullTerminatedList<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{PascalString, byte_counted::ByteCounted};
-
     use super::*;
-    use binrw::{binrw, io::Cursor};
+    use binrw::{io::Cursor, BinWriterExt};
 
-    #[binrw]
-    #[derive(Debug)]
-    struct TestStructure {
-        pub id: DynamicInteger,
-        pub value: ByteCounted<NullTerminatedList<PascalString>>,
+    #[test]
+    fn read_success() {
+        let mut reader = Cursor::new(b"\x02\x04\x06\x00\x01");
+        let data = NullTerminatedList::<u8>::read_be(&mut reader).unwrap();
+        assert_eq!(data[0], 2);
+        assert_eq!(data[1], 4);
+        assert_eq!(data[2], 6);
+        assert_eq!(data.len(), 3);
     }
 
     #[test]
-    fn read_basic() {
-        let mut reader = Cursor::new(b"\x03\x05Hello\x05there\x02m8");
-        let data = NullTerminatedList::<PascalString>::read_be(&mut reader).unwrap();
-        assert_eq!(data.0[0].0, "Hello");
-        assert_eq!(data.0[1].0, "there");
-        assert_eq!(data.0[2].0, "m8");
-    }
-
-    #[test]
-    fn write_basic() {
-        let data = NullTerminatedList(vec![
-            PascalString::from("Hello"),
-            PascalString::from("there"),
-            PascalString::from("m8")
-        ]);
+    fn write_success() {
+        let data: NullTerminatedList<u8> = NullTerminatedList(vec![2, 4, 6]);
         let mut writer = Cursor::new(Vec::<u8>::new());
         writer.write_be(&data).unwrap();
-        assert_eq!(
-            writer.into_inner(),
-            b"\x03\x05Hello\x05there\x02m8"
-        );
+        assert_eq!(writer.into_inner(), b"\x02\x04\x06\x00");
+    }
+
+    #[test]
+    fn read_empty_success() {
+        let mut reader = Cursor::new(b"\x00\x02\x04\x06\x00\x01");
+        let data = NullTerminatedList::<u8>::read_be(&mut reader).unwrap();
+        assert_eq!(data.len(), 0);
+    }
+
+    #[test]
+    fn write_empty_success() {
+        let data: NullTerminatedList<u8> = NullTerminatedList(vec![]);
+        let mut writer = Cursor::new(Vec::<u8>::new());
+        writer.write_be(&data).unwrap();
+        assert_eq!(writer.into_inner(), b"\x00");
     }
 }

@@ -117,14 +117,14 @@ impl BinRead for DynamicInteger {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: Endian,
+        _: Endian,
         (): Self::Args<'_>,
     ) -> BinResult<Self> {
         let mut bytes = vec![];
         let mut is_terminated = false;
 
         for _ in 0..5 {
-            let byte = <u8>::read_options(reader, endian, ())?;
+            let byte = u8::read_be(reader)?;
             bytes.push(byte);
 
             // Evaluate the continue bit

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Make sure to place this #[derive(Debug, Deserialize, Serialize)] below #[binrw], or it'll throw errors for temporary fields.
-
+// -----
 // NOTE: All headers are kept in a Vec instead of a HashMap in order to guarantee
 // preserving the original order, remaining as close as possible to the original binary.
 // Tradeoff: Uses less efficient helper functions to access common fields.

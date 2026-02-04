@@ -22,8 +22,8 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        let mut bytes = Vec::<u8>::new();
         let byte_count = DynamicInteger::read_be(reader).expect(ERROR_BINRW_READ);
+        let mut bytes: Vec<u8> = Vec::with_capacity(byte_count.0 as usize);
 
         for _ in 0..*byte_count {
             let byte = u8::read_be(reader).expect(ERROR_BINRW_READ);
@@ -55,8 +55,8 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<()> {
+        // Create the subsection of bytes to count
         let mut subsection_writer = Cursor::new(Vec::<u8>::new());
-        // Write the rest of the bytes
         subsection_writer.write_type(&self.0, endian).unwrap();
         let bytes = subsection_writer.into_inner();
 

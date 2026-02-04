@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PreallocatedList<T: BinRead>(pub Vec<T>);
 
-impl<T: for<'a> BinRead<Args<'a> = ()> /*+ std::fmt::Debug*/> BinRead for PreallocatedList<T> {
+impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for PreallocatedList<T> {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -21,12 +21,7 @@ impl<T: for<'a> BinRead<Args<'a> = ()> /*+ std::fmt::Debug*/> BinRead for Preall
 
         for _ in 0..*count {
             let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);
-            //println!("DEBUG = {entry:?}");
             entries.push(entry);
-
-            /*if test == 299 {
-                println!("test");
-            }*/
         }
 
         Ok(PreallocatedList(entries))
@@ -67,6 +62,23 @@ impl<T: BinRead + BinWrite> std::ops::DerefMut for PreallocatedList<T> {
         &mut self.0
     }
 }
+
+/*impl<'a, T: BinRead + BinWrite> Iterator for &'a PreallocatedList<T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        self.0.iter().next()
+    }
+}*/
+/*impl<'a, T: BinRead + BinWrite> IntoIterator for &'a PreallocatedList<&'a T> {
+    type Item = &'a T;
+    type IntoIter = std::vec::IntoIter<&'a T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let a = &self.0.into_iter();
+        a
+    }
+}*/
 
 #[cfg(test)]
 mod tests {

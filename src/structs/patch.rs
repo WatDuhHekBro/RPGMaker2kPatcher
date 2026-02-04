@@ -1,7 +1,7 @@
 use crate::{
-    structs::{map::LcfMapUnitCommand, LcfMapUnit},
+    structs::{common::LcfCommonCommand, LcfMapUnit},
     types::DynamicInteger,
-    util::constants::*,
+    util::patching_operations,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,142 +14,20 @@ pub struct Patch {
 }
 
 impl Patch {
-    pub fn generate_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> Patch {
-        let mut dialogue: Vec<Dialogue> = vec![];
-        let mut text: Vec<Text> = vec![];
-
-        // Loop through all commands
-        if let Some(events) = map.get_events() {
-            for event in &events.0 {
-                if let Some(pages) = event.headers.get_pages() {
-                    for page in &pages.0 {
-                        if let Some(commands) = page.headers.get_commands() {
-                            let mut command_index = 0;
-                            let mut start_index = 0;
-                            let mut last_command_code = -1;
-                            let mut current_dialogue_text = String::new();
-                            let mut last_command_indent = 0;
-                            let mut indent_written_into_patch: Option<DynamicInteger> = None;
-
-                            for command in &commands.0 {
-                                // 10110 as A
-                                // 20110 as B
-                                // A o --> [A]
-                                // A A --> [A] [A]
-                                // A B --> [A,B]
-                                // A B B --> [A,B,B]
-                                // A B A --> [A,B] [A]
-                                let current_command_code = command.code.0;
-                                let current_command_indent = command.indent.0;
-
-                                let was_single_line_dialogue = last_command_code
-                                    == COMMAND_DIALOGUE_START
-                                    && current_command_code != COMMAND_DIALOGUE_CONTINUE;
-
-                                let was_dialogue_terminated = last_command_code
-                                    == COMMAND_DIALOGUE_CONTINUE
-                                    && current_command_code != COMMAND_DIALOGUE_CONTINUE;
-
-                                let is_other_text = current_command_code
-                                    == COMMAND_MULTIPLE_CHOICE_PROMPT
-                                    || current_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
-                                    || current_command_code == COMMAND_SAVE_POINT_NAME;
-
-                                if was_single_line_dialogue || was_dialogue_terminated {
-                                    dialogue.push(Dialogue {
-                                        event: event.id.0,
-                                        page: page.id.0,
-                                        command: start_index,
-                                        indent: indent_written_into_patch,
-                                        original: current_dialogue_text.clone(),
-                                        patched: current_dialogue_text.clone(),
-                                    });
-
-                                    current_dialogue_text = String::new();
-                                    indent_written_into_patch = None;
-                                }
-
-                                if current_command_code == COMMAND_DIALOGUE_START {
-                                    start_index = command_index;
-                                    current_dialogue_text.push_str(command.text.0.as_str());
-
-                                    // Compare the indent for the first line of dialogue
-                                    indent_written_into_patch = {
-                                        if current_command_indent != last_command_indent {
-                                            Some(DynamicInteger(current_command_indent))
-                                        } else {
-                                            None
-                                        }
-                                    };
-
-                                    // I don't think dialogue commands have parameters, but it doesn't hurt
-                                    // to alert the user if there is any.
-                                    if !command.parameters.is_empty() {
-                                        println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id.0, page.id.0);
-                                    }
-                                } else if current_command_code == COMMAND_DIALOGUE_CONTINUE {
-                                    current_dialogue_text.push_str("\n");
-                                    current_dialogue_text.push_str(command.text.0.as_str());
-
-                                    // And then just make sure there's no conflicting indent in any continue statements.
-                                    if let Some(indent_written_into_patch) =
-                                        &indent_written_into_patch
-                                    {
-                                        if indent_written_into_patch.0 != current_command_indent {
-                                            println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) has a conflicting indent in a DIALOGUE_CONTINUE command?!", event.id.0, page.id.0);
-                                        }
-                                    }
-
-                                    // I don't think dialogue commands have parameters, but it doesn't hurt
-                                    // to alert the user if there is any.
-                                    if !command.parameters.is_empty() {
-                                        println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id.0, page.id.0);
-                                    }
-                                } else if is_other_text {
-                                    // Other commands do sometimes have parameters
-                                    // But unlike dialogue where you're splicing in new commands,
-                                    // patching other text doesn't affect existing parameters.
-                                    // So no need to alert the user about parameters here.
-                                    text.push(Text {
-                                        event: event.id.0,
-                                        page: page.id.0,
-                                        command: command_index,
-                                        original: command.text.0.clone(),
-                                        patched: command.text.0.clone(),
-                                    });
-                                }
-
-                                last_command_code = current_command_code;
-                                last_command_indent = current_command_indent;
-                                command_index += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        let dialogue = {
-            if dialogue.len() > 0 {
-                Some(dialogue)
-            } else {
-                None
-            }
-        };
-
-        let text = {
-            if text.len() > 0 {
-                Some(text)
-            } else {
-                None
-            }
-        };
-
-        Patch {
+    // No idea why adding this function causes trim_dialogue_ending_newline() to get called twice, but let's just not.
+    // Just call trim_dialogue_ending_newline() explicitly each time you deserialize a Patch.
+    /*pub fn new(dialogue: Option<Vec<Dialogue>>, text: Option<Vec<Text>>) -> Patch {
+        let mut patch = Patch {
             dialogue,
             text,
             insert_commands: None,
-        }
+        };
+        patch.trim_dialogue_ending_newline();
+        patch
+    }*/
+
+    pub fn generate_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> Patch {
+        patching_operations::generate_patch_from_map(map, map_name)
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
@@ -223,7 +101,7 @@ pub struct InsertCommands {
     pub event: i32,
     pub page: i32,
     pub command: i32,
-    pub commands: Vec<LcfMapUnitCommand>,
+    pub commands: Vec<LcfCommonCommand>,
 }
 
 /*

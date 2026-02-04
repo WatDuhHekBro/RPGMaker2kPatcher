@@ -2,7 +2,6 @@
 mod structs; // Main structures
 mod types; // Custom data types
 mod util;
-mod wrappers; // Intermediary data types for specialized functionality (upfront byte counts & null ID lists (similar to NullStrings))
 
 use crate::{structs::LcfDataBase, util::file_operations};
 use binrw::{BinRead, BinWriterExt};
@@ -26,7 +25,7 @@ fn main() {
 
     match command {
         Some(command) => match command.as_str() {
-            "decompileMaps" => {
+            "decompile" => {
                 file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference)
                     .unwrap();
             }
@@ -63,9 +62,14 @@ fn main() {
                     }
                 }
             }
-            "testLMUSerialization" => {
+            "testLibrary" => {
+                println!("Testing...");
+
+                // Test whether or not original binary read/write identical to original
                 file_operations::bulk_serialize_lcfmapunits(&path_to_original, &path_to_reference)
                     .unwrap();
+                // Test whether or not patched binary (from default patches) identical to original
+                // Test whether or not <already patched>
             }
             "test" => {
                 println!("Testing...");
@@ -75,18 +79,25 @@ fn main() {
                     fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.ldb").unwrap();
                 let mut reader = Cursor::new(db);
                 let db = LcfDataBase::read_be(&mut reader).unwrap();
-                println!("{db:?}");
+                //println!("{db:?}");
 
-                let mut file = file_operations::overwrite("/home/watduhhekbro/external/workspace/debug/out/RPG_RT.ldb").unwrap();
+                let mut file = file_operations::overwrite(
+                    "/home/watduhhekbro/external/workspace/debug/ref/RPG_RT.ldb",
+                )
+                .unwrap();
                 file.write_be(&db).unwrap();
-                fs::write("/home/watduhhekbro/external/workspace/debug/out/RPG_RT.txt", format!("{db:?}")).unwrap();
+                fs::write(
+                    "/home/watduhhekbro/external/workspace/debug/ref/RPG_RT.txt",
+                    format!("{db:?}"),
+                )
+                .unwrap();
             }
             _ => {
                 println!("Unknown command!");
             }
         },
         None => {
-            println!("Available commands: decompileMaps, generatePatches, applyPatches, convertLegacyPatches, testLMUSerialization");
+            println!("Available commands: decompile, generatePatches, applyPatches, convertLegacyPatches");
         }
     }
 }

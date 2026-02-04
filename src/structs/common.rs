@@ -1,7 +1,7 @@
 // NOTE: You cannot use NullTerminatedList<LcfCommonCommand>, as this is a special case of terminating via a 4-set of zeroes, not 0x00.
 
 use crate::{
-    types::{DynamicInteger, DynamicIntegerArray, PascalString},
+    types::{DynamicInteger, DynamicIntegerArray, PascalString, U8Array},
     util::constants::ERROR_BINRW_READ,
 };
 use binrw::{
@@ -10,6 +10,13 @@ use binrw::{
     BinRead, BinResult, BinWrite, Endian,
 };
 use serde::{Deserialize, Serialize};
+
+#[binrw]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LcfCommonGeneric {
+    pub id: DynamicInteger,
+    pub value: U8Array,
+}
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,5 +91,21 @@ impl std::ops::Deref for LcfCommonCommandList {
 impl std::ops::DerefMut for LcfCommonCommandList {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_command_should_terminate() {
+        let command = LcfCommonCommand {
+            code: DynamicInteger(0),
+            indent: DynamicInteger(0),
+            text: PascalString::from(""),
+            parameters: DynamicIntegerArray(vec![]),
+        };
+        assert_eq!(command.is_terminating(), true);
     }
 }

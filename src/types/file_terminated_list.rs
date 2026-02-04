@@ -1,5 +1,9 @@
 // Really unorthodox edge case for LcfDataBase.
 // Functions just like a NullTerminatedList except instead of 0x00, it's the EOF.
+// -----
+// My old JS code did something similar, albeit in a much more obtuse way.
+// writer.js::createStart() => "//writer.writeInt8(0); // I don't know why the database doesn't have that last byte at the end."
+// general.js::handleData() => "if(!isDatabase) download(new Uint8Array(createStart(data, MAP).concat(0)), filename + '.lmu');"
 
 use crate::util::constants::ERROR_BINRW_READ;
 use binrw::{

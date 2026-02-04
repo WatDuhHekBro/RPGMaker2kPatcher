@@ -67,9 +67,9 @@ pub struct LcfDataBaseHeaderGeneric {
     pub value: U8Array,
 }
 
-#[binrw]
+/*#[binrw]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LcfDataBaseCharacters {}
+pub struct LcfDataBaseCharacters {}*/
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]

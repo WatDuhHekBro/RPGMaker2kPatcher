@@ -1,10 +1,7 @@
-use crate::{
-    structs::{
-        map::*,
-        patch::{Dialogue, Text},
-        Patch,
-    },
-    wrappers::*,
+use crate::structs::{
+    map::*,
+    patch::{Dialogue, Text},
+    LcfCommonCommand, LcfCommonGeneric, Patch,
 };
 
 // NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all,
@@ -21,47 +18,44 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
     let mut output_events = String::new();
 
     // This disgusting nesting could probably be done more elegantly... but oh well.
-    for header in &map.headers.0 {
+    for header in &*map.headers {
         match header {
-            LcfMapUnitHeader::End => {}
             LcfMapUnitHeader::Panorama(name) => {
                 output_header.push_str(&format!("32 = '''{name}'''\n"))
             }
-            LcfMapUnitHeader::Generic(LcfMapUnitHeaderGeneric { id, value }) => {
+            LcfMapUnitHeader::Generic(LcfCommonGeneric { id, value }) => {
                 output_header.push_str(&format!("{id} = {value}\n"));
             }
-            LcfMapUnitHeader::Events(MapEventsWrapper(events)) => {
-                for event in events {
+            LcfMapUnitHeader::Events(events) => {
+                for event in &***events {
                     let mut output_current_event = format!("[event.{}]\n", event.id);
                     let mut output_pages = String::new();
 
-                    for event_header in &event.headers.0 {
+                    for event_header in &*event.headers {
                         match event_header {
-                            LcfMapUnitEventHeader::End => {}
                             LcfMapUnitEventHeader::Name(name) => {
                                 output_current_event.push_str(&format!("1 = '''{name}'''\n"))
                             }
-                            LcfMapUnitEventHeader::Generic(LcfMapUnitEventHeaderGeneric {
-                                id,
-                                value,
-                            }) => output_current_event.push_str(&format!("{id} = {value}\n")),
-                            LcfMapUnitEventHeader::Pages(MapPagesWrapper(pages)) => {
-                                for page in pages {
+                            LcfMapUnitEventHeader::Generic(LcfCommonGeneric { id, value }) => {
+                                output_current_event.push_str(&format!("{id} = {value}\n"))
+                            }
+                            LcfMapUnitEventHeader::Pages(pages) => {
+                                for page in &***pages {
                                     let mut output_current_page =
                                         format!("[event.{}.page.{}]\n", event.id, page.id);
 
                                     for page_header in &page.headers.0 {
                                         match page_header {
-                                            LcfMapUnitPageHeader::End => {}
                                             LcfMapUnitPageHeader::Name(name) => output_current_page
                                                 .push_str(&format!("21 = '''{name}'''\n")),
-                                            LcfMapUnitPageHeader::Generic(
-                                                LcfMapUnitPageHeaderGeneric { id, value },
-                                            ) => output_current_page
+                                            LcfMapUnitPageHeader::Generic(LcfCommonGeneric {
+                                                id,
+                                                value,
+                                            }) => output_current_page
                                                 .push_str(&format!("{id} = {value}\n")),
-                                            LcfMapUnitPageHeader::Commands(MapCommandsWrapper(
-                                                commands,
-                                            )) => {
+                                            LcfMapUnitPageHeader::Commands(commands) => {
+                                                let commands = &**commands;
+
                                                 if commands.is_empty() {
                                                     output_current_page
                                                         .push_str(&format!("commands = []\n"));
@@ -70,12 +64,12 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                         .push_str(&format!("commands = [\n"));
                                                     let mut index = 0;
 
-                                                    for LcfMapUnitCommand {
+                                                    for LcfCommonCommand {
                                                         code,
                                                         indent,
                                                         text,
                                                         parameters,
-                                                    } in commands
+                                                    } in &**commands
                                                     {
                                                         output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
                                                         index += 1;

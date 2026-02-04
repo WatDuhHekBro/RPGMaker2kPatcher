@@ -28,13 +28,12 @@
 
 ## Clipboard / Current Status
 
-**Right now:** DB redefine
+**Right now:**
 
 Your next goals after that are:
 - Port over manual patches functionality
 
 Database
-- Parsing
 - TOML representation
 - TOML map
 - Insert into bulk functions (before map parsing etc.), assume one database only, always with the same name `RPG_RT.ldb`

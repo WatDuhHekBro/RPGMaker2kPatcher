@@ -1,7 +1,7 @@
 use crate::structs::{
     map::*,
     patch::{Dialogue, Text},
-    LcfCommonCommand, LcfCommonGeneric, Patch,
+    LcfCommand, ListEntryHeaderGeneric, Patch,
 };
 
 // NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all,
@@ -23,7 +23,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
             LcfMapUnitHeader::Panorama(name) => {
                 output_header.push_str(&format!("32 = '''{name}'''\n"))
             }
-            LcfMapUnitHeader::Generic(LcfCommonGeneric { id, value }) => {
+            LcfMapUnitHeader::Generic(ListEntryHeaderGeneric { id, value }) => {
                 output_header.push_str(&format!("{id} = {value}\n"));
             }
             LcfMapUnitHeader::Events(events) => {
@@ -36,9 +36,10 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                             LcfMapUnitEventHeader::Name(name) => {
                                 output_current_event.push_str(&format!("1 = '''{name}'''\n"))
                             }
-                            LcfMapUnitEventHeader::Generic(LcfCommonGeneric { id, value }) => {
-                                output_current_event.push_str(&format!("{id} = {value}\n"))
-                            }
+                            LcfMapUnitEventHeader::Generic(ListEntryHeaderGeneric {
+                                id,
+                                value,
+                            }) => output_current_event.push_str(&format!("{id} = {value}\n")),
                             LcfMapUnitEventHeader::Pages(pages) => {
                                 for page in &***pages {
                                     let mut output_current_page =
@@ -48,10 +49,9 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                         match page_header {
                                             LcfMapUnitPageHeader::Name(name) => output_current_page
                                                 .push_str(&format!("21 = '''{name}'''\n")),
-                                            LcfMapUnitPageHeader::Generic(LcfCommonGeneric {
-                                                id,
-                                                value,
-                                            }) => output_current_page
+                                            LcfMapUnitPageHeader::Generic(
+                                                ListEntryHeaderGeneric { id, value },
+                                            ) => output_current_page
                                                 .push_str(&format!("{id} = {value}\n")),
                                             LcfMapUnitPageHeader::Commands(commands) => {
                                                 let commands = &**commands;
@@ -64,7 +64,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                         .push_str(&format!("commands = [\n"));
                                                     let mut index = 0;
 
-                                                    for LcfCommonCommand {
+                                                    for LcfCommand {
                                                         code,
                                                         indent,
                                                         text,

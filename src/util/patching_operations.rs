@@ -1,7 +1,7 @@
 use crate::{
     structs::{
         patch::{Dialogue, Text},
-        LcfCommonCommand, LcfMapUnit, Patch,
+        LcfCommand, LcfMapUnit, Patch,
     },
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
     util::constants::*,
@@ -218,7 +218,7 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
             };
 
             // Generate patched commands
-            let mut patched_commands: Vec<LcfCommonCommand> = Vec::new();
+            let mut patched_commands: Vec<LcfCommand> = Vec::new();
             let patched_lines = patched.split("\n").collect::<Vec<&str>>();
             let patched_lines_count = patched_lines.len();
             let mut is_first_line = true;
@@ -229,7 +229,7 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
 
             for line in patched_lines {
                 if is_first_line {
-                    patched_commands.push(LcfCommonCommand {
+                    patched_commands.push(LcfCommand {
                         code: DynamicInteger(COMMAND_DIALOGUE_START),
                         indent: DynamicInteger(previous_indent),
                         text: PascalString::from(line),
@@ -238,7 +238,7 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
 
                     is_first_line = false;
                 } else {
-                    patched_commands.push(LcfCommonCommand {
+                    patched_commands.push(LcfCommand {
                         code: DynamicInteger(COMMAND_DIALOGUE_CONTINUE),
                         indent: DynamicInteger(previous_indent),
                         text: PascalString::from(line),

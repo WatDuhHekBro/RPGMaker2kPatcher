@@ -1,8 +1,8 @@
 use crate::{
-    structs::LcfCommonCommandList,
+    structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric},
     types::{
         double_byte_counted::DoubleByteCounted, ByteCounted, DynamicInteger, FileTerminatedList,
-        NullTerminatedList, PascalString, PreallocatedList, U8Array,
+        NullTerminatedList, PascalString, PreallocatedList,
     },
 };
 use binrw::binrw;
@@ -36,47 +36,103 @@ impl std::ops::DerefMut for LcfDataBase {
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
 pub enum LcfDataBaseHeader {
-    //#[brw(magic = 11u8)]
-    //Characters(LcfDataBaseCharacters),
-    // 12u8 = Skills
-    // 13u8 = Items
-    // 14u8 = Enemies
-    // 15u8 = EnemyGroups
-    // 16u8 = Terrain
-    // 17u8 = Attributes
-    // 18u8 = Conditions
-    // 19u8 = BattleAnimations
-    // 20u8 = Chipsets
-    // 21u8 = Vocabulary
-    // 22u8 = System
-    // 23u8 = Switches
-    // 24u8 = Variables
+    #[brw(magic = 11u8)]
+    Characters(ByteCounted<PreallocatedList<LcfDataBaseCharacter>>),
+    #[brw(magic = 12u8)]
+    Skills(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
+    #[brw(magic = 13u8)]
+    Items(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    #[brw(magic = 14u8)]
+    Enemies(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    #[brw(magic = 15u8)]
+    EnemyGroups(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
+    #[brw(magic = 16u8)]
+    Terrain(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
+    #[brw(magic = 17u8)]
+    Attributes(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
+    #[brw(magic = 18u8)]
+    Conditions(ByteCounted<PreallocatedList<LcfDataBaseConditions>>),
+    #[brw(magic = 19u8)]
+    BattleAnimations(ByteCounted<PreallocatedList<LcfDataBaseSingleText>>),
+    #[brw(magic = 20u8)]
+    Chipsets(ByteCounted<PreallocatedList<LcfDataBaseDualText>>),
+    #[brw(magic = 21u8)]
+    Vocabulary(ByteCounted<NullTerminatedList<LcfDataBaseVocab>>),
+    #[brw(magic = 22u8)]
+    System(ByteCounted<NullTerminatedList<LcfDataBaseVocab>>),
+    #[brw(magic = 23u8)]
+    Switches(ByteCounted<PreallocatedList<ListEntry<LcfDataBaseSingleTextHeader>>>),
+    #[brw(magic = 24u8)]
+    Variables(ByteCounted<PreallocatedList<ListEntry<LcfDataBaseSingleTextHeader>>>),
     #[brw(magic = 25u8)]
     GlobalEvents(ByteCounted<PreallocatedList<LcfDataBaseGlobalEvent>>),
-    //#[brw(magic = 0x20u8)]
-    //Panorama(PascalString),
-    //#[brw(magic = 0x51u8)]
-    //Events(MapEventsWrapper), // Wrapper: Byte Count (DynamicInteger), # of Events Count (DynamicInteger), Vec<LcfMapUnitEvent>
-    Generic(LcfDataBaseHeaderGeneric),
+    Generic(ListEntryHeaderGeneric),
+}
+
+pub type LcfDataBaseSingleText = ListEntry<LcfDataBaseSingleTextHeader>;
+
+#[binrw]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum LcfDataBaseSingleTextHeader {
+    #[brw(magic = 1u8)]
+    Text(PascalString),
+    Generic(ListEntryHeaderGeneric),
+}
+
+pub type LcfDataBaseDualText = ListEntry<LcfDataBaseDualTextHeader>;
+
+#[binrw]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum LcfDataBaseDualTextHeader {
+    #[brw(magic = 1u8)]
+    TextA(PascalString),
+    #[brw(magic = 2u8)]
+    TextB(PascalString),
+    Generic(ListEntryHeaderGeneric),
+}
+
+pub type LcfDataBaseCharacter = ListEntry<LcfDataBaseCharacterHeader>;
+
+#[binrw]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum LcfDataBaseCharacterHeader {
+    #[brw(magic = 1u8)]
+    Name1(PascalString),
+    #[brw(magic = 2u8)]
+    Name2(PascalString),
+    #[brw(magic = 3u8)]
+    Name3(PascalString),
+    #[brw(magic = 15u8)]
+    Face(PascalString),
+    #[brw(magic = 67u8)]
+    Type(PascalString),
+    Generic(ListEntryHeaderGeneric),
+}
+
+pub type LcfDataBaseConditions = ListEntry<LcfDataBaseConditionsHeader>;
+
+#[binrw]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum LcfDataBaseConditionsHeader {
+    #[brw(magic = 1u8)]
+    Name(PascalString),
+    #[brw(magic = 51u8)]
+    Start1(PascalString),
+    #[brw(magic = 52u8)]
+    Start2(PascalString),
+    #[brw(magic = 55u8)]
+    Finish(PascalString),
+    Generic(ListEntryHeaderGeneric),
 }
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LcfDataBaseHeaderGeneric {
+pub struct LcfDataBaseVocab {
     pub id: DynamicInteger,
-    pub value: U8Array,
+    pub text: PascalString,
 }
 
-/*#[binrw]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LcfDataBaseCharacters {}*/
-
-#[binrw]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LcfDataBaseGlobalEvent {
-    pub id: DynamicInteger,
-    pub headers: NullTerminatedList<LcfDataBaseGlobalEventHeader>,
-}
+pub type LcfDataBaseGlobalEvent = ListEntry<LcfDataBaseGlobalEventHeader>;
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,13 +140,6 @@ pub enum LcfDataBaseGlobalEventHeader {
     #[brw(magic = 1u8)]
     Name(PascalString),
     #[brw(magic = 21u8)]
-    Commands(DoubleByteCounted<LcfCommonCommandList>),
-    Generic(LcfDataBaseGlobalEventHeaderGeneric),
-}
-
-#[binrw]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LcfDataBaseGlobalEventHeaderGeneric {
-    pub id: DynamicInteger,
-    pub value: U8Array,
+    Commands(DoubleByteCounted<LcfCommandList>),
+    Generic(ListEntryHeaderGeneric),
 }

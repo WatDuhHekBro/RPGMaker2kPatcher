@@ -1,5 +1,5 @@
 use crate::{
-    structs::{common::LcfCommonCommand, LcfMapUnit},
+    structs::{common::LcfCommand, LcfMapUnit},
     types::DynamicInteger,
     util::patching_operations,
 };
@@ -101,7 +101,7 @@ pub struct InsertCommands {
     pub event: i32,
     pub page: i32,
     pub command: i32,
-    pub commands: Vec<LcfCommonCommand>,
+    pub commands: Vec<LcfCommand>,
 }
 
 /*

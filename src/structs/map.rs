@@ -1,8 +1,8 @@
 use crate::{
-    structs::{LcfCommonCommandList, LcfCommonGeneric, Patch},
+    structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric, Patch},
     types::{
-        double_byte_counted::DoubleByteCounted, ByteCounted, DynamicInteger, NullTerminatedList,
-        PascalString, PreallocatedList,
+        double_byte_counted::DoubleByteCounted, ByteCounted, NullTerminatedList, PascalString,
+        PreallocatedList,
     },
     util::{generate_toml_map, generate_toml_patch, patching_operations},
 };
@@ -84,22 +84,17 @@ impl LcfMapUnit {
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
 pub enum LcfMapUnitHeader {
-    #[brw(magic = 0x20u8)]
+    #[brw(magic = 32u8)]
     Panorama(PascalString),
-    #[brw(magic = 0x51u8)]
+    #[brw(magic = 81u8)]
     Events(ByteCounted<PreallocatedList<LcfMapUnitEvent>>),
-    Generic(LcfCommonGeneric),
+    Generic(ListEntryHeaderGeneric),
 }
 
-#[binrw]
-#[derive(Debug, Deserialize, Serialize)]
-#[brw(big)]
-pub struct LcfMapUnitEvent {
-    pub id: DynamicInteger,
-    pub headers: NullTerminatedList<LcfMapUnitEventHeader>,
-}
+pub type LcfMapUnitEvent = ListEntry<LcfMapUnitEventHeader>;
 
-impl LcfMapUnitEvent {
+// For some reason "LcfMapUnitEvent" doesn't expand here.
+impl ListEntry<LcfMapUnitEventHeader> {
     pub fn get_pages(&self) -> Option<&Vec<LcfMapUnitPage>> {
         for entry in &self.headers.0 {
             if let LcfMapUnitEventHeader::Pages(pages) = entry {
@@ -152,19 +147,13 @@ pub enum LcfMapUnitEventHeader {
     Name(PascalString),
     #[brw(magic = 5u8)]
     Pages(ByteCounted<PreallocatedList<LcfMapUnitPage>>),
-    Generic(LcfCommonGeneric),
+    Generic(ListEntryHeaderGeneric),
 }
 
-#[binrw]
-#[derive(Debug, Deserialize, Serialize)]
-#[brw(big)]
-pub struct LcfMapUnitPage {
-    pub id: DynamicInteger,
-    pub headers: NullTerminatedList<LcfMapUnitPageHeader>,
-}
+pub type LcfMapUnitPage = ListEntry<LcfMapUnitPageHeader>;
 
 impl LcfMapUnitPage {
-    pub fn get_commands(&self) -> Option<&LcfCommonCommandList> {
+    pub fn get_commands(&self) -> Option<&LcfCommandList> {
         for entry in &self.headers.0 {
             if let LcfMapUnitPageHeader::Commands(commands) = entry {
                 return Some(commands);
@@ -174,7 +163,7 @@ impl LcfMapUnitPage {
         None
     }
 
-    pub fn get_commands_mut(&mut self) -> Option<&mut LcfCommonCommandList> {
+    pub fn get_commands_mut(&mut self) -> Option<&mut LcfCommandList> {
         for entry in &mut self.headers.0 {
             if let LcfMapUnitPageHeader::Commands(commands) = entry {
                 return Some(commands);
@@ -192,6 +181,6 @@ pub enum LcfMapUnitPageHeader {
     Name(PascalString),
     // 0x33 contains redundant byte count, immediately followed by 0x34 which contains the commands
     #[brw(magic = 51u8)]
-    Commands(DoubleByteCounted<LcfCommonCommandList>),
-    Generic(LcfCommonGeneric),
+    Commands(DoubleByteCounted<LcfCommandList>),
+    Generic(ListEntryHeaderGeneric),
 }

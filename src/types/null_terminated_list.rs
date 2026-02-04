@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NullTerminatedList<T: BinRead>(pub Vec<T>);
 
-impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
+impl<T: for<'a> BinRead<Args<'a> = ()> + std::fmt::Debug> BinRead for NullTerminatedList<T> {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -36,6 +36,7 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
 
                 // Then read the arbitrary data entry
                 let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);
+                //println!("NullTerminatedList::DEBUG = {entry:?}");
                 entries.push(entry);
             }
         }
@@ -44,7 +45,7 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for NullTerminatedList<T> {
     }
 }
 
-impl<T: BinRead + BinWrite + 'static> BinWrite for NullTerminatedList<T>
+impl<T: BinRead + BinWrite + 'static + std::fmt::Debug> BinWrite for NullTerminatedList<T>
 where
     for<'a> T: BinRead + BinWrite<Args<'a> = ()>,
     /*for<'a> T: BinRead + BinWrite,

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FileTerminatedList<T: BinRead>(pub Vec<T>);
 
-impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for FileTerminatedList<T> {
+impl<T: for<'a> BinRead<Args<'a> = ()> + std::fmt::Debug> BinRead for FileTerminatedList<T> {
     type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
@@ -48,6 +48,7 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for FileTerminatedList<T> {
                 panic!("current_position > file_size ?! Overshot...");
             } else {
                 let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);
+                //println!("FileTerminatedList::DEBUG = {entry:?}");
                 entries.push(entry);
             }
         }

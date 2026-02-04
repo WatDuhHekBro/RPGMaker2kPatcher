@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     structs::{common::LcfCommand, LcfMapUnit},
     types::DynamicInteger,
@@ -26,8 +28,12 @@ impl Patch {
         patch
     }*/
 
-    pub fn generate_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> Patch {
-        patching_operations::generate_patch_from_map(map, map_name)
+    pub fn generate_from_map(
+        map: &LcfMapUnit,
+        character_names: &HashMap<i32, String>,
+        map_name: Option<&String>,
+    ) -> Patch {
+        patching_operations::generate_patch_from_map(map, character_names, map_name)
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
@@ -82,6 +88,8 @@ pub struct Dialogue {
     // This is basically only for times when you can't figure out the indent from the surrounding context.
     pub indent: Option<DynamicInteger>,
     //pub is_portrait: bool,
+    // Helpful field to decipher character name variables (e.g. "\n[1]"), unused during actual patching
+    pub character: Option<String>,
     pub original: String,
     pub patched: String,
 }

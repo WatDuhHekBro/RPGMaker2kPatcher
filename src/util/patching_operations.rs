@@ -6,9 +6,14 @@ use crate::{
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
     util::constants::*,
 };
-use std::collections::HashMap;
+use regex::Regex;
+use std::{collections::HashMap, sync::LazyLock};
 
-pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> Patch {
+pub fn generate_patch_from_map(
+    map: &LcfMapUnit,
+    character_names: &HashMap<i32, String>,
+    map_name: Option<&String>,
+) -> Patch {
     let mut dialogue: Vec<Dialogue> = vec![];
     let mut text: Vec<Text> = vec![];
 
@@ -50,11 +55,31 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
                                 || current_command_code == COMMAND_SAVE_POINT_NAME;
 
                             if was_single_line_dialogue || was_dialogue_terminated {
+                                // If there's a character name variable present, add a field
+                                // with the original character's name for ease of use.
+                                static VAR_CHARACTER_PATTERN: LazyLock<Regex> =
+                                    LazyLock::new(|| Regex::new(r"\\n\[(\d+?)\]").unwrap());
+                                let captures =
+                                    VAR_CHARACTER_PATTERN.captures(&current_dialogue_text);
+                                let mut character: Option<String> = None;
+
+                                // I think this should only match the first occurrence anyway.
+                                if let Some(captures) = captures {
+                                    let (_full, [character_id]) = captures.extract();
+                                    let character_id = character_id.parse::<i32>();
+
+                                    if let Ok(character_id) = character_id {
+                                        character = character_names.get(&character_id).cloned();
+                                    }
+                                }
+
+                                // Regular dialogue section
                                 dialogue.push(Dialogue {
                                     event: *event.id,
                                     page: *page.id,
                                     command: start_index,
                                     indent: indent_written_into_patch,
+                                    character,
                                     original: current_dialogue_text.clone(),
                                     patched: current_dialogue_text.clone(),
                                 });
@@ -164,6 +189,7 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
                 page,
                 command: command_index,
                 indent: explicitly_defined_indent,
+                character: _,
                 original,
                 patched,
             } = dialogue;

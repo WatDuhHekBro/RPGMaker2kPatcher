@@ -556,6 +556,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             page,
             command,
             indent: explicitly_defined_indent,
+            character,
             original,
             patched,
         } in dialogue
@@ -567,6 +568,10 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
 
             if let Some(indent) = explicitly_defined_indent {
                 output.push_str(&format!("indent = {indent}\n"));
+            }
+
+            if let Some(character) = character {
+                output.push_str(&format!("character = '''{character}'''\n"));
             }
 
             // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.

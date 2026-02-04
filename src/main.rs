@@ -29,8 +29,11 @@ fn main() {
     match command {
         Some(command) => match command.as_str() {
             "decompile" => {
-                file_operations::bulk_generate_toml_maps(&path_to_original, &path_to_reference)
-                    .unwrap();
+                file_operations::bulk_generate_toml_representations(
+                    &path_to_original,
+                    &path_to_reference,
+                )
+                .unwrap();
             }
             "generatePatches" => {
                 file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace)
@@ -77,7 +80,7 @@ fn main() {
                 println!(
                     "Testing whether or not original binary read/write identical to original..."
                 );
-                file_operations::bulk_serialize_lcfmapunits(&path_to_original, &subpath_reference)
+                file_operations::bulk_redundant_serialize(&path_to_original, &subpath_reference)
                     .unwrap();
 
                 println!("\nTesting whether or not patched binary (from default patches) identical to original...");

@@ -8,9 +8,13 @@
 event = 32
 page = 3
 command = 21
+# Explicitly-defined indent for cases where you simply can't infer from the previous indent.
+indent = 5
 #length = 3 # Redundant if the original is left expanded
 # If you want the cleaned up version of either, write a program to extract it.
 is_portrait = true
+# Helper field for character name variables (e.g. "\n[1]")
+character = '''Kento'''
 original = '''
 \c[13]Rothaarige Frau\c[0]:\s[6] S...\.Seldan...\.
 Glaube mir,\....es ist besser so 

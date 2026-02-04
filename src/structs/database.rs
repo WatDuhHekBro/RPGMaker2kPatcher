@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use crate::{
     structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric},
     types::{
         double_byte_counted::DoubleByteCounted, ByteCounted, DynamicInteger, FileTerminatedList,
         NullTerminatedList, PascalString, PreallocatedList,
     },
+    util::generate_toml_database,
 };
 use binrw::binrw;
 use serde::{Deserialize, Serialize};
@@ -18,6 +21,38 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 #[brw(big, magic = b"\x0BLcfDataBase")]
 pub struct LcfDataBase(pub FileTerminatedList<LcfDataBaseHeader>);
+
+impl LcfDataBase {
+    pub fn extract_character_names(&self) -> HashMap<i32, String> {
+        let mut character_names = HashMap::new();
+
+        for header in &**self {
+            if let LcfDataBaseHeader::Characters(characters) = header {
+                let characters = &***characters;
+
+                for character in characters {
+                    for character_header in &*character.headers {
+                        if let LcfDataBaseCharacterHeader::Name1(name) = character_header {
+                            character_names.insert(*character.id, name.0.clone());
+
+                            // Name header found
+                            break;
+                        }
+                    }
+                }
+
+                // No need to continue the loop to the other top-level headers once found
+                break;
+            }
+        }
+
+        character_names
+    }
+
+    pub fn generate_toml_database(&self) -> String {
+        generate_toml_database(&self)
+    }
+}
 
 impl std::ops::Deref for LcfDataBase {
     type Target = Vec<LcfDataBaseHeader>;

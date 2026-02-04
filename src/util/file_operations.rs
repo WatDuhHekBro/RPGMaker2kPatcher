@@ -1,5 +1,5 @@
 use crate::{
-    structs::{LcfMapUnit, LegacyPatch, Patch},
+    structs::{LcfDataBase, LcfMapUnit, LegacyPatch, Patch},
     util,
 };
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
@@ -33,6 +33,14 @@ pub fn read_lcfmapunit<P: AsRef<Path>>(path: P) -> Result<LcfMapUnit, binrw::Err
     map
 }
 
+// Assume that only one database exists, named "RPG_RT.ldb" in the same directory.
+pub fn read_lcfdatabase<P: AsRef<Path>>(path: P) -> Result<LcfDataBase, binrw::Error> {
+    let file = fs::read(path)?;
+    let mut reader = Cursor::new(file);
+    let database = LcfDataBase::read_be(&mut reader);
+    database
+}
+
 pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     path_to_lcfmapunit: P1,
     path_to_patch: P2,
@@ -60,11 +68,11 @@ pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pat
 
 // Actually, these operations are so fast that I don't even need to worry about implementing concurrency at all.
 
-pub fn bulk_generate_toml_maps<P1: AsRef<Path>, P2: AsRef<Path>>(
+pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
     path_to_original: P1,
     path_to_reference: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Bulk generating TOML maps...");
+    println!("Bulk generating TOML representations...");
 
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
@@ -91,6 +99,26 @@ pub fn bulk_generate_toml_maps<P1: AsRef<Path>, P2: AsRef<Path>>(
 
                 // Write
                 fs::write(toml_path, map.generate_toml_map())?;
+            } else if extension == "ldb" {
+                // "RPG_RT"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                if file_stem != "RPG_RT" {
+                    println!(
+                        "WARNING: LcfDataBase found that doesn't go by the name \"RPG_RT.ldb\"!"
+                    );
+                }
+
+                let database = read_lcfdatabase(&path)?;
+
+                // "/path/to/reference/Map0134.toml"
+                let mut toml_path = path_to_reference.as_ref().join(file_stem);
+                toml_path.set_extension("toml");
+
+                // Write
+                fs::write(toml_path, database.generate_toml_database())?;
             }
         }
     }
@@ -98,14 +126,19 @@ pub fn bulk_generate_toml_maps<P1: AsRef<Path>, P2: AsRef<Path>>(
     Ok(())
 }
 
-pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
-    path_to_original: P1,
-    path_to_workspace: P2,
+pub fn bulk_generate_toml_patches<P: AsRef<Path>>(
+    path_to_original: &String,
+    path_to_workspace: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk generating TOML patches...");
 
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_workspace)?;
+
+    // You need to read the database before reading any maps for the character names!
+    let path_to_database = Path::new(path_to_original).join("RPG_RT.ldb");
+    let database = read_lcfdatabase(path_to_database)?;
+    let character_names = database.extract_character_names();
 
     for entry in fs::read_dir(path_to_original)? {
         let entry = entry?;
@@ -132,7 +165,7 @@ pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
                     .to_str()
                     .expect("OsStr conversion to String failed!")
                     .to_string();
-                let stringified_patch = map.generate_toml_patch(Some(&map_name));
+                let stringified_patch = map.generate_toml_patch(&character_names, Some(&map_name));
 
                 if stringified_patch.len() > 1 {
                     fs::write(toml_path, stringified_patch)?;
@@ -245,7 +278,7 @@ pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
 }
 
 // Purpose: Test if the LcfMapUnit in memory is identical to the raw binary output.
-pub fn bulk_serialize_lcfmapunits<P1: AsRef<Path>, P2: AsRef<Path>>(
+pub fn bulk_redundant_serialize<P1: AsRef<Path>, P2: AsRef<Path>>(
     path_to_original: P1,
     path_to_reference: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -277,6 +310,27 @@ pub fn bulk_serialize_lcfmapunits<P1: AsRef<Path>, P2: AsRef<Path>>(
                 // Write
                 let mut output_file = overwrite(new_lmu_path)?;
                 output_file.write_be(&map)?;
+            } else if extension == "ldb" {
+                // "RPG_RT"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+
+                if file_stem != "RPG_RT" {
+                    println!(
+                        "WARNING: LcfDataBase found that doesn't go by the name \"RPG_RT.ldb\"!"
+                    );
+                }
+
+                let database = read_lcfdatabase(&path)?;
+
+                // "/path/to/reference/RPG_RT.ldb"
+                let mut new_ldb_path = path_to_reference.as_ref().join(file_stem);
+                new_ldb_path.set_extension("ldb");
+
+                // Write
+                let mut output_file = overwrite(new_ldb_path)?;
+                output_file.write_be(&database)?;
             }
         }
     }

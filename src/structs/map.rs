@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric, Patch},
     types::{
@@ -71,8 +73,12 @@ impl LcfMapUnit {
         generate_toml_map(&self)
     }
 
-    pub fn generate_toml_patch(&self, map_name: Option<&String>) -> String {
-        let patch = Patch::generate_from_map(&self, map_name);
+    pub fn generate_toml_patch(
+        &self,
+        character_names: &HashMap<i32, String>,
+        map_name: Option<&String>,
+    ) -> String {
+        let patch = Patch::generate_from_map(&self, character_names, map_name);
         generate_toml_patch(&patch)
     }
 

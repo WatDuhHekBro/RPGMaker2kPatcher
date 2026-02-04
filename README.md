@@ -28,12 +28,10 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Map & DB redefine, get rid of wrappers
+**Right now:** DB redefine
 
 Your next goals after that are:
 - Port over manual patches functionality
-- Replace `.0` calls with direct comparison Traits
-- Easy bulk operations parallelism with Rayon?
 - Bulk operation to easily generate outputs to test how well your code holds up (binary matching/identical)
     - Subfolders of ORIGINAL path
 

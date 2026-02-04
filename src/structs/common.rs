@@ -31,7 +31,7 @@ pub struct LcfCommonCommand {
 
 impl LcfCommonCommand {
     pub fn is_terminating(&self) -> bool {
-        self.code.0 == 0 && self.indent.0 == 0 && self.text.is_empty() && self.parameters.is_empty()
+        *self.code == 0 && *self.indent == 0 && self.text.is_empty() && self.parameters.is_empty()
     }
 }
 

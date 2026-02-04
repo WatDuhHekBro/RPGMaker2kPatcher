@@ -33,8 +33,8 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
                             // A B --> [A,B]
                             // A B B --> [A,B,B]
                             // A B A --> [A,B] [A]
-                            let current_command_code = command.code.0;
-                            let current_command_indent = command.indent.0;
+                            let current_command_code = *command.code;
+                            let current_command_indent = *command.indent;
 
                             let was_single_line_dialogue = last_command_code
                                 == COMMAND_DIALOGUE_START
@@ -51,8 +51,8 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
 
                             if was_single_line_dialogue || was_dialogue_terminated {
                                 dialogue.push(Dialogue {
-                                    event: event.id.0,
-                                    page: page.id.0,
+                                    event: *event.id,
+                                    page: *page.id,
                                     command: start_index,
                                     indent: indent_written_into_patch,
                                     original: current_dialogue_text.clone(),
@@ -65,7 +65,7 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
 
                             if current_command_code == COMMAND_DIALOGUE_START {
                                 start_index = command_index;
-                                current_dialogue_text.push_str(command.text.0.as_str());
+                                current_dialogue_text.push_str(command.text.as_str());
 
                                 // Compare the indent for the first line of dialogue
                                 indent_written_into_patch = {
@@ -79,24 +79,24 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
                                 // I don't think dialogue commands have parameters, but it doesn't hurt
                                 // to alert the user if there is any.
                                 if !command.parameters.is_empty() {
-                                    println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id.0, page.id.0);
+                                    println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id, page.id);
                                 }
                             } else if current_command_code == COMMAND_DIALOGUE_CONTINUE {
                                 current_dialogue_text.push_str("\n");
-                                current_dialogue_text.push_str(command.text.0.as_str());
+                                current_dialogue_text.push_str(command.text.as_str());
 
                                 // And then just make sure there's no conflicting indent in any continue statements.
                                 if let Some(indent_written_into_patch) = &indent_written_into_patch
                                 {
-                                    if indent_written_into_patch.0 != current_command_indent {
-                                        println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) has a conflicting indent in a DIALOGUE_CONTINUE command?!", event.id.0, page.id.0);
+                                    if indent_written_into_patch != current_command_indent {
+                                        println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) has a conflicting indent in a DIALOGUE_CONTINUE command?!", event.id, page.id);
                                     }
                                 }
 
                                 // I don't think dialogue commands have parameters, but it doesn't hurt
                                 // to alert the user if there is any.
                                 if !command.parameters.is_empty() {
-                                    println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id.0, page.id.0);
+                                    println!("WARNING: [map.{map_name:?}.event.{}.page.{}.command.{command_index}] (dialogue) contains an unwritten parameter!", event.id, page.id);
                                 }
                             } else if is_other_text {
                                 // Other commands do sometimes have parameters
@@ -104,11 +104,11 @@ pub fn generate_patch_from_map(map: &LcfMapUnit, map_name: Option<&String>) -> P
                                 // patching other text doesn't affect existing parameters.
                                 // So no need to alert the user about parameters here.
                                 text.push(Text {
-                                    event: event.id.0,
-                                    page: page.id.0,
+                                    event: *event.id,
+                                    page: *page.id,
                                     command: command_index,
-                                    original: command.text.0.clone(),
-                                    patched: command.text.0.clone(),
+                                    original: command.text.clone(),
+                                    patched: command.text.clone(),
                                 });
                             }
 
@@ -325,8 +325,7 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
                 .get_page_mut(*page)
                 .expect("Page should exist!")
                 .get_commands_mut()
-                .expect("Commands should exist!")
-                .0;
+                .expect("Commands should exist!");
 
             // Get explicit indent if available or assume previous indent
             let command_index = *command_index as usize;

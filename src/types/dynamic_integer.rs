@@ -196,6 +196,12 @@ impl PartialEq<i32> for DynamicInteger {
     }
 }
 
+impl PartialEq<i32> for &DynamicInteger {
+    fn eq(&self, other: &i32) -> bool {
+        self.0 == *other
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

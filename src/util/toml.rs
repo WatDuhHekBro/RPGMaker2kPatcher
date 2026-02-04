@@ -44,7 +44,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                     let mut output_current_page =
                                         format!("[event.{}.page.{}]\n", event.id, page.id);
 
-                                    for page_header in &page.headers.0 {
+                                    for page_header in &*page.headers {
                                         match page_header {
                                             LcfMapUnitPageHeader::Name(name) => output_current_page
                                                 .push_str(&format!("21 = '''{name}'''\n")),

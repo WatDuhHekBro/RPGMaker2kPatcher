@@ -17,7 +17,7 @@ impl<T: for<'a> BinRead<Args<'a> = ()>> BinRead for PreallocatedList<T> {
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
         let count = DynamicInteger::read_be(reader).expect(ERROR_BINRW_READ);
-        let mut entries: Vec<T> = Vec::with_capacity(count.0 as usize);
+        let mut entries: Vec<T> = Vec::with_capacity(*count as usize);
 
         for _ in 0..*count {
             let entry = T::read_options(reader, endian, args).expect(ERROR_BINRW_READ);

@@ -23,7 +23,7 @@ where
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
         let byte_count = DynamicInteger::read_be(reader).expect(ERROR_BINRW_READ);
-        let mut bytes: Vec<u8> = Vec::with_capacity(byte_count.0 as usize);
+        let mut bytes: Vec<u8> = Vec::with_capacity(*byte_count as usize);
 
         for _ in 0..*byte_count {
             let byte = u8::read_be(reader).expect(ERROR_BINRW_READ);
@@ -99,14 +99,14 @@ mod tests {
     fn read_i32_be() {
         let mut reader = Cursor::new(b"\x04\x01\x02\x03\x04\x05");
         let data = ByteCounted::<i32>::read_be(&mut reader).unwrap();
-        assert_eq!(data.0, 0x01020304);
+        assert_eq!(*data, 0x01020304);
     }
 
     #[test]
     fn read_i32_le() {
         let mut reader = Cursor::new(b"\x04\x01\x02\x03\x04\x05");
         let data = ByteCounted::<i32>::read_le(&mut reader).unwrap();
-        assert_eq!(data.0, 0x04030201);
+        assert_eq!(*data, 0x04030201);
     }
 
     #[test]

@@ -20,7 +20,7 @@ impl BinRead for U8Array {
         (): Self::Args<'_>,
     ) -> BinResult<Self> {
         let count = DynamicInteger::read_be(reader)?;
-        let mut bytes: Vec<u8> = Vec::with_capacity(count.0 as usize);
+        let mut bytes: Vec<u8> = Vec::with_capacity(*count as usize);
 
         for _ in 0..*count {
             let byte = u8::read_be(reader)?;

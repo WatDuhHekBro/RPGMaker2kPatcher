@@ -49,7 +49,7 @@ where
         }
 
         // Read the next field's byte count instead
-        let mut bytes: Vec<u8> = Vec::with_capacity(byte_count.0 as usize);
+        let mut bytes: Vec<u8> = Vec::with_capacity(*byte_count as usize);
 
         for _ in 0..*byte_count {
             let byte = u8::read_be(reader).expect(ERROR_BINRW_READ);

@@ -6,7 +6,7 @@ mod util;
 use crate::{structs::LcfDataBase, util::file_operations};
 use binrw::{BinRead, BinWriterExt};
 use dotenvy::dotenv;
-use std::{env, fs, io::Cursor};
+use std::{env, fs, io::Cursor, path::Path};
 
 fn main() {
     dotenv().ok();
@@ -62,14 +62,51 @@ fn main() {
                     }
                 }
             }
-            "testLibrary" => {
-                println!("Testing...");
+            "testLib" => {
+                let subpath_reference = Path::new(&path_to_original).join("original-recompiled");
+                let subpath_workspace_default =
+                    Path::new(&path_to_original).join("patches-original");
+                let subpath_workspace_custom = Path::new(&path_to_original).join("patches-custom");
+                let subpath_patched_default =
+                    Path::new(&path_to_original).join("original-default-patches");
+                let subpath_patched_custom = Path::new(&path_to_original).join("translated-custom");
 
-                // Test whether or not original binary read/write identical to original
-                file_operations::bulk_serialize_lcfmapunits(&path_to_original, &path_to_reference)
+                println!(
+                    "Testing whether or not original binary read/write identical to original..."
+                );
+                file_operations::bulk_serialize_lcfmapunits(&path_to_original, &subpath_reference)
                     .unwrap();
-                // Test whether or not patched binary (from default patches) identical to original
-                // Test whether or not <already patched>
+
+                println!("\nTesting whether or not patched binary (from default patches) identical to original...");
+                file_operations::bulk_generate_toml_patches(
+                    &path_to_original,
+                    &subpath_workspace_default,
+                )
+                .unwrap();
+                file_operations::bulk_apply_toml_patches(
+                    &path_to_original,
+                    &subpath_workspace_default,
+                    &subpath_patched_default,
+                )
+                .unwrap();
+
+                println!("\nTesting whether or not the already-patched binaries are identical (to legacy patches)...");
+                file_operations::bulk_generate_toml_patches(
+                    &path_to_original,
+                    &subpath_workspace_custom,
+                )
+                .unwrap();
+                file_operations::bulk_convert_legacy_patches(
+                    &subpath_workspace_custom,
+                    &path_to_legacy_workspace,
+                )
+                .unwrap();
+                file_operations::bulk_apply_toml_patches(
+                    &path_to_original,
+                    &subpath_workspace_custom,
+                    &subpath_patched_custom,
+                )
+                .unwrap();
             }
             "test" => {
                 println!("Testing...");

@@ -9,7 +9,7 @@ use std::{
     path::Path,
 };
 
-pub fn overwrite<S: AsRef<Path>>(path: S) -> io::Result<File> {
+pub fn overwrite<P: AsRef<Path>>(path: P) -> io::Result<File> {
     File::options()
         .write(true)
         .create(true)
@@ -26,17 +26,17 @@ where
     format!("{:02X?}", writer.into_inner())
 }
 
-pub fn read_lcfmapunit<S: AsRef<Path>>(path: S) -> Result<LcfMapUnit, binrw::Error> {
+pub fn read_lcfmapunit<P: AsRef<Path>>(path: P) -> Result<LcfMapUnit, binrw::Error> {
     let file = fs::read(path)?;
     let mut reader = Cursor::new(file);
     let map = LcfMapUnit::read_be(&mut reader);
     map
 }
 
-pub fn read_lcfmapunit_and_patch<S: AsRef<Path>>(
-    path_to_lcfmapunit: S,
-    path_to_patch: S,
-    path_to_patched_lcfmapunit: S,
+pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
+    path_to_lcfmapunit: P1,
+    path_to_patch: P2,
+    path_to_patched_lcfmapunit: P3,
 ) -> Result<LcfMapUnit, Box<dyn std::error::Error>> {
     // Read map
     let file_map = fs::read(path_to_lcfmapunit)?;
@@ -60,9 +60,9 @@ pub fn read_lcfmapunit_and_patch<S: AsRef<Path>>(
 
 // Actually, these operations are so fast that I don't even need to worry about implementing concurrency at all.
 
-pub fn bulk_generate_toml_maps<S: AsRef<Path>>(
-    path_to_original: S,
-    path_to_reference: S,
+pub fn bulk_generate_toml_maps<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_reference: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk generating TOML maps...");
 
@@ -98,9 +98,9 @@ pub fn bulk_generate_toml_maps<S: AsRef<Path>>(
     Ok(())
 }
 
-pub fn bulk_generate_toml_patches<S: AsRef<Path>>(
-    path_to_original: S,
-    path_to_workspace: S,
+pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_workspace: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk generating TOML patches...");
 
@@ -144,10 +144,10 @@ pub fn bulk_generate_toml_patches<S: AsRef<Path>>(
     Ok(())
 }
 
-pub fn bulk_apply_toml_patches<S: AsRef<Path>>(
-    path_to_original: S,
-    path_to_workspace: S,
-    path_to_patched: S,
+pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_workspace: P2,
+    path_to_patched: P3,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk applying TOML patches...");
 
@@ -191,9 +191,9 @@ pub fn bulk_apply_toml_patches<S: AsRef<Path>>(
     Ok(())
 }
 
-pub fn bulk_convert_legacy_patches<S: AsRef<Path>>(
-    path_to_workspace: S,
-    path_to_legacy_workspace: S,
+pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_workspace: P1,
+    path_to_legacy_workspace: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk converting legacy patches...");
 
@@ -245,9 +245,9 @@ pub fn bulk_convert_legacy_patches<S: AsRef<Path>>(
 }
 
 // Purpose: Test if the LcfMapUnit in memory is identical to the raw binary output.
-pub fn bulk_serialize_lcfmapunits<S: AsRef<Path>>(
-    path_to_original: S,
-    path_to_reference: S,
+pub fn bulk_serialize_lcfmapunits<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_reference: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk serializing in-memory LcfMapUnits...");
 

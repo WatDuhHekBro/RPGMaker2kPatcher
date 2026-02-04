@@ -32,8 +32,6 @@
 
 Your next goals after that are:
 - Port over manual patches functionality
-- Bulk operation to easily generate outputs to test how well your code holds up (binary matching/identical)
-    - Subfolders of ORIGINAL path
 
 Database
 - Parsing

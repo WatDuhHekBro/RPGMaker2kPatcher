@@ -45,6 +45,7 @@ impl LcfMapUnit {
         None
     }
 
+    #[allow(dead_code)]
     pub fn get_event(&self, id: i32) -> Option<&LcfMapUnitEvent> {
         self.get_events().and_then(|events| {
             for event in events {
@@ -83,7 +84,7 @@ impl LcfMapUnit {
     }
 
     pub fn apply_patch(&mut self, patch: &Patch) {
-        patch_operations::apply_patch(self, patch);
+        patch_operations::apply_patch_map(self, patch);
     }
 }
 
@@ -121,6 +122,7 @@ impl ListEntry<LcfMapUnitEventHeader> {
         None
     }
 
+    #[allow(dead_code)]
     pub fn get_page(&self, id: i32) -> Option<&LcfMapUnitPage> {
         self.get_pages().and_then(|pages| {
             for page in pages {

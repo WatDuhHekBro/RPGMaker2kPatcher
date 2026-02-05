@@ -2,6 +2,8 @@
 // if you used "?" for all of the DynamicInteger::read()'s, you'll only see the error thrown in your main function.
 // Not helpful at all for debugging issues.
 pub const ERROR_BINRW_READ: &str = "Binary read failed!";
+pub const ERROR_MAP_PAGE_NONE: &str =
+    "All LcfMapUnit patches MUST have a \"page\" number! It is only optional for the LcfDataBase!";
 
 // Dialogue-related commands
 pub const COMMAND_DIALOGUE_START: i32 = 10110;

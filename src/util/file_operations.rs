@@ -309,7 +309,7 @@ pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
                     let legacy_patch: LegacyPatch = serde_json::from_str(&text)?;
 
                     // Patch and write
-                    legacy_patch.import_lines_to_toml_patch(&mut patch, &map_name);
+                    legacy_patch.import_lines_to_toml_map_patch(&mut patch, &map_name);
                     fs::write(&toml_path, util::generate_toml_patch(&patch))?;
                 } else {
                     println!("ERROR: Error on reading TOML patch file for {map_name}!");

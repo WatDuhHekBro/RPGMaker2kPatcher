@@ -563,7 +563,11 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         {
             output.push_str("[[dialogue]]\n");
             output.push_str(&format!("event = {event}\n"));
-            output.push_str(&format!("page = {page}\n"));
+
+            if let Some(page) = page {
+                output.push_str(&format!("page = {page}\n"));
+            }
+
             output.push_str(&format!("command = {command}\n"));
 
             if let Some(indent) = explicitly_defined_indent {
@@ -592,7 +596,11 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         {
             output.push_str("[[text]]\n");
             output.push_str(&format!("event = {event}\n"));
-            output.push_str(&format!("page = {page}\n"));
+
+            if let Some(page) = page {
+                output.push_str(&format!("page = {page}\n"));
+            }
+
             output.push_str(&format!("command = {command}\n"));
             output.push_str(&format!("original = '''{original}'''\n"));
             output.push_str(&format!("patched = '''{patched}'''\n\n"));

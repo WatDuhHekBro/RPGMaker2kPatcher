@@ -37,6 +37,7 @@ Database
     - Create a `[[database-patch]]` field if necessary, I really don't want to have a separate patch format.
     - Then again, it can't be that hard to create two Patch formats. Just not semantic with `.patch.toml`.
     - `header = 21`?
+    - Current Idea: `page` becomes optional, though expected for maps. Database assumes header 25 header 21 for `[[dialogue]]` and `[[text]]`. Anything outside of that you need to use a different method, the arbitrary data editing method.
 
 What exactly needs to get patched in the database?
 - 21 (Vocabulary, only other header listed in original patch)

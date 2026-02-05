@@ -77,7 +77,7 @@ impl Patch {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Dialogue {
     pub event: i32,
-    pub page: i32,
+    pub page: Option<i32>,
     pub command: i32,
     // All the indent seems to do is affect how it shows up in the editor GUI.
     // -----
@@ -102,7 +102,7 @@ pub struct Dialogue {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Text {
     pub event: i32,
-    pub page: i32,
+    pub page: Option<i32>,
     pub command: i32,
     pub original: String,
     pub patched: String,

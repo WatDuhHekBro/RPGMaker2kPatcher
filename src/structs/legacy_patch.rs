@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::structs::Patch;
+use crate::{structs::Patch, util::constants::ERROR_MAP_PAGE_NONE};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -26,7 +26,7 @@ struct LegacyPatchOther {
 }
 
 impl LegacyPatch {
-    pub fn import_lines_to_toml_patch(self, patch: &mut Patch, map_name: &String) {
+    pub fn import_lines_to_toml_map_patch(self, patch: &mut Patch, map_name: &String) {
         // 3-tuple identifier [event, page, command]
         let mut patch_map = HashMap::<(i32, i32, i32), String>::new();
 
@@ -58,7 +58,7 @@ impl LegacyPatch {
         if let Some(dialogues) = &mut patch.dialogue {
             for dialogue in dialogues {
                 let event = dialogue.event;
-                let page = dialogue.page;
+                let page = dialogue.page.expect(ERROR_MAP_PAGE_NONE);
                 let command = dialogue.command;
                 let key = &(event, page, command);
                 let patched_text = patch_map.get(key);
@@ -76,7 +76,7 @@ impl LegacyPatch {
         if let Some(texts) = &mut patch.text {
             for text in texts {
                 let event = text.event;
-                let page = text.page;
+                let page = text.page.expect(ERROR_MAP_PAGE_NONE);
                 let command = text.command;
                 let key = &(event, page, command);
                 let patched_text = patch_map.get(key);

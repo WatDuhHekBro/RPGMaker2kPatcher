@@ -6,7 +6,7 @@ use crate::{
         double_byte_counted::DoubleByteCounted, ByteCounted, NullTerminatedList, PascalString,
         PreallocatedList,
     },
-    util::{generate_toml_map, generate_toml_patch, patching_operations},
+    util::{generate_toml_map, generate_toml_patch, patch_operations},
 };
 use binrw::binrw;
 use serde::{Deserialize, Serialize};
@@ -83,7 +83,7 @@ impl LcfMapUnit {
     }
 
     pub fn apply_patch(&mut self, patch: &Patch) {
-        patching_operations::apply_patch(self, patch);
+        patch_operations::apply_patch(self, patch);
     }
 }
 

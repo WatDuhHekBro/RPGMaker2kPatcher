@@ -224,6 +224,50 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     Ok(())
 }
 
+pub fn bulk_extract_text(
+    path_to_original: &String,
+    path_to_workspace: &String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Bulk extracting text...");
+
+    // NOTE: Don't forget to create the leading directories if needed!
+    let path_to_workspace = Path::new(path_to_workspace);
+    let path_to_extracted = path_to_workspace.join("extracted");
+    fs::create_dir_all(&path_to_extracted)?;
+
+    // You need to read the database before reading any maps for the character names!
+    let path_to_database = Path::new(path_to_original).join("RPG_RT.ldb");
+    let database = read_lcfdatabase(path_to_database)?;
+    let character_names = database.extract_character_names();
+
+    for entry in fs::read_dir(path_to_workspace)? {
+        let entry = entry?;
+        // "/path/to/workspace/Map0134.patch.toml"
+        let path = entry.path();
+        // "toml"
+        let extension = path.extension();
+
+        if let Some(extension) = extension {
+            if extension == "toml" {
+                // Read patch
+                let mut patch = toml::from_str::<Patch>(&fs::read_to_string(&path)?)?;
+                patch.trim_dialogue_ending_newline();
+
+                // "Map0134.patch"
+                let file_stem = path
+                    .file_stem()
+                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+                // "/path/to/workspace/extracted/Map0134.patch.txt"
+                let mut text_path = path_to_extracted.join(file_stem);
+                text_path.set_extension("patch.txt");
+                fs::write(&text_path, patch.extract_text(&character_names))?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
     path_to_workspace: P1,
     path_to_legacy_workspace: P2,

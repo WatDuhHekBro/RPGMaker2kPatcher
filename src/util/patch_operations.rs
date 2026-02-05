@@ -362,3 +362,102 @@ pub fn apply_patch(map: &mut LcfMapUnit, patch: &Patch) {
         }
     }
 }
+
+pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> String {
+    let mut output_original = String::new();
+    let mut output_patched = String::new();
+    let mut is_patched_identical_to_original = true;
+
+    if let Some(dialogues) = &patch.dialogue {
+        let mut last_event = -1;
+        let mut last_page = -1;
+
+        for Dialogue {
+            event,
+            page,
+            command: _,
+            indent: _,
+            character: _,
+            original,
+            patched,
+        } in dialogues
+        {
+            if last_event != *event || last_page != *page {
+                output_original.push_str(&format!("\n==========[ Event #{event} / Page #{page} ]==========\n\n"));
+                output_patched.push_str(&format!("\n==========[ Event #{event} / Page #{page} ]==========\n\n"));
+            }
+
+            if is_patched_identical_to_original && (original != patched) {
+                is_patched_identical_to_original = false;
+            }
+
+            output_original.push_str(&clean_escaped_text(original, &character_names));
+            output_patched.push_str(&clean_escaped_text(patched, &character_names));
+
+            last_event = *event;
+            last_page = *page;
+        }
+    }
+
+    if let Some(texts) = &patch.text {
+        output_original.push_str("\n###################\n# Original (Text) #\n###################\n");
+        output_patched.push_str("\n##################\n# Patched (Text) #\n##################\n");
+        let mut last_event = -1;
+        let mut last_page = -1;
+
+        for Text {
+            event,
+            page,
+            command: _,
+            original,
+            patched,
+        } in texts
+        {
+            if last_event != *event || last_page != *page {
+                output_original.push_str(&format!("\n==========[ Event #{event} / Page #{page} ]==========\n\n"));
+                output_patched.push_str(&format!("\n==========[ Event #{event} / Page #{page} ]==========\n\n"));
+            }
+
+            if is_patched_identical_to_original && (original != patched) {
+                is_patched_identical_to_original = false;
+            }
+
+            output_original.push_str(&clean_escaped_text(original, &character_names));
+            output_patched.push_str(&clean_escaped_text(patched, &character_names));
+
+            last_event = *event;
+            last_page = *page;
+        }
+    }
+
+    let mut output = String::new();
+    output.push_str("#######################\n# Original (Dialogue) #\n#######################\n");
+    output.push_str(&output_original);
+
+    if !is_patched_identical_to_original {
+        output.push_str("\n######################\n# Patched (Dialogue) #\n######################\n");
+        output.push_str(&output_patched);
+    }
+
+    output
+}
+
+// Removes all escape characters and replaces \\n[#] with characters.
+fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>) -> String {
+    static ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\\[^nv](:?\[(\d+?)\])?").unwrap());
+    static MULTI_SPACE_PATTERN: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r" {2,}").unwrap());
+
+    let mut output = String::from(ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN.replace_all(text, ""));
+
+    for (id, name) in character_names {
+        output = output.replace(&format!(r"\n[{id}]"), name);
+    }
+
+    let output = output.replace("\n", " ");
+    let mut output = MULTI_SPACE_PATTERN.replace_all(&output, " ").to_string();
+    output.push_str("\n");
+
+    output
+}

@@ -10,13 +10,15 @@
 - `rpgmaker2kpatcher applyPatches`: Applies TOML patches to `LcfMapUnit`s and generates patched files in another directory
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE` and `PATH_TO_PATCHED`
     - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
+- `rpgmaker2kpatcher extractText`: Cleans and extracts all text to a separate text file.
+    - Uses `PATH_TO_ORIGINAL` (for the database) and `PATH_TO_WORKSPACE`
 - `rpgmaker2kpatcher convertLegacyPatches`: Convert old JSON patches to the new TOML patches
     - Uses `PATH_TO_WORKSPACE` and `PATH_TO_WORKSPACE_LEGACY`
 
 `.env` Variables
 - `PATH_TO_ORIGINAL`: Root folder of the original RPGMaker2000 game.
-- `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
 - `PATH_TO_REFERENCE`: Location of TOML maps. Do not commit this to version control.
+- `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
 - `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
 - `PATH_TO_WORKSPACE_LEGACY`: Root folder of the patched RPGMaker2000 game.
 
@@ -28,13 +30,23 @@
 
 ## Clipboard / Current Status
 
-**Right now:** Extract text
+**Right now:**
 
 Database
 - TOML patch
+    - Create a `[[database-patch]]` field if necessary, I really don't want to have a separate patch format.
+    - Then again, it can't be that hard to create two Patch formats. Just not semantic with `.patch.toml`.
+    - `header = 21`?
+
+What exactly needs to get patched in the database?
+- 21 (Vocabulary, only other header listed in original patch)
+- 25 (EventCommands)
+- Basically everything outside of 25 is on a case-by-case basis, as you need it.
 
 Your next goals after that are:
 - Port over manual patches functionality
+    - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
+    - `arbitrary_path = [23, 1]`
 
 -----
 

@@ -15,11 +15,11 @@ fn main() {
     dotenv().ok();
 
     // Environment Variables
-    let path_to_original = env::var("PATH_TO_ORIGINAL").unwrap();
-    let path_to_workspace = env::var("PATH_TO_WORKSPACE").unwrap();
-    let path_to_reference = env::var("PATH_TO_REFERENCE").unwrap();
-    let path_to_patched = env::var("PATH_TO_PATCHED").unwrap();
-    let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY").unwrap();
+    let path_to_original = env::var("PATH_TO_ORIGINAL");
+    let path_to_reference = env::var("PATH_TO_REFERENCE");
+    let path_to_workspace = env::var("PATH_TO_WORKSPACE");
+    let path_to_patched = env::var("PATH_TO_PATCHED");
+    let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY");
 
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
@@ -29,6 +29,9 @@ fn main() {
     match command {
         Some(command) => match command.as_str() {
             "decompile" => {
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_reference = path_to_reference.expect(".env PATH_TO_REFERENCE missing!");
+
                 file_operations::bulk_generate_toml_representations(
                     &path_to_original,
                     &path_to_reference,
@@ -36,10 +39,17 @@ fn main() {
                 .unwrap();
             }
             "generatePatches" => {
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+
                 file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace)
                     .unwrap();
             }
             "applyPatches" => {
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+                let path_to_patched = path_to_patched.expect(".env PATH_TO_PATCHED missing!");
+
                 file_operations::bulk_apply_toml_patches(
                     &path_to_original,
                     &path_to_workspace,
@@ -47,7 +57,17 @@ fn main() {
                 )
                 .unwrap();
             }
+            "extractText" => {
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+
+                file_operations::bulk_extract_text(&path_to_original, &path_to_workspace).unwrap();
+            }
             "convertLegacyPatches" => {
+                let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+                let path_to_legacy_workspace =
+                    path_to_legacy_workspace.expect(".env PATH_TO_WORKSPACE_LEGACY missing!");
+
                 file_operations::bulk_convert_legacy_patches(
                     &path_to_workspace,
                     &path_to_legacy_workspace,
@@ -69,6 +89,10 @@ fn main() {
                 }
             }
             "testLib" => {
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_legacy_workspace =
+                    path_to_legacy_workspace.expect(".env PATH_TO_WORKSPACE_LEGACY missing!");
+
                 let subpath_reference = Path::new(&path_to_original).join("original-recompiled");
                 let subpath_workspace_default =
                     Path::new(&path_to_original).join("patches-original");
@@ -140,7 +164,7 @@ fn main() {
             }
         },
         None => {
-            println!("Available commands: decompile, generatePatches, applyPatches, convertLegacyPatches");
+            println!("Available commands: decompile, generatePatches, applyPatches, extractText, convertLegacyPatches");
         }
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     structs::{common::LcfCommand, LcfMapUnit},
     types::DynamicInteger,
-    util::patching_operations,
+    util::patch_operations,
 };
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +33,7 @@ impl Patch {
         character_names: &HashMap<i32, String>,
         map_name: Option<&String>,
     ) -> Patch {
-        patching_operations::generate_patch_from_map(map, character_names, map_name)
+        patch_operations::generate_patch_from_map(map, character_names, map_name)
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
@@ -67,6 +67,10 @@ impl Patch {
                 }
             }
         }
+    }
+
+    pub fn extract_text(&self, character_names: &HashMap<i32, String>) -> String {
+        patch_operations::extract_text(&self, character_names)
     }
 }
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    structs::{common::LcfCommand, LcfMapUnit},
+    structs::{common::LcfCommand, LcfDataBase, LcfMapUnit},
     types::DynamicInteger,
     util::patch_operations,
 };
@@ -34,6 +34,10 @@ impl Patch {
         map_name: Option<&String>,
     ) -> Patch {
         patch_operations::generate_patch_from_map(map, character_names, map_name)
+    }
+
+    pub fn generate_from_database(database: &LcfDataBase) -> Patch {
+        patch_operations::generate_patch_from_database(database)
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.

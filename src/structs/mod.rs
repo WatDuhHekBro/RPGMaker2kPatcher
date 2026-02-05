@@ -6,6 +6,6 @@ pub mod patch;
 
 pub use common::*;
 pub use database::LcfDataBase;
-pub use legacy_patch::LegacyPatch;
+pub use legacy_patch::{LegacyDatabasePatch, LegacyMapPatch};
 pub use map::LcfMapUnit;
 pub use patch::Patch;

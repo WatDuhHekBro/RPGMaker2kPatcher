@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use crate::{
-    structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric},
+    structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric, Patch},
     types::{
         double_byte_counted::DoubleByteCounted, ByteCounted, DynamicInteger, FileTerminatedList,
         NullTerminatedList, PascalString, PreallocatedList,
     },
-    util::generate_toml_database,
+    util::{generate_toml_database, generate_toml_patch, patch_operations},
 };
 use binrw::binrw;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,50 @@ use serde::{Deserialize, Serialize};
 pub struct LcfDataBase(pub FileTerminatedList<LcfDataBaseHeader>);
 
 impl LcfDataBase {
+    pub fn get_events(&self) -> Option<&Vec<LcfDataBaseGlobalEvent>> {
+        for header in &**self {
+            if let LcfDataBaseHeader::GlobalEvents(events) = header {
+                return Some(events);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_events_mut(&mut self) -> Option<&mut Vec<LcfDataBaseGlobalEvent>> {
+        for header in &mut **self {
+            if let LcfDataBaseHeader::GlobalEvents(events) = header {
+                return Some(events);
+            }
+        }
+
+        None
+    }
+
+    /*pub fn get_event(&self, id: i32) -> Option<&LcfDataBaseGlobalEvent> {
+        self.get_events().and_then(|events| {
+            for event in events {
+                if event.id == id {
+                    return Some(event);
+                }
+            }
+
+            None
+        })
+    }*/
+
+    pub fn get_event_mut(&mut self, id: i32) -> Option<&mut LcfDataBaseGlobalEvent> {
+        self.get_events_mut().and_then(|events| {
+            for event in events {
+                if event.id == id {
+                    return Some(event);
+                }
+            }
+
+            None
+        })
+    }
+
     pub fn extract_character_names(&self) -> HashMap<i32, String> {
         let mut character_names = HashMap::new();
 
@@ -51,6 +95,15 @@ impl LcfDataBase {
 
     pub fn generate_toml_database(&self) -> String {
         generate_toml_database(&self)
+    }
+
+    pub fn generate_toml_patch(&self) -> String {
+        let patch = Patch::generate_from_database(&self);
+        generate_toml_patch(&patch)
+    }
+
+    pub fn apply_patch(&mut self, patch: &Patch) {
+        patch_operations::apply_patch_database(self, patch);
     }
 }
 
@@ -168,6 +221,28 @@ pub struct LcfDataBaseVocab {
 }
 
 pub type LcfDataBaseGlobalEvent = ListEntry<LcfDataBaseGlobalEventHeader>;
+
+impl LcfDataBaseGlobalEvent {
+    pub fn get_commands(&self) -> Option<&LcfCommandList> {
+        for entry in &self.headers.0 {
+            if let LcfDataBaseGlobalEventHeader::Commands(commands) = entry {
+                return Some(commands);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_commands_mut(&mut self) -> Option<&mut LcfCommandList> {
+        for entry in &mut self.headers.0 {
+            if let LcfDataBaseGlobalEventHeader::Commands(commands) = entry {
+                return Some(commands);
+            }
+        }
+
+        None
+    }
+}
 
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]

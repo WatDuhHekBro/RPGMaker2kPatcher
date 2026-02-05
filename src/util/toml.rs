@@ -29,7 +29,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
     let mut output_events = String::new();
 
     // This disgusting nesting could probably be done more elegantly... but oh well.
-    for header in &*map.headers {
+    for header in &**map {
         match header {
             LcfMapUnitHeader::Panorama(name) => {
                 output_header.push_str(&format!("32 = '''{name}'''\n"))

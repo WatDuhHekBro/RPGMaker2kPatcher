@@ -63,12 +63,12 @@ fn main() {
 
                 file_operations::bulk_extract_text(&path_to_original, &path_to_workspace).unwrap();
             }
-            "convertLegacyPatches" => {
+            "importLegacyPatches" => {
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
                 let path_to_legacy_workspace =
                     path_to_legacy_workspace.expect(".env PATH_TO_WORKSPACE_LEGACY missing!");
 
-                file_operations::bulk_convert_legacy_patches(
+                file_operations::bulk_import_legacy_patches(
                     &path_to_workspace,
                     &path_to_legacy_workspace,
                 )
@@ -102,12 +102,12 @@ fn main() {
                 let subpath_patched_custom = Path::new(&path_to_original).join("translated-custom");
 
                 println!(
-                    "Testing whether or not original binary read/write identical to original..."
+                    "In order to test whether or not original binary read/write identical to original..."
                 );
                 file_operations::bulk_redundant_serialize(&path_to_original, &subpath_reference)
                     .unwrap();
 
-                println!("\nTesting whether or not patched binary (from default patches) identical to original...");
+                println!("\nIn order to test whether or not patched binary (from default patches) identical to original...");
                 file_operations::bulk_generate_toml_patches(
                     &path_to_original,
                     &subpath_workspace_default,
@@ -120,13 +120,13 @@ fn main() {
                 )
                 .unwrap();
 
-                println!("\nTesting whether or not the already-patched binaries are identical (to legacy patches)...");
+                println!("\nIn order to test whether or not the already-patched binaries are identical (to legacy patches)...");
                 file_operations::bulk_generate_toml_patches(
                     &path_to_original,
                     &subpath_workspace_custom,
                 )
                 .unwrap();
-                file_operations::bulk_convert_legacy_patches(
+                file_operations::bulk_import_legacy_patches(
                     &subpath_workspace_custom,
                     &path_to_legacy_workspace,
                 )
@@ -135,6 +135,26 @@ fn main() {
                     &path_to_original,
                     &subpath_workspace_custom,
                     &subpath_patched_custom,
+                )
+                .unwrap();
+            }
+            "testApplyPatches" => {
+                println!("Reapplying patch and automatically decompiling patched folder for easier debugging...");
+
+                let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
+                let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+                let path_to_patched = path_to_patched.expect(".env PATH_TO_PATCHED missing!");
+
+                file_operations::bulk_apply_toml_patches(
+                    &path_to_original,
+                    &path_to_workspace,
+                    &path_to_patched,
+                )
+                .unwrap();
+
+                file_operations::bulk_generate_toml_representations(
+                    &path_to_patched,
+                    &path_to_patched,
                 )
                 .unwrap();
             }
@@ -164,7 +184,7 @@ fn main() {
             }
         },
         None => {
-            println!("Available commands: decompile, generatePatches, applyPatches, extractText, convertLegacyPatches");
+            println!("Available commands: decompile, generatePatches, applyPatches, extractText, importLegacyPatches");
         }
     }
 }

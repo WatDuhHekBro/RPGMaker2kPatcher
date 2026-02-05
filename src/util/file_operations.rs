@@ -1,5 +1,5 @@
 use crate::{
-    structs::{LcfDataBase, LcfMapUnit, LegacyPatch, Patch},
+    structs::{LcfDataBase, LcfMapUnit, LegacyDatabasePatch, LegacyMapPatch, Patch},
     util,
 };
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
@@ -66,6 +66,31 @@ pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pat
     Ok(map)
 }
 
+pub fn read_lcfdatabase_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
+    path_to_lcfdatabase: P1,
+    path_to_patch: P2,
+    path_to_patched_lcfdatabase: P3,
+) -> Result<LcfDataBase, Box<dyn std::error::Error>> {
+    // Read database
+    let file_map = fs::read(path_to_lcfdatabase)?;
+    let mut reader = Cursor::new(file_map);
+    let mut database = LcfDataBase::read_be(&mut reader)?;
+
+    // Read patch
+    let patch_file_string = &fs::read_to_string(path_to_patch)?;
+    let mut patch = toml::from_str::<Patch>(patch_file_string)?;
+    patch.trim_dialogue_ending_newline();
+
+    // Apply patch to map
+    database.apply_patch(&patch);
+
+    // Write the patched map
+    let mut patched_output_file = overwrite(path_to_patched_lcfdatabase)?;
+    patched_output_file.write_be(&database)?;
+
+    Ok(database)
+}
+
 // Actually, these operations are so fast that I don't even need to worry about implementing concurrency at all.
 
 pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
@@ -76,6 +101,15 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
 
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
+
+    // Read the database first, assume hardcoded path and only one database.
+    let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
+    let database = read_lcfdatabase(path_to_database)?;
+
+    fs::write(
+        path_to_reference.as_ref().join("RPG_RT.toml"),
+        database.generate_toml_database(),
+    )?;
 
     for entry in fs::read_dir(path_to_original)? {
         let entry = entry?;
@@ -99,26 +133,6 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
 
                 // Write
                 fs::write(toml_path, map.generate_toml_map())?;
-            } else if extension == "ldb" {
-                // "RPG_RT"
-                let file_stem = path
-                    .file_stem()
-                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
-
-                if file_stem != "RPG_RT" {
-                    println!(
-                        "WARNING: LcfDataBase found that doesn't go by the name \"RPG_RT.ldb\"!"
-                    );
-                }
-
-                let database = read_lcfdatabase(&path)?;
-
-                // "/path/to/reference/Map0134.toml"
-                let mut toml_path = path_to_reference.as_ref().join(file_stem);
-                toml_path.set_extension("toml");
-
-                // Write
-                fs::write(toml_path, database.generate_toml_database())?;
             }
         }
     }
@@ -126,9 +140,9 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
     Ok(())
 }
 
-pub fn bulk_generate_toml_patches<P: AsRef<Path>>(
-    path_to_original: &String,
-    path_to_workspace: P,
+pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_workspace: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk generating TOML patches...");
 
@@ -136,9 +150,15 @@ pub fn bulk_generate_toml_patches<P: AsRef<Path>>(
     fs::create_dir_all(&path_to_workspace)?;
 
     // You need to read the database before reading any maps for the character names!
-    let path_to_database = Path::new(path_to_original).join("RPG_RT.ldb");
+    let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
     let database = read_lcfdatabase(path_to_database)?;
     let character_names = database.extract_character_names();
+
+    // May as well get the database patch done first while you're here.
+    fs::write(
+        path_to_workspace.as_ref().join("RPG_RT.patch.toml"),
+        database.generate_toml_patch(),
+    )?;
 
     for entry in fs::read_dir(path_to_original)? {
         let entry = entry?;
@@ -188,6 +208,18 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     fs::create_dir_all(&path_to_workspace)?;
     fs::create_dir_all(&path_to_patched)?;
 
+    // Read the database first, assume hardcoded path and only one database.
+    let path_to_lcfdatabase = path_to_original.as_ref().join("RPG_RT.ldb");
+    let path_to_patch = path_to_workspace.as_ref().join("RPG_RT.patch.toml");
+    let path_to_patched_lcfdatabase = path_to_patched.as_ref().join("RPG_RT.ldb");
+
+    read_lcfdatabase_and_patch(
+        path_to_lcfdatabase,
+        path_to_patch,
+        path_to_patched_lcfdatabase,
+    )
+    .unwrap();
+
     for entry in fs::read_dir(path_to_original)? {
         let entry = entry?;
         // "/path/to/original/Map0134.lmu"
@@ -224,21 +256,33 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     Ok(())
 }
 
-pub fn bulk_extract_text(
-    path_to_original: &String,
-    path_to_workspace: &String,
+pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>>(
+    path_to_original: P1,
+    path_to_workspace: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk extracting text...");
 
     // NOTE: Don't forget to create the leading directories if needed!
-    let path_to_workspace = Path::new(path_to_workspace);
-    let path_to_extracted = path_to_workspace.join("extracted");
+    let path_to_extracted = path_to_workspace.as_ref().join("extracted");
     fs::create_dir_all(&path_to_extracted)?;
 
     // You need to read the database before reading any maps for the character names!
-    let path_to_database = Path::new(path_to_original).join("RPG_RT.ldb");
+    let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
     let database = read_lcfdatabase(path_to_database)?;
     let character_names = database.extract_character_names();
+
+    // You may as well extract the database text while you're here.
+    // "/path/to/workspace/RPG_RT.patch.toml"
+    let mut patch = toml::from_str::<Patch>(&fs::read_to_string(
+        path_to_workspace.as_ref().join("RPG_RT.patch.toml"),
+    )?)?;
+    patch.trim_dialogue_ending_newline();
+
+    // "/path/to/workspace/extracted/RPG_RT.patch.txt"
+    fs::write(
+        &path_to_extracted.join("RPG_RT.patch.txt"),
+        patch.extract_text(&character_names),
+    )?;
 
     for entry in fs::read_dir(path_to_workspace)? {
         let entry = entry?;
@@ -268,11 +312,28 @@ pub fn bulk_extract_text(
     Ok(())
 }
 
-pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
+pub fn bulk_import_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
     path_to_workspace: P1,
     path_to_legacy_workspace: P2,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk converting legacy patches...");
+
+    // Read database patch
+    let toml_path = path_to_workspace.as_ref().join("RPG_RT.patch.toml");
+    let mut patch = toml::from_str::<Patch>(&fs::read_to_string(&toml_path)?)?;
+    patch.trim_dialogue_ending_newline();
+
+    // Read legacy database patch
+    let text = fs::read_to_string(
+        path_to_legacy_workspace
+            .as_ref()
+            .join("database.patch.json"),
+    )?;
+    let legacy_patch: LegacyDatabasePatch = serde_json::from_str(&text)?;
+
+    // Patch and write
+    legacy_patch.import_lines_to_toml_database_patch(&mut patch);
+    fs::write(&toml_path, util::generate_toml_patch(&patch))?;
 
     for entry in fs::read_dir(path_to_legacy_workspace)? {
         let entry = entry?;
@@ -306,12 +367,12 @@ pub fn bulk_convert_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
 
                     // Read legacy patch
                     let text = fs::read_to_string(path)?;
-                    let legacy_patch: LegacyPatch = serde_json::from_str(&text)?;
+                    let legacy_patch: LegacyMapPatch = serde_json::from_str(&text)?;
 
                     // Patch and write
                     legacy_patch.import_lines_to_toml_map_patch(&mut patch, &map_name);
                     fs::write(&toml_path, util::generate_toml_patch(&patch))?;
-                } else {
+                } else if map_name != "database" {
                     println!("ERROR: Error on reading TOML patch file for {map_name}!");
                 }
             }
@@ -330,6 +391,13 @@ pub fn bulk_redundant_serialize<P1: AsRef<Path>, P2: AsRef<Path>>(
 
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
+
+    // Read the database first, assume hardcoded path and only one database.
+    let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
+    let database = read_lcfdatabase(path_to_database)?;
+
+    let mut output_file = overwrite(path_to_reference.as_ref().join("RPG_RT.ldb"))?;
+    output_file.write_be(&database)?;
 
     for entry in fs::read_dir(path_to_original)? {
         let entry = entry?;
@@ -354,27 +422,6 @@ pub fn bulk_redundant_serialize<P1: AsRef<Path>, P2: AsRef<Path>>(
                 // Write
                 let mut output_file = overwrite(new_lmu_path)?;
                 output_file.write_be(&map)?;
-            } else if extension == "ldb" {
-                // "RPG_RT"
-                let file_stem = path
-                    .file_stem()
-                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
-
-                if file_stem != "RPG_RT" {
-                    println!(
-                        "WARNING: LcfDataBase found that doesn't go by the name \"RPG_RT.ldb\"!"
-                    );
-                }
-
-                let database = read_lcfdatabase(&path)?;
-
-                // "/path/to/reference/RPG_RT.ldb"
-                let mut new_ldb_path = path_to_reference.as_ref().join(file_stem);
-                new_ldb_path.set_extension("ldb");
-
-                // Write
-                let mut output_file = overwrite(new_ldb_path)?;
-                output_file.write_be(&database)?;
             }
         }
     }

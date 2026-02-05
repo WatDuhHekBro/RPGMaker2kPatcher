@@ -12,7 +12,7 @@
     - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
 - `rpgmaker2kpatcher extractText`: Cleans and extracts all text to a separate text file.
     - Uses `PATH_TO_ORIGINAL` (for the database) and `PATH_TO_WORKSPACE`
-- `rpgmaker2kpatcher convertLegacyPatches`: Convert old JSON patches to the new TOML patches
+- `rpgmaker2kpatcher importLegacyPatches`: Convert old JSON patches to the new TOML patches
     - Uses `PATH_TO_WORKSPACE` and `PATH_TO_WORKSPACE_LEGACY`
 
 `.env` Variables
@@ -30,7 +30,10 @@
 
 ## Clipboard / Current Status
 
-**Right now:**
+**Right now:** In the middle of modifying `file_operations` to include database patch, then I need to test out the database patch for myself.
+- Don't do any ext = ldb, just hardcode it. Assume that there's only one database with the same name each time.
+- TODO: importLegacyPatches
+- TODO: applyPatches
 
 Database
 - TOML patch
@@ -38,6 +41,7 @@ Database
     - Then again, it can't be that hard to create two Patch formats. Just not semantic with `.patch.toml`.
     - `header = 21`?
     - Current Idea: `page` becomes optional, though expected for maps. Database assumes header 25 header 21 for `[[dialogue]]` and `[[text]]`. Anything outside of that you need to use a different method, the arbitrary data editing method.
+    - `[[arbitrary]]` -> `path = [21, 114]` (still takes offsets into accounts, especially to replace events)
 
 What exactly needs to get patched in the database?
 - 21 (Vocabulary, only other header listed in original patch)
@@ -48,6 +52,10 @@ Your next goals after that are:
 - Port over manual patches functionality
     - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
     - `arbitrary_path = [23, 1]`
+- Improved patch format (See EasyRPG Editor to help)
+    - See if you can remove some `indent` fields by inferring from branching/logic commands like `12010` (branch if)
+    - See if you can infer `is_portrait` that applies to Aedemphia as well
+        - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
 
 -----
 

@@ -20,13 +20,11 @@ use serde::{Deserialize, Serialize};
 #[binrw]
 #[derive(Debug, Deserialize, Serialize)]
 #[brw(big, magic = b"\x0ALcfMapUnit")]
-pub struct LcfMapUnit {
-    pub headers: NullTerminatedList<LcfMapUnitHeader>,
-}
+pub struct LcfMapUnit(pub NullTerminatedList<LcfMapUnitHeader>);
 
 impl LcfMapUnit {
     pub fn get_events(&self) -> Option<&Vec<LcfMapUnitEvent>> {
-        for header in &self.headers.0 {
+        for header in &**self {
             if let LcfMapUnitHeader::Events(events) = header {
                 return Some(events);
             }
@@ -36,7 +34,7 @@ impl LcfMapUnit {
     }
 
     pub fn get_events_mut(&mut self) -> Option<&mut Vec<LcfMapUnitEvent>> {
-        for header in &mut self.headers.0 {
+        for header in &mut **self {
             if let LcfMapUnitHeader::Events(events) = header {
                 return Some(events);
             }
@@ -45,8 +43,7 @@ impl LcfMapUnit {
         None
     }
 
-    #[allow(dead_code)]
-    pub fn get_event(&self, id: i32) -> Option<&LcfMapUnitEvent> {
+    /*pub fn get_event(&self, id: i32) -> Option<&LcfMapUnitEvent> {
         self.get_events().and_then(|events| {
             for event in events {
                 if event.id == id {
@@ -56,7 +53,7 @@ impl LcfMapUnit {
 
             None
         })
-    }
+    }*/
 
     pub fn get_event_mut(&mut self, id: i32) -> Option<&mut LcfMapUnitEvent> {
         self.get_events_mut().and_then(|events| {
@@ -85,6 +82,20 @@ impl LcfMapUnit {
 
     pub fn apply_patch(&mut self, patch: &Patch) {
         patch_operations::apply_patch_map(self, patch);
+    }
+}
+
+impl std::ops::Deref for LcfMapUnit {
+    type Target = Vec<LcfMapUnitHeader>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for LcfMapUnit {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -122,8 +133,7 @@ impl ListEntry<LcfMapUnitEventHeader> {
         None
     }
 
-    #[allow(dead_code)]
-    pub fn get_page(&self, id: i32) -> Option<&LcfMapUnitPage> {
+    /*pub fn get_page(&self, id: i32) -> Option<&LcfMapUnitPage> {
         self.get_pages().and_then(|pages| {
             for page in pages {
                 if page.id == id {
@@ -133,7 +143,7 @@ impl ListEntry<LcfMapUnitEventHeader> {
 
             None
         })
-    }
+    }*/
 
     pub fn get_page_mut(&mut self, id: i32) -> Option<&mut LcfMapUnitPage> {
         self.get_pages_mut().and_then(|pages| {

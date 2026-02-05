@@ -1,7 +1,7 @@
 use crate::{
     structs::{
         patch::{Dialogue, Text},
-        LcfCommand, LcfCommandList, LcfMapUnit, Patch,
+        LcfCommand, LcfCommandList, LcfDataBase, LcfMapUnit, Patch,
     },
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
     util::constants::*,
@@ -34,6 +34,51 @@ pub fn generate_patch_from_map(
                         );
                     }
                 }
+            }
+        }
+    }
+
+    let dialogue = {
+        if dialogue.len() > 0 {
+            Some(dialogue)
+        } else {
+            None
+        }
+    };
+
+    let text = {
+        if text.len() > 0 {
+            Some(text)
+        } else {
+            None
+        }
+    };
+
+    Patch {
+        dialogue,
+        text,
+        insert_commands: None,
+    }
+}
+
+pub fn generate_patch_from_database(database: &LcfDataBase) -> Patch {
+    let mut dialogue: Vec<Dialogue> = vec![];
+    let mut text: Vec<Text> = vec![];
+    let character_names = database.extract_character_names();
+
+    // Loop through all commands
+    if let Some(events) = database.get_events() {
+        for event in events {
+            if let Some(commands) = event.get_commands() {
+                extract_dialogue_and_text_from_commands(
+                    commands,
+                    &mut dialogue,
+                    &mut text,
+                    *event.id,
+                    None,
+                    Some(&String::from("RPG_RT (LcfDataBase)")),
+                    &character_names,
+                );
             }
         }
     }
@@ -186,15 +231,6 @@ fn extract_dialogue_and_text_from_commands(
 }
 
 pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
-    // Since Array.splice is a dynamic function, you need to adjust for things that'll change the index.
-    // The offset tracked will be different for every event-page pair.
-    // Targeted command index also must be in order, if you want this simplified offset method to work (and not have to use a HashMap of references).
-    // -----
-    // Or just forget the above. Use the HashMap method to keep track of where everything is.
-    // This method provides resilience against out-of-order TOML. The patch order isn't dependent on user-edited TOML.
-    // -----
-    // HashMap<(event, page), Vec<(original_index), shifted_index>>
-    // Make sure the offsets is NOT unsigned, you need those negative numbers!
     let mut offsets_table: HashMap<(i32, i32), Vec<isize>> = HashMap::new();
 
     if let Some(dialogues) = &patch.dialogue {
@@ -271,6 +307,86 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
     }
 }
 
+pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
+    let mut offsets_table: HashMap<(i32, i32), Vec<isize>> = HashMap::new();
+
+    if let Some(dialogues) = &patch.dialogue {
+        for dialogue in dialogues {
+            let Dialogue {
+                event,
+                page: _,
+                command: command_index,
+                indent: explicitly_defined_indent,
+                character: _,
+                original,
+                patched,
+            } = dialogue;
+            let event = *event;
+            let key = (event, 0);
+
+            let commands = &mut database
+                .get_event_mut(event)
+                .expect("Event should exist!")
+                .get_commands_mut()
+                .expect("Commands should exist!");
+
+            splice_dialogue_and_update_offsets(
+                commands,
+                *command_index,
+                explicitly_defined_indent,
+                original,
+                patched,
+                &mut offsets_table,
+                key,
+            );
+        }
+    }
+
+    if let Some(texts) = &patch.text {
+        for text in texts {
+            let Text {
+                event,
+                page: _,
+                command: command_index,
+                original: _,
+                patched,
+            } = text;
+            let event = *event;
+            let key = (event, 0);
+
+            let commands = &mut database
+                .get_event_mut(event)
+                .expect("Event should exist!")
+                .get_commands_mut()
+                .expect("Commands should exist!");
+
+            // Get explicit indent if available or assume previous indent
+            let command_index = *command_index as usize;
+            let start_index = {
+                let offsets = offsets_table.get(&key);
+
+                if let Some(offsets) = offsets {
+                    ((command_index as isize) + (offsets[command_index])).max(0) as usize
+                } else {
+                    command_index
+                }
+            };
+
+            // Replace text
+            commands[start_index].text = PascalString::from(patched);
+        }
+    }
+}
+
+// Since Array.splice is a dynamic function, you need to adjust for things that'll change the index.
+// The offset tracked will be different for every event-page pair.
+// Targeted command index also must be in order, if you want this simplified offset method to work (and not have to use a HashMap of references).
+// -----
+// Or just forget the above. Use the HashMap method to keep track of where everything is.
+// This method provides resilience against out-of-order TOML. The patch order isn't dependent on user-edited TOML.
+// -----
+// HashMap<(event, page), Vec<(original_index), shifted_index>>
+// Make sure the offsets is NOT unsigned, you need those negative numbers!
 fn splice_dialogue_and_update_offsets(
     commands: &mut LcfCommandList,
     command_index: i32,

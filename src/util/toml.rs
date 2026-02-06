@@ -6,7 +6,7 @@ use crate::{
         },
         map::*,
         maptree::LcfMapTreeMapHeader,
-        patch::{Dialogue, Text},
+        patch::{DatabaseVocabulary, Dialogue, SpliceCommands, Text},
         LcfCommand, LcfDataBase, LcfMapTree, ListEntryHeaderGeneric, Patch,
     },
     types::PascalString,
@@ -599,21 +599,16 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         {
             output.push_str("[[dialogue]]\n");
             output.push_str(&format!("event = {event}\n"));
-
             if let Some(page) = page {
                 output.push_str(&format!("page = {page}\n"));
             }
-
             output.push_str(&format!("command = {command}\n"));
-
             if let Some(indent) = explicitly_defined_indent {
                 output.push_str(&format!("indent = {indent}\n"));
             }
-
             if let Some(has_portrait) = has_portrait {
                 output.push_str(&format!("has_portrait = {has_portrait}\n"));
             }
-
             if let Some(character) = character {
                 output.push_str(&format!("character = '''{character}'''\n"));
             }
@@ -625,7 +620,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         }
     }
 
-    if let Some(replace) = &patch.text {
+    if let Some(text) = &patch.text {
         for Text {
             event,
             page,
@@ -633,21 +628,70 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             has_portrait,
             original,
             patched,
-        } in replace
+        } in text
         {
             output.push_str("[[text]]\n");
             output.push_str(&format!("event = {event}\n"));
-
             if let Some(page) = page {
                 output.push_str(&format!("page = {page}\n"));
             }
-
             output.push_str(&format!("command = {command}\n"));
-
             if let Some(has_portrait) = has_portrait {
                 output.push_str(&format!("has_portrait = {has_portrait}\n"));
             }
+            output.push_str(&format!("original = '''{original}'''\n"));
+            output.push_str(&format!("patched = '''{patched}'''\n\n"));
+        }
+    }
 
+    if let Some(splice_commands) = &patch.splice_commands {
+        for SpliceCommands {
+            event,
+            page,
+            replace_command_from,
+            replace_command_to,
+            commands,
+        } in splice_commands
+        {
+            output.push_str("[[splice-commands]]\n");
+            output.push_str(&format!("event = {event}\n"));
+            if let Some(page) = page {
+                output.push_str(&format!("page = {page}\n"));
+            }
+            output.push_str(&format!("replace_command_from = {replace_command_from}\n"));
+            output.push_str(&format!("replace_command_to = {replace_command_to}\n"));
+
+            if commands.is_empty() {
+                output.push_str(&format!("commands = []\n\n"));
+            } else {
+                output.push_str(&format!("commands = [\n"));
+
+                for LcfCommand {
+                    code,
+                    indent,
+                    text,
+                    parameters,
+                } in &**commands
+                {
+                    output.push_str(&format!(
+                        "\t[{code}, {indent}, '''{text}''', {parameters}],\n"
+                    ));
+                }
+
+                output.push_str(&format!("]\n\n"));
+            }
+        }
+    }
+
+    if let Some(database_vocabulary) = &patch.database_vocabulary {
+        for DatabaseVocabulary {
+            id,
+            original,
+            patched,
+        } in database_vocabulary
+        {
+            output.push_str("[[database-vocabulary]]\n");
+            output.push_str(&format!("id = {id}\n"));
             output.push_str(&format!("original = '''{original}'''\n"));
             output.push_str(&format!("patched = '''{patched}'''\n\n"));
         }

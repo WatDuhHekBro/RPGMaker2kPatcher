@@ -1,6 +1,7 @@
 use crate::{
     structs::{
-        patch::{Dialogue, SpliceCommands, Text},
+        database::LcfDataBaseHeader,
+        patch::{DatabaseVocabulary, Dialogue, SpliceCommands, Text},
         LcfCommand, LcfCommandList, LcfDataBase, LcfMapUnit, Patch,
     },
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
@@ -60,6 +61,7 @@ pub fn generate_patch_from_map(
         dialogue,
         text,
         splice_commands: None,
+        database_vocabulary: None,
     }
 }
 
@@ -106,6 +108,7 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
         dialogue,
         text,
         splice_commands: None,
+        database_vocabulary: None,
     }
 }
 
@@ -576,6 +579,22 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
             );
         }
     }
+
+    if let Some(database_vocabulary) = &patch.database_vocabulary {
+        let vocab_map = DatabaseVocabulary::convert_to_hashmap(database_vocabulary);
+
+        for header in &mut **database {
+            if let LcfDataBaseHeader::Vocabulary(header) = header {
+                for vocab_entry in &mut ***header {
+                    let patched_vocab_text = vocab_map.get(&vocab_entry.id);
+
+                    if let Some(patched_vocab_text) = patched_vocab_text {
+                        vocab_entry.text = PascalString::from(*patched_vocab_text);
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Since Array.splice is a dynamic function, you need to adjust for things that'll change the index.
@@ -795,12 +814,6 @@ fn splice_arbitrary_commands_and_update_offsets(
             offsets[offsets_index] += length_difference;
         }
     }
-
-    /*let length_difference = (splice_in_size as isize) - ((stop_index - start_index) as isize);
-
-    for offsets_index in (replace_command_from as usize)..offsets.len() {
-        offsets[offsets_index] += length_difference;
-    }*/
 
     //println!("{offsets:?} <== {length_difference}");
 }

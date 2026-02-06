@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{structs::Patch, util::constants::ERROR_MAP_PAGE_NONE};
+use crate::{
+    structs::{patch::DatabaseVocabulary, Patch},
+    util::constants::ERROR_MAP_PAGE_NONE,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -119,7 +122,7 @@ struct LegacyDatabasePatchOther {
     // - A 5-tuple integer array consisting of: [header=25 (event), event #, id=22 (commands), command start, index=2 (text field)]
     // - A 2-tuple integer array consisting of: [header=21 (vocab), vocab #]
     path: Vec<i32>,
-    //original: String,
+    original: String,
     patch: String,
 }
 
@@ -127,6 +130,7 @@ impl LegacyDatabasePatch {
     pub fn import_lines_to_toml_database_patch(self, patch: &mut Patch) {
         // 2-tuple identifier [event, command]
         let mut patch_map = HashMap::<(i32, i32), String>::new();
+        let mut vocab_list: Vec<DatabaseVocabulary> = Vec::new();
 
         // Build patch map for dialogue
         if let Some(old_dialogues) = self.dialogue {
@@ -143,6 +147,7 @@ impl LegacyDatabasePatch {
         if let Some(old_other) = self.other {
             for text in old_other {
                 match text.path.len() {
+                    // Import other event text to new patch format
                     5 => {
                         let event = text.path[1];
                         let command = text.path[3];
@@ -150,12 +155,17 @@ impl LegacyDatabasePatch {
 
                         patch_map.insert((event, command), patched_text);
                     }
+                    // Import vocab to new patch format
                     2 => {
-                        /*let header = text.path[0];
-                        let entry = text.path[1];
-                        let patched_text = text.patch;
+                        let id = text.path[1];
+                        let original = text.original;
+                        let patched = text.patch;
 
-                        patch_map.insert((header, entry), patched_text);*/
+                        vocab_list.push(DatabaseVocabulary {
+                            id,
+                            original,
+                            patched,
+                        });
                     }
                     _ => {
                         println!("WARNING: Legacy \"database.patch.json\" other entry contains non-standard path length of {}!", text.path.len());
@@ -200,6 +210,10 @@ impl LegacyDatabasePatch {
 
         if !patch_map.is_empty() {
             println!("WARNING: Some legacy entries weren't used in the conversion process for database!\n{patch_map:?}");
+        }
+
+        if !vocab_list.is_empty() {
+            patch.database_vocabulary = Some(vocab_list);
         }
     }
 }

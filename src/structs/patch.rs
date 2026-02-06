@@ -18,7 +18,12 @@ pub struct Patch {
     pub dialogue: Option<Vec<Dialogue>>,
     pub text: Option<Vec<Text>>,
     pub splice_commands: Option<Vec<SpliceCommands>>,
+    pub database_vocabulary: Option<Vec<DatabaseVocabulary>>,
 }
+
+// I have two ideas on how to add arbitrary patching if I ever need it:
+// - "header = 21"
+// - "path = [21, 123]"
 
 impl Patch {
     // No idea why adding this function causes trim_dialogue_ending_newline() to get called twice, but let's just not.
@@ -144,3 +149,22 @@ Or maybe just create another array as a replacement?
 
 Or maybe splicing solution is, pre-group all same event/page, then use same offset function in js code. Hashmap of vecs. Offsets only work if presorted command list. Do that so you don't have to use a moving ref vec.
 */
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DatabaseVocabulary {
+    pub id: i32,
+    pub original: String,
+    pub patched: String,
+}
+
+impl DatabaseVocabulary {
+    pub fn convert_to_hashmap(vocab_list: &Vec<DatabaseVocabulary>) -> HashMap<i32, &String> {
+        let mut map = HashMap::new();
+
+        for vocab in vocab_list {
+            map.insert(vocab.id, &vocab.patched);
+        }
+
+        map
+    }
+}

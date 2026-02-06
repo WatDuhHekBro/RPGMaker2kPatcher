@@ -1,6 +1,9 @@
 use crate::{
-    structs::{LcfDataBase, LcfMapUnit, LegacyDatabasePatch, LegacyMapPatch, Patch},
-    util,
+    structs::{LcfDataBase, LcfMapTree, LcfMapUnit, LegacyDatabasePatch, LegacyMapPatch, Patch},
+    util::{
+        self,
+        constants::{ERROR_NO_FILE_DATABASE, ERROR_NO_FILE_MAPTREE},
+    },
 };
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
 use std::{
@@ -35,10 +38,18 @@ pub fn read_lcfmapunit<P: AsRef<Path>>(path: P) -> Result<LcfMapUnit, binrw::Err
 
 // Assume that only one database exists, named "RPG_RT.ldb" in the same directory.
 pub fn read_lcfdatabase<P: AsRef<Path>>(path: P) -> Result<LcfDataBase, binrw::Error> {
-    let file = fs::read(path)?;
+    let file = fs::read(path).expect(ERROR_NO_FILE_DATABASE);
     let mut reader = Cursor::new(file);
     let database = LcfDataBase::read_be(&mut reader);
     database
+}
+
+// Assume that only one map tree exists, named "RPG_RT.lmt" in the same directory.
+pub fn read_lcfmaptree<P: AsRef<Path>>(path: P) -> Result<LcfMapTree, binrw::Error> {
+    let file = fs::read(path).expect(ERROR_NO_FILE_MAPTREE);
+    let mut reader = Cursor::new(file);
+    let maptree = LcfMapTree::read_be(&mut reader);
+    maptree
 }
 
 pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
@@ -102,12 +113,21 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_reference)?;
 
-    // Read the database first, assume hardcoded path and only one database.
+    // Read the map tree first (for portrait conditions), assume hardcoded path and only one map tree.
+    let path_to_maptree = path_to_original.as_ref().join("RPG_RT.lmt");
+    let maptree = read_lcfmaptree(path_to_maptree)?;
+
+    fs::write(
+        path_to_reference.as_ref().join("MapTree.toml"),
+        maptree.generate_toml_maptree(),
+    )?;
+
+    // Read the database second, assume hardcoded path and only one database.
     let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
     let database = read_lcfdatabase(path_to_database)?;
 
     fs::write(
-        path_to_reference.as_ref().join("RPG_RT.toml"),
+        path_to_reference.as_ref().join("Database.toml"),
         database.generate_toml_database(),
     )?;
 
@@ -149,6 +169,11 @@ pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
     // NOTE: Don't forget to create the leading directories if needed!
     fs::create_dir_all(&path_to_workspace)?;
 
+    // Read the map tree first (for portrait conditions), assume hardcoded path and only one map tree.
+    let path_to_maptree = path_to_original.as_ref().join("RPG_RT.lmt");
+    let maptree = read_lcfmaptree(path_to_maptree)?;
+    let game_title = maptree.extract_game_title();
+
     // You need to read the database before reading any maps for the character names!
     let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
     let database = read_lcfdatabase(path_to_database)?;
@@ -156,8 +181,8 @@ pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
 
     // May as well get the database patch done first while you're here.
     fs::write(
-        path_to_workspace.as_ref().join("RPG_RT.patch.toml"),
-        database.generate_toml_patch(),
+        path_to_workspace.as_ref().join("Database.patch.toml"),
+        database.generate_toml_patch(game_title),
     )?;
 
     for entry in fs::read_dir(path_to_original)? {
@@ -185,7 +210,8 @@ pub fn bulk_generate_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
                     .to_str()
                     .expect("OsStr conversion to String failed!")
                     .to_string();
-                let stringified_patch = map.generate_toml_patch(&character_names, Some(&map_name));
+                let stringified_patch =
+                    map.generate_toml_patch(&character_names, &map_name, game_title);
 
                 if stringified_patch.len() > 1 {
                     fs::write(toml_path, stringified_patch)?;
@@ -210,7 +236,7 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
 
     // Read the database first, assume hardcoded path and only one database.
     let path_to_lcfdatabase = path_to_original.as_ref().join("RPG_RT.ldb");
-    let path_to_patch = path_to_workspace.as_ref().join("RPG_RT.patch.toml");
+    let path_to_patch = path_to_workspace.as_ref().join("Database.patch.toml");
     let path_to_patched_lcfdatabase = path_to_patched.as_ref().join("RPG_RT.ldb");
 
     read_lcfdatabase_and_patch(
@@ -272,15 +298,13 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>>(
     let character_names = database.extract_character_names();
 
     // You may as well extract the database text while you're here.
-    // "/path/to/workspace/RPG_RT.patch.toml"
     let mut patch = toml::from_str::<Patch>(&fs::read_to_string(
-        path_to_workspace.as_ref().join("RPG_RT.patch.toml"),
+        path_to_workspace.as_ref().join("Database.patch.toml"),
     )?)?;
     patch.trim_dialogue_ending_newline();
 
-    // "/path/to/workspace/extracted/RPG_RT.patch.txt"
     fs::write(
-        &path_to_extracted.join("RPG_RT.patch.txt"),
+        &path_to_extracted.join("Database.patch.txt"),
         patch.extract_text(&character_names),
     )?;
 
@@ -319,7 +343,7 @@ pub fn bulk_import_legacy_patches<P1: AsRef<Path>, P2: AsRef<Path>>(
     println!("Bulk converting legacy patches...");
 
     // Read database patch
-    let toml_path = path_to_workspace.as_ref().join("RPG_RT.patch.toml");
+    let toml_path = path_to_workspace.as_ref().join("Database.patch.toml");
     let mut patch = toml::from_str::<Patch>(&fs::read_to_string(&toml_path)?)?;
     patch.trim_dialogue_ending_newline();
 

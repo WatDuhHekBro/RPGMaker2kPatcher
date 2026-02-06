@@ -5,8 +5,9 @@ use crate::{
             LcfDataBaseGlobalEventHeader, LcfDataBaseHeader, LcfDataBaseSingleTextHeader,
         },
         map::*,
+        maptree::LcfMapTreeMapHeader,
         patch::{Dialogue, Text},
-        LcfCommand, LcfDataBase, ListEntryHeaderGeneric, Patch,
+        LcfCommand, LcfDataBase, LcfMapTree, ListEntryHeaderGeneric, Patch,
     },
     types::PascalString,
 };
@@ -134,7 +135,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for character in &***characters {
-                    output.push_str(&format!("[[character.{}]]\n", *character.id));
+                    output.push_str(&format!("[character.{}]\n", *character.id));
 
                     for header in &*character.headers {
                         let line = match header {
@@ -171,7 +172,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[skill.{}]]\n", *entry.id));
+                    output.push_str(&format!("[skill.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -196,7 +197,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_double_text {
-                    output.push_str(&format!("[[item.{}]]\n", *entry.id));
+                    output.push_str(&format!("[item.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -224,7 +225,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_double_text {
-                    output.push_str(&format!("[[enemy.{}]]\n", *entry.id));
+                    output.push_str(&format!("[enemy.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -252,7 +253,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[enemy-group.{}]]\n", *entry.id));
+                    output.push_str(&format!("[enemy-group.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -277,7 +278,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[terrain.{}]]\n", *entry.id));
+                    output.push_str(&format!("[terrain.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -302,7 +303,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[attribute.{}]]\n", *entry.id));
+                    output.push_str(&format!("[attribute.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -327,7 +328,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for condition in &***conditions {
-                    output.push_str(&format!("[[condition.{}]]\n", *condition.id));
+                    output.push_str(&format!("[condition.{}]\n", *condition.id));
 
                     for header in &*condition.headers {
                         let line = match header {
@@ -361,7 +362,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[battle-animation.{}]]\n", *entry.id));
+                    output.push_str(&format!("[battle-animation.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -386,7 +387,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_double_text {
-                    output.push_str(&format!("[[chipset.{}]]\n", *entry.id));
+                    output.push_str(&format!("[chipset.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -440,7 +441,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[switch.{}]]\n", *entry.id));
+                    output.push_str(&format!("[switch.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -465,7 +466,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for entry in &***lcf_single_text {
-                    output.push_str(&format!("[[variable.{}]]\n", *entry.id));
+                    output.push_str(&format!("[variable.{}]\n", *entry.id));
 
                     for header in &*entry.headers {
                         let line = match header {
@@ -490,7 +491,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(HEADER_SIGNPOST_END);
 
                 for event in &***events {
-                    output.push_str(&format!("[[event.{}]]\n", *event.id));
+                    output.push_str(&format!("[event.{}]\n", *event.id));
 
                     for header in &*event.headers {
                         let line = match header {
@@ -537,6 +538,40 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                 output.push_str(&format!("{id} = {value}\n"));
             }
         }
+    }
+
+    // Cleanup
+    let mut output = output.trim_end().to_string();
+    output.push_str("\n");
+
+    output
+}
+
+pub fn generate_toml_maptree(maptree: &LcfMapTree) -> String {
+    let mut output = String::from(DISCLAIMER_TEXT);
+    output.push_str("[header]\ntype = '''LcfMapTree'''\n\n");
+
+    for map in &maptree.0 .0 {
+        output.push_str(&format!("[map.{}]\n", *map.id));
+
+        for header in &*map.headers {
+            let line = match header {
+                LcfMapTreeMapHeader::Name(PascalString(name)) => {
+                    format!("1 = '''{name}'''\n")
+                }
+                LcfMapTreeMapHeader::ParentMap(parent_id) => {
+                    let parent_id = ***parent_id;
+                    format!("2 = {parent_id}\n")
+                }
+                LcfMapTreeMapHeader::Generic(ListEntryHeaderGeneric { id, value }) => {
+                    format!("{id} = {value}\n")
+                }
+            };
+
+            output.push_str(&line);
+        }
+
+        output.push_str("\n");
     }
 
     // Cleanup

@@ -1,0 +1,18 @@
+# This binary representation has been serialized for easier debugging/patching.
+# It will not be used by the program to actually patch anything, so feel free to delete this.
+
+# NOTE: Because of the way TOML treats string literals (single quotes), you cannot escape anything at all, neither backslashes nor single quotes. So in order to be safe, you must use the multiline literals (triple single quotes)! That'll take care of any problems with apostrophes.
+
+[header]
+type = '''LcfMapTree'''
+
+[map.0]
+1 = '''Velsarbor'''
+2 = 1
+4 = [0]
+7 = [1]
+11 = [0]
+12 = [1, 5, 40, 79, 70, 70, 41, 0]
+
+[map.1]
+1 = '''asdf'''

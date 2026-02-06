@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     structs::{LcfCommandList, ListEntry, ListEntryHeaderGeneric, Patch},
     types::{
@@ -10,6 +8,7 @@ use crate::{
 };
 use binrw::binrw;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Make sure to place this #[derive(Debug, Deserialize, Serialize)] below #[binrw], or it'll throw errors for temporary fields.
 // -----
@@ -97,8 +96,8 @@ impl LcfDataBase {
         generate_toml_database(&self)
     }
 
-    pub fn generate_toml_patch(&self) -> String {
-        let patch = Patch::generate_from_database(&self);
+    pub fn generate_toml_patch(&self, game_title: &String) -> String {
+        let patch = Patch::generate_from_database(&self, game_title);
         generate_toml_patch(&patch)
     }
 

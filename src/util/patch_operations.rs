@@ -12,7 +12,8 @@ use std::{collections::HashMap, sync::LazyLock};
 pub fn generate_patch_from_map(
     map: &LcfMapUnit,
     character_names: &HashMap<i32, String>,
-    map_name: Option<&String>,
+    map_name: &String,
+    game_title: &String,
 ) -> Patch {
     let mut dialogue: Vec<Dialogue> = vec![];
     let mut text: Vec<Text> = vec![];
@@ -31,6 +32,7 @@ pub fn generate_patch_from_map(
                             Some(*page.id),
                             map_name,
                             &character_names,
+                            game_title,
                         );
                     }
                 }
@@ -61,7 +63,7 @@ pub fn generate_patch_from_map(
     }
 }
 
-pub fn generate_patch_from_database(database: &LcfDataBase) -> Patch {
+pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String) -> Patch {
     let mut dialogue: Vec<Dialogue> = vec![];
     let mut text: Vec<Text> = vec![];
     let character_names = database.extract_character_names();
@@ -76,8 +78,9 @@ pub fn generate_patch_from_database(database: &LcfDataBase) -> Patch {
                     &mut text,
                     *event.id,
                     None,
-                    Some(&String::from("RPG_RT (LcfDataBase)")),
+                    &String::from("RPG_RT/LcfDataBase"),
                     &character_names,
+                    game_title,
                 );
             }
         }
@@ -112,8 +115,9 @@ fn extract_dialogue_and_text_from_commands(
     text: &mut Vec<Text>,
     event: i32,
     page: Option<i32>,
-    map_name: Option<&String>,
+    map_name: &String,
     character_names: &HashMap<i32, String>,
+    game_title: &String,
 ) {
     let mut command_index = 0;
     let mut start_index = 0;
@@ -230,7 +234,7 @@ fn extract_dialogue_and_text_from_commands(
             // I don't think dialogue commands have parameters, but it doesn't hurt
             // to alert the user if there is any.
             if !command.parameters.is_empty() {
-                println!("WARNING: [map.{map_name:?}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
+                println!("WARNING: [map.{map_name}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
             }
         } else if current_command_code == COMMAND_DIALOGUE_CONTINUE {
             current_dialogue_text.push_str("\n");
@@ -239,14 +243,14 @@ fn extract_dialogue_and_text_from_commands(
             // And then just make sure there's no conflicting indent in any continue statements.
             if let Some(indent_written_into_patch) = &indent_written_into_patch {
                 if indent_written_into_patch != current_command_indent {
-                    println!("WARNING: [map.{map_name:?}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) has a conflicting indent in a DIALOGUE_CONTINUE command?!");
+                    println!("WARNING: [map.{map_name}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) has a conflicting indent in a DIALOGUE_CONTINUE command?!");
                 }
             }
 
             // I don't think dialogue commands have parameters, but it doesn't hurt
             // to alert the user if there is any.
             if !command.parameters.is_empty() {
-                println!("WARNING: [map.{map_name:?}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
+                println!("WARNING: [map.{map_name}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
             }
         } else if is_other_text {
             let has_portrait = {
@@ -345,7 +349,7 @@ fn extract_dialogue_and_text_from_commands(
             has_portrait = !command.text.is_empty();
         }
         // Special edge case for Velsarbor, the clear portrait command is abstracted away into a specific global event call
-        else if current_command_code == COMMAND_CALL_GLOBAL_EVENT {
+        else if game_title == "Velsarbor" && current_command_code == COMMAND_CALL_GLOBAL_EVENT {
             let global_event_id = command.parameters.get(1);
 
             if let Some(global_event_id) = global_event_id {

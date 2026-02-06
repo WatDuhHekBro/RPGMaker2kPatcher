@@ -3,10 +3,7 @@ mod structs; // Main structures
 mod types; // Custom data types
 mod util;
 
-use crate::{
-    structs::LcfDataBase,
-    util::{file_operations, generate_toml_database},
-};
+use crate::{structs::LcfMapTree, util::file_operations};
 use binrw::{BinRead, BinWriterExt};
 use dotenvy::dotenv;
 use std::{env, fs, io::Cursor, path::Path};
@@ -190,20 +187,20 @@ fn main() {
             "test" => {
                 println!("Testing...");
 
-                // Read database
                 let db =
-                    fs::read("/home/watduhhekbro/external/workspace/debug/db/RPG_RT.ldb").unwrap();
+                    fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.lmt").unwrap();
                 let mut reader = Cursor::new(db);
-                let db = LcfDataBase::read_be(&mut reader).unwrap();
-                fs::write("test.toml", generate_toml_database(&db)).unwrap();
+                let db = LcfMapTree::read_be(&mut reader).unwrap();
+                fs::write("test.toml", db.generate_toml_maptree()).unwrap();
+                //println!("{db:?}");
 
                 let mut file = file_operations::overwrite(
-                    "/home/watduhhekbro/external/workspace/debug/db/out/RPG_RT.ldb",
+                    "/home/watduhhekbro/external/workspace/debug/out/RPG_RT.lmt",
                 )
                 .unwrap();
                 file.write_be(&db).unwrap();
                 fs::write(
-                    "/home/watduhhekbro/external/workspace/debug/db/out/RPG_RT.txt",
+                    "/home/watduhhekbro/external/workspace/debug/out/MapTree.txt",
                     format!("{db:?}"),
                 )
                 .unwrap();

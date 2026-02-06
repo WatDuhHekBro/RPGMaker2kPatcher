@@ -35,13 +35,14 @@ impl Patch {
     pub fn generate_from_map(
         map: &LcfMapUnit,
         character_names: &HashMap<i32, String>,
-        map_name: Option<&String>,
+        map_name: &String,
+        game_title: &String,
     ) -> Patch {
-        patch_operations::generate_patch_from_map(map, character_names, map_name)
+        patch_operations::generate_patch_from_map(map, character_names, map_name, game_title)
     }
 
-    pub fn generate_from_database(database: &LcfDataBase) -> Patch {
-        patch_operations::generate_patch_from_database(database)
+    pub fn generate_from_database(database: &LcfDataBase, game_title: &String) -> Patch {
+        patch_operations::generate_patch_from_database(database, game_title)
     }
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.

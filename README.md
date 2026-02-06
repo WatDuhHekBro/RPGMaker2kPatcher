@@ -32,9 +32,7 @@
 
 # Clipboard / Current Status
 
-**Right now:** Parse LcfMapTree in order to make the current `has_portrait` game-specific
-
-`Database.toml` and `MapTree.toml`
+**Right now:**
 
 Database
 - TOML patch

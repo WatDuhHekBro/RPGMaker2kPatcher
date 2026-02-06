@@ -74,9 +74,10 @@ impl LcfMapUnit {
     pub fn generate_toml_patch(
         &self,
         character_names: &HashMap<i32, String>,
-        map_name: Option<&String>,
+        map_name: &String,
+        game_title: &String,
     ) -> String {
-        let patch = Patch::generate_from_map(&self, character_names, map_name);
+        let patch = Patch::generate_from_map(&self, character_names, map_name, game_title);
         generate_toml_patch(&patch)
     }
 

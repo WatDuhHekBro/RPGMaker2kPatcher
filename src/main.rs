@@ -90,8 +90,6 @@ fn main() {
             }
             "testLib" => {
                 let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
-                let path_to_legacy_workspace =
-                    path_to_legacy_workspace.expect(".env PATH_TO_WORKSPACE_LEGACY missing!");
 
                 let subpath_original_toml = Path::new(&path_to_original).join("original-toml");
                 let subpath_reference = Path::new(&path_to_original).join("original-recompiled");
@@ -109,7 +107,7 @@ fn main() {
                     Path::new(&path_to_original).join("translated-custom-toml");
 
                 println!(
-                    "In order to test whether or not original binary read/write identical to original..."
+                    "In order to test whether or not original binary read/write identical to original...\nCreate a git repository, put all files in \"<root>\" to \"<repo>/bin\" and all files in \"<root>/original-toml\" to \"<repo>/toml\".\nThen replace \"<repo>/bin\" = \"<root>/original-recompiled\" and \"<repo>/bin\" = \"<root>/original-recompiled-toml\".\nThen check \"git status | grep modified\".\n"
                 );
                 file_operations::bulk_redundant_serialize(&path_to_original, &subpath_reference)
                     .unwrap();
@@ -124,7 +122,7 @@ fn main() {
                 )
                 .unwrap();
 
-                println!("\nIn order to test whether or not patched binary (from default patches) identical to original...");
+                println!("\nIn order to test whether or not patched binary (from default patches) identical to original...\nUsing the same git repo, replace \"<repo>/bin\" = \"<root>/original-default-patches\" and \"<repo>/bin\" = \"<root>/original-default-patches-toml\".\nThen check \"git status | grep modified\".\n");
                 file_operations::bulk_generate_toml_patches(
                     &path_to_original,
                     &subpath_workspace_default,
@@ -142,28 +140,32 @@ fn main() {
                 )
                 .unwrap();
 
-                println!("\nIn order to test whether or not the already-patched binaries are identical (to legacy patches)...");
-                file_operations::bulk_generate_toml_patches(
-                    &path_to_original,
-                    &subpath_workspace_custom,
-                )
-                .unwrap();
-                file_operations::bulk_import_legacy_patches(
-                    &subpath_workspace_custom,
-                    &path_to_legacy_workspace,
-                )
-                .unwrap();
-                file_operations::bulk_apply_toml_patches(
-                    &path_to_original,
-                    &subpath_workspace_custom,
-                    &subpath_patched_custom,
-                )
-                .unwrap();
-                file_operations::bulk_generate_toml_representations(
-                    &subpath_patched_custom,
-                    &subpath_patched_custom_toml,
-                )
-                .unwrap();
+                if let Ok(path_to_legacy_workspace) = path_to_legacy_workspace {
+                    println!("\nIn order to test whether or not the already-patched binaries are identical (to legacy patches)...\nCreate a git repository, put all files in \"<translated-root>\" to \"<repo>/bin\" and all files in \"<translated-root>/original-toml\" to \"<repo>/toml\".\nThen replace \"<repo>/bin\" = \"<root>/translated-custom\" and \"<repo>/bin\" = \"<root>/translated-custom-toml\".\nThen check \"git status | grep modified\".\n");
+                    file_operations::bulk_generate_toml_patches(
+                        &path_to_original,
+                        &subpath_workspace_custom,
+                    )
+                    .unwrap();
+                    file_operations::bulk_import_legacy_patches(
+                        &subpath_workspace_custom,
+                        &path_to_legacy_workspace,
+                    )
+                    .unwrap();
+                    file_operations::bulk_apply_toml_patches(
+                        &path_to_original,
+                        &subpath_workspace_custom,
+                        &subpath_patched_custom,
+                    )
+                    .unwrap();
+                    file_operations::bulk_generate_toml_representations(
+                        &subpath_patched_custom,
+                        &subpath_patched_custom_toml,
+                    )
+                    .unwrap();
+                } else {
+                    println!("To test if it's identical to an already-patched binary, set PATH_TO_WORKSPACE_LEGACY in .env!");
+                }
             }
             "testApplyPatches" => {
                 println!("Reapplying patch and automatically decompiling patched folder for easier debugging...");

@@ -7,6 +7,10 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+// NOTE: Both Dialogue and Text are special options to assume certain paths to avoid repeating constant numbers in the path.
+// - Maps: Header #81 (Map Events) -> ID #5 (Pages) -> ID #52 (Commands)
+// - Database: Header #25 (Global Events) -> ID #22 (Commands)
+// Anything outside that uses different fields that aren't specialized for these common paths.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Patch {
     // These have to be made optional in order for serde to be able to read the TOML file directly

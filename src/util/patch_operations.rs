@@ -196,7 +196,14 @@ fn extract_dialogue_and_text_from_commands(
                     if indent_difference == 1
                         && (last_command_code == COMMAND_BRANCH_IF
                             || last_command_code == COMMAND_BRANCH_ELSE
-                            || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION)
+                            || last_command_code == COMMAND_LOOP
+                            || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
+                            || last_command_code == COMMAND_TRANSACTION
+                            || last_command_code == COMMAND_NO_TRANSACTION)
+                    {
+                        None
+                    } else if indent_difference == -1
+                        && last_command_code == COMMAND_DECREASE_INDENT
                     {
                         None
                     } else {
@@ -446,9 +453,14 @@ fn splice_dialogue_and_update_offsets(
 
                 if last_command_code == COMMAND_BRANCH_IF
                     || last_command_code == COMMAND_BRANCH_ELSE
+                    || last_command_code == COMMAND_LOOP
                     || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
+                    || last_command_code == COMMAND_TRANSACTION
+                    || last_command_code == COMMAND_NO_TRANSACTION
                 {
                     last_command_indent + 1
+                } else if last_command_code == COMMAND_DECREASE_INDENT {
+                    (last_command_indent - 1).max(0)
                 } else {
                     last_command_indent
                 }

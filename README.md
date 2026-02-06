@@ -30,34 +30,36 @@
 
 ## Clipboard / Current Status
 
-**Right now:** In the middle of modifying `file_operations` to include database patch, then I need to test out the database patch for myself.
-- Don't do any ext = ldb, just hardcode it. Assume that there's only one database with the same name each time.
-- TODO: importLegacyPatches
-- TODO: applyPatches
+**Right now:**
+
+`Database.toml` and `MapTree.toml`
 
 Database
 - TOML patch
-    - Create a `[[database-patch]]` field if necessary, I really don't want to have a separate patch format.
-    - Then again, it can't be that hard to create two Patch formats. Just not semantic with `.patch.toml`.
     - `header = 21`?
-    - Current Idea: `page` becomes optional, though expected for maps. Database assumes header 25 header 21 for `[[dialogue]]` and `[[text]]`. Anything outside of that you need to use a different method, the arbitrary data editing method.
     - `[[arbitrary]]` -> `path = [21, 114]` (still takes offsets into accounts, especially to replace events)
 
 What exactly needs to get patched in the database?
 - 21 (Vocabulary, only other header listed in original patch)
-- 25 (EventCommands)
-- Basically everything outside of 25 is on a case-by-case basis, as you need it.
 
 Your next goals after that are:
 - Port over manual patches functionality
     - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
     - `arbitrary_path = [23, 1]`
 - Improved patch format (See EasyRPG Editor to help)
-    - See if you can remove some `indent` fields by inferring from branching/logic commands like `12010` (branch if) or `22010` (else)
     - See if you can infer `is_portrait` that applies to Aedemphia as well
         - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
 
------
+## Edge Cases
+
+Edge Case: Aedemphia Map0323 Event #12 Page #1 Command #59 has a control character 7F. When written with custom formatting and read back, the TOML parser throws an error. See how the default TOML formatter deals with this.
+https://stackoverflow.com/questions/26741455/how-to-remove-control-characters-from-string `(str.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""))`
+- Then again, how often does it happen anyway? Just manually convert it to a double string literal so you can escape the control character.
+- Also Map1426 Event #42 Page #1 Command #2 has the same 7F issue
+
+Edge Case: Tara's Adventure Map1180 Event #16 Page #1 Command #23 - One line itself has a bunch of newlines. Then because the original length gets counted differently, the binary output is tangibly different because of splicing the wrong indexes.
+
+## Plans n' Stuff
 
 The next release will only have the pre-patched release, no dev stuff or separate patch generated.
 - Source and destination folders.
@@ -86,19 +88,4 @@ Map0014
 Map0143
 Map0144
 Map0213
-```
-
-```
-Bulk converting legacy patches...
-WARNING: [map.Map0074.event.7.page.1.command.94] found no equivalent dialogue in its legacy patch!
-WARNING: [map.Map0074.event.7.page.1.command.144] found no equivalent dialogue in its legacy patch!
-WARNING: [map.Map0084.event.12.page.1.command.24] found no equivalent dialogue in its legacy patch!
-WARNING: [map.Map0084.event.15.page.1.command.9] found no equivalent dialogue in its legacy patch!
-WARNING: [map.Map0084.event.15.page.1.command.54] found no equivalent dialogue in its legacy patch!
-WARNING: Some legacy entries weren't used in the conversion process for Map0179!
-{(25, 2, 157): "Bedrohung_von_oben"}
-WARNING: Some legacy entries weren't used in the conversion process for Map0208!
-{(34, 10, 187): "2003MaximumBattle"}
-ERROR: Error on reading TOML patch file for Map0250!
-ERROR: Error on reading TOML patch file for database!
 ```

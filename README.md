@@ -53,7 +53,7 @@ Your next goals after that are:
     - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
     - `arbitrary_path = [23, 1]`
 - Improved patch format (See EasyRPG Editor to help)
-    - See if you can remove some `indent` fields by inferring from branching/logic commands like `12010` (branch if)
+    - See if you can remove some `indent` fields by inferring from branching/logic commands like `12010` (branch if) or `22010` (else)
     - See if you can infer `is_portrait` that applies to Aedemphia as well
         - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
 

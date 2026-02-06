@@ -119,6 +119,10 @@ fn extract_dialogue_and_text_from_commands(
     let mut start_index = 0;
     let mut last_command_code = -1;
     let mut current_dialogue_text = String::new();
+    // NOTE: Only "dialogue" needs to worry about indents, "text" doesn't touch any other field than the text field
+    // Heuristic #1: Assume the last indent if it's the same
+    // Heuristic #2: Check if the last command was a branching operation (12010 or 22010)
+    // Heuristic #3: Check if the last command was a multiple choice selection (20140)
     let mut last_command_indent = 0;
     let mut indent_written_into_patch: Option<DynamicInteger> = None;
 
@@ -182,8 +186,22 @@ fn extract_dialogue_and_text_from_commands(
 
             // Compare the indent for the first line of dialogue
             indent_written_into_patch = {
+                // If the indent is the same as the one before it, it can be assumed
                 if current_command_indent != last_command_indent {
-                    Some(DynamicInteger(current_command_indent))
+                    // However, if they differ, that sometimes means that a branching operation was used right before it
+                    // 12010 (Branch If) indent+1
+                    // 22010 (Branch Else) indent+1
+                    let indent_difference = current_command_indent - last_command_indent;
+
+                    if indent_difference == 1
+                        && (last_command_code == COMMAND_BRANCH_IF
+                            || last_command_code == COMMAND_BRANCH_ELSE
+                            || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION)
+                    {
+                        None
+                    } else {
+                        Some(DynamicInteger(current_command_indent))
+                    }
                 } else {
                     None
                 }
@@ -422,7 +440,18 @@ fn splice_dialogue_and_update_offsets(
             indent.0
         } else {
             if start_index > 0 {
-                commands[start_index - 1].indent.0
+                let last_command = &commands[start_index - 1];
+                let last_command_indent = last_command.indent.0;
+                let last_command_code = *last_command.code;
+
+                if last_command_code == COMMAND_BRANCH_IF
+                    || last_command_code == COMMAND_BRANCH_ELSE
+                    || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
+                {
+                    last_command_indent + 1
+                } else {
+                    last_command_indent
+                }
             } else {
                 0
             }

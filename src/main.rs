@@ -93,19 +93,36 @@ fn main() {
                 let path_to_legacy_workspace =
                     path_to_legacy_workspace.expect(".env PATH_TO_WORKSPACE_LEGACY missing!");
 
+                let subpath_original_toml = Path::new(&path_to_original).join("original-toml");
                 let subpath_reference = Path::new(&path_to_original).join("original-recompiled");
+                let subpath_reference_toml =
+                    Path::new(&path_to_original).join("original-recompiled-toml");
                 let subpath_workspace_default =
                     Path::new(&path_to_original).join("patches-original");
                 let subpath_workspace_custom = Path::new(&path_to_original).join("patches-custom");
                 let subpath_patched_default =
                     Path::new(&path_to_original).join("original-default-patches");
+                let subpath_patched_default_toml =
+                    Path::new(&path_to_original).join("original-default-patches-toml");
                 let subpath_patched_custom = Path::new(&path_to_original).join("translated-custom");
+                let subpath_patched_custom_toml =
+                    Path::new(&path_to_original).join("translated-custom-toml");
 
                 println!(
                     "In order to test whether or not original binary read/write identical to original..."
                 );
                 file_operations::bulk_redundant_serialize(&path_to_original, &subpath_reference)
                     .unwrap();
+                file_operations::bulk_generate_toml_representations(
+                    &path_to_original,
+                    &subpath_original_toml,
+                )
+                .unwrap();
+                file_operations::bulk_generate_toml_representations(
+                    &subpath_reference,
+                    &subpath_reference_toml,
+                )
+                .unwrap();
 
                 println!("\nIn order to test whether or not patched binary (from default patches) identical to original...");
                 file_operations::bulk_generate_toml_patches(
@@ -117,6 +134,11 @@ fn main() {
                     &path_to_original,
                     &subpath_workspace_default,
                     &subpath_patched_default,
+                )
+                .unwrap();
+                file_operations::bulk_generate_toml_representations(
+                    &subpath_patched_default,
+                    &subpath_patched_default_toml,
                 )
                 .unwrap();
 
@@ -135,6 +157,11 @@ fn main() {
                     &path_to_original,
                     &subpath_workspace_custom,
                     &subpath_patched_custom,
+                )
+                .unwrap();
+                file_operations::bulk_generate_toml_representations(
+                    &subpath_patched_custom,
+                    &subpath_patched_custom_toml,
                 )
                 .unwrap();
             }

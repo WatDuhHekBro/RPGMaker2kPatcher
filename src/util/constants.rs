@@ -10,7 +10,12 @@ pub const COMMAND_DIALOGUE_START: i32 = 10110;
 pub const COMMAND_DIALOGUE_CONTINUE: i32 = 20110;
 //pub const COMMAND_CHANGE_FACE_GRAPHIC: i32 = 10130;
 
-// Other commands
+// Text-related commands
 pub const COMMAND_MULTIPLE_CHOICE_PROMPT: i32 = 10140;
 pub const COMMAND_MULTIPLE_CHOICE_SELECTION: i32 = 20140;
 pub const COMMAND_SAVE_POINT_NAME: i32 = 10610;
+
+// Other commands
+pub const COMMAND_BRANCH_IF: i32 = 12010;
+pub const COMMAND_BRANCH_ELSE: i32 = 22010;
+//pub const COMMAND_DECREASE_INDENT: i32 = 10;

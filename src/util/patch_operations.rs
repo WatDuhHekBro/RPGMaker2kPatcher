@@ -1,6 +1,6 @@
 use crate::{
     structs::{
-        patch::{Dialogue, Text},
+        patch::{Dialogue, SpliceCommands, Text},
         LcfCommand, LcfCommandList, LcfDataBase, LcfMapUnit, Patch,
     },
     types::{DynamicInteger, DynamicIntegerArray, PascalString},
@@ -59,7 +59,7 @@ pub fn generate_patch_from_map(
     Patch {
         dialogue,
         text,
-        insert_commands: None,
+        splice_commands: None,
     }
 }
 
@@ -105,7 +105,7 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
     Patch {
         dialogue,
         text,
-        insert_commands: None,
+        splice_commands: None,
     }
 }
 
@@ -442,6 +442,38 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             commands[start_index].text = PascalString::from(patched);
         }
     }
+
+    if let Some(splice_commands) = &patch.splice_commands {
+        for splice_command in splice_commands {
+            let SpliceCommands {
+                event,
+                page,
+                replace_command_from,
+                replace_command_to,
+                commands: patched_commands,
+            } = splice_command;
+            let event = *event;
+            let page = page.expect(ERROR_MAP_PAGE_NONE);
+            let key = (event, page);
+
+            let commands = &mut map
+                .get_event_mut(event)
+                .expect("Event should exist!")
+                .get_page_mut(page)
+                .expect("Page should exist!")
+                .get_commands_mut()
+                .expect("Commands should exist!");
+
+            splice_arbitrary_commands_and_update_offsets(
+                commands,
+                *replace_command_from,
+                *replace_command_to,
+                patched_commands.clone(),
+                &mut offsets_table,
+                key,
+            );
+        }
+    }
 }
 
 pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
@@ -513,6 +545,35 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
 
             // Replace text
             commands[start_index].text = PascalString::from(patched);
+        }
+    }
+
+    if let Some(splice_commands) = &patch.splice_commands {
+        for splice_command in splice_commands {
+            let SpliceCommands {
+                event,
+                page: _,
+                replace_command_from,
+                replace_command_to,
+                commands: patched_commands,
+            } = splice_command;
+            let event = *event;
+            let key = (event, 0);
+
+            let commands = &mut database
+                .get_event_mut(event)
+                .expect("Event should exist!")
+                .get_commands_mut()
+                .expect("Commands should exist!");
+
+            splice_arbitrary_commands_and_update_offsets(
+                commands,
+                *replace_command_from,
+                *replace_command_to,
+                patched_commands.clone(),
+                &mut offsets_table,
+                key,
+            );
         }
     }
 }
@@ -640,11 +701,106 @@ fn splice_dialogue_and_update_offsets(
     // [0, 1, [2, 3, 4, 5], [6, 7, 8, 9], 10, 11, 12, 13, 14, 15, [16, 17, 18], 19, [20], 21, [22, 23], [24, 25, 26, 27], 28, [29, 30], 31, ...]
     // But stop_index=25. You set offsets from index=25. But the original_index=23. So it's 23+2 starting at 25, not 24.
     // Should you use the original_index?
+    // ----- Issues -----
+    // Issue: Targeting moved dialogue is offset -1 more than necessary.
+    // You should instead treat the offset table like pointers to new locations.
+    // Where exactly does it make sense to point to?
+    //
+    // [a, b, c, d, e, f, g, h, i, j,[k,  l,  m,  n,] o,  p,  q,  r,  s,  t,  u,  v,  w,  x,  y,  z]
+    // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    //
+    // [a, b, c, d, e, f, g, h, i, j, o,  p,  q,  r,  s,  t,  u,  v,  w,  x,  y,  z] (new list)
+    // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] (new indexes)
+    //                                    -1  -2  -3  -4  -4  -4  -4  -4  -4  -4  -4
+    // [a, b, c, d, e, f, g, h, i, j, k,  l,  m,  n,  o,  p,  q,  r,  s,  t,  u,  v,  w,  x,  y,  z]
+    // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] (new target indexes)
+    //
+    // The rationale behind this new change is that with the old system, targeting "n" would get you to target "j", it just doesn't make sense.
+    //
+    // [a, b, c, d, e, f]
+    // [0, 1, 2, 3, 4, 5]
+    //
+    // [a, b, c, x, y, z, d, e, f] (new list)
+    // [0, 1, 2, 3, 4, 5, 6, 7, 8] (new indexes)
+    //          +3 +3 +3
+    // [a, b, c, d, e, f]
+    // [0, 1, 2, 6, 7, 8] (new target indexes)
+    //
+    // When splicing in more entries, this seems to be a non-issue still.
     let length_difference = (patched_lines_count as isize) - (original_lines_count as isize);
 
     for offsets_index in command_index..offsets.len() {
-        offsets[offsets_index] += length_difference;
+        // If the length_difference is negative, you need to take the distance from the command_index into account.
+        // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
+        // 0-0 = 0, 0-1 = -1, 0-2 = -2, 0-3 = -3
+        if length_difference < 0 {
+            let distance_from_original_index = (command_index as isize) - (offsets_index as isize);
+            offsets[offsets_index] += length_difference.max(distance_from_original_index as isize);
+        } else {
+            offsets[offsets_index] += length_difference;
+        }
     }
+
+    //println!("{offsets:?} <== {length_difference}");
+}
+
+fn splice_arbitrary_commands_and_update_offsets(
+    commands: &mut LcfCommandList,
+    replace_command_from: i32,
+    replace_command_to: i32,
+    patched_commands: Vec<LcfCommand>,
+    offsets_table: &mut HashMap<(i32, i32), Vec<isize>>,
+    key: (i32, i32),
+) {
+    // Create offset entry if it hasn't worked on this key yet
+    if !offsets_table.contains_key(&key) {
+        let commands_len = commands.len();
+        let mut offsets: Vec<isize> = Vec::with_capacity(commands_len);
+
+        for _ in 0..commands_len {
+            offsets.push(0);
+        }
+
+        offsets_table.insert(key, offsets);
+    }
+
+    // Then work off the existing offsets table.
+    let offsets = offsets_table
+        .get_mut(&key)
+        .expect("Offsets HashMap should exist by this point!");
+
+    // Splice
+    let splice_out_size = replace_command_to - replace_command_from;
+    let splice_in_size = patched_commands.len();
+
+    let start_index = ((replace_command_from as isize) + (offsets[replace_command_from as usize]))
+        .max(0) as usize;
+    let stop_index = start_index + (splice_out_size as usize);
+    let splice_range = start_index..stop_index;
+
+    commands.splice(splice_range, patched_commands);
+
+    // Then update indexes
+    let length_difference = (splice_in_size as isize) - (splice_out_size as isize);
+
+    for offsets_index in (replace_command_from as usize)..offsets.len() {
+        // If the length_difference is negative, you need to take the distance from the command_index into account.
+        // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
+        // 0-0 = 0, 0-1 = -1, 0-2 = -2, 0-3 = -3
+        if length_difference < 0 {
+            let distance_from_original_index =
+                (replace_command_from as isize) - (offsets_index as isize);
+            offsets[offsets_index] += length_difference.max(distance_from_original_index as isize);
+        } else {
+            offsets[offsets_index] += length_difference;
+        }
+    }
+
+    /*let length_difference = (splice_in_size as isize) - ((stop_index - start_index) as isize);
+
+    for offsets_index in (replace_command_from as usize)..offsets.len() {
+        offsets[offsets_index] += length_difference;
+    }*/
 
     //println!("{offsets:?} <== {length_difference}");
 }

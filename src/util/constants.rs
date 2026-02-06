@@ -5,7 +5,7 @@ pub const ERROR_BINRW_READ: &str = "Binary read failed!";
 pub const ERROR_MAP_PAGE_NONE: &str =
     "All LcfMapUnit patches MUST have a \"page\" number! It is only optional for the LcfDataBase!";
 pub const ERROR_NO_FILE_DATABASE: &str = "You're missing the LcfDataBase file (RPG_RT.ldb) in the target directory! This file is essential for processing!";
-pub const ERROR_NO_FILE_MAPTREE: &str = "You're missing the LcfMapTree file (RPG_RT.lmt) in the target directory! This file is essential for processing!";
+pub const ERROR_NO_FILE_MAPTREE: &str = "You're missing the LcfMapTree file (RPG_RT.lmt) in the target directory! This file is essential for generating TOML patches!";
 
 // Dialogue-related commands
 pub const COMMAND_DIALOGUE_START: i32 = 10110;

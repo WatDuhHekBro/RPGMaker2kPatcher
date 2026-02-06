@@ -46,6 +46,12 @@ Your next goals after that are:
 - Port over manual patches functionality
     - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
     - `arbitrary_path = [23, 1]`
+- Types of manual patches
+    - Append commands (`path = []`, context-dependent)
+    - Replace commands (can also be used to delete commands) - 0245
+    - Maybe append/replace/delete/insert can all be generalized to a splice commands patch step
+        - NOTE: To get started, hardcode stuff in your code, then generalize it. Instead of starting with the TOML part first.
+    - Add events - 0242, 0250
 
 ## Non-Immediate
 

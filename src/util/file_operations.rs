@@ -114,13 +114,18 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
     fs::create_dir_all(&path_to_reference)?;
 
     // Read the map tree first (for portrait conditions), assume hardcoded path and only one map tree.
+    // For TOML references, this step is optional, as it's only essential to generating patches.
+    // This would actively hinder the testing process, as you're decompiling each step of the process.
     let path_to_maptree = path_to_original.as_ref().join("RPG_RT.lmt");
-    let maptree = read_lcfmaptree(path_to_maptree)?;
 
-    fs::write(
-        path_to_reference.as_ref().join("MapTree.toml"),
-        maptree.generate_toml_maptree(),
-    )?;
+    if path_to_maptree.exists() {
+        let maptree = read_lcfmaptree(path_to_maptree)?;
+
+        fs::write(
+            path_to_reference.as_ref().join("MapTree.toml"),
+            maptree.generate_toml_maptree(),
+        )?;
+    }
 
     // Read the database second, assume hardcoded path and only one database.
     let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");

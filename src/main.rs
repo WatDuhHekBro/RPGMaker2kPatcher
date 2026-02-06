@@ -21,7 +21,7 @@ fn main() {
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
     let command = args.get(1);
-    //let command = Some(&String::from("test"));
+    //let command = Some(&String::from("testApplyPatches"));
 
     match command {
         Some(command) => match command.as_str() {
@@ -161,7 +161,7 @@ fn main() {
                     )
                     .unwrap();
                 } else {
-                    println!("To test if it's identical to an already-patched binary, set PATH_TO_WORKSPACE_LEGACY in .env!");
+                    println!("\nTo test if it's identical to an already-patched binary, set PATH_TO_WORKSPACE_LEGACY in .env!");
                 }
             }
             "testApplyPatches" => {

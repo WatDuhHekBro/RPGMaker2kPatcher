@@ -12,11 +12,12 @@ use serde::{Deserialize, Serialize};
 // - Database: Header #25 (Global Events) -> ID #22 (Commands)
 // Anything outside that uses different fields that aren't specialized for these common paths.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Patch {
     // These have to be made optional in order for serde to be able to read the TOML file directly
     pub dialogue: Option<Vec<Dialogue>>,
     pub text: Option<Vec<Text>>,
-    pub insert_commands: Option<Vec<InsertCommands>>,
+    pub splice_commands: Option<Vec<SpliceCommands>>,
 }
 
 impl Patch {
@@ -26,7 +27,7 @@ impl Patch {
         let mut patch = Patch {
             dialogue,
             text,
-            insert_commands: None,
+            splice_commands: None,
         };
         patch.trim_dialogue_ending_newline();
         patch
@@ -124,10 +125,11 @@ pub struct Text {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct InsertCommands {
+pub struct SpliceCommands {
     pub event: i32,
-    pub page: i32,
-    pub command: i32,
+    pub page: Option<i32>,
+    pub replace_command_from: i32,
+    pub replace_command_to: i32,
     pub commands: Vec<LcfCommand>,
 }
 

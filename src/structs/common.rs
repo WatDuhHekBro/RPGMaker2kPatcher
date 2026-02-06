@@ -45,6 +45,23 @@ impl LcfCommand {
     }
 }
 
+impl Clone for LcfCommand {
+    fn clone(&self) -> Self {
+        let mut parameters: Vec<DynamicInteger> = Vec::with_capacity(self.parameters.len());
+
+        for param in &*self.parameters {
+            parameters.push(DynamicInteger(**param));
+        }
+
+        Self {
+            code: DynamicInteger(*self.code),
+            indent: DynamicInteger(*self.indent),
+            text: PascalString(self.text.0.clone()),
+            parameters: DynamicIntegerArray(parameters),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LcfCommandList(pub Vec<LcfCommand>); // (null-terminated by a 4-set of zeroes)
 

@@ -12,7 +12,7 @@ command = 21
 indent = 5
 #length = 3 # Redundant if the original is left expanded
 # If you want the cleaned up version of either, write a program to extract it.
-is_portrait = true
+has_portrait = true
 # Helper field for character name variables (e.g. "\n[1]")
 character = '''Kento'''
 original = '''
@@ -38,7 +38,7 @@ event = 32
 page = 3
 command = 24
 #length = 3 # Redundant if the original is left expanded
-is_portrait = true
+has_portrait = true
 original = '''
 \c[13]Rothaarige Frau\c[0]:\s[6] Diese ewigen 
 Kriege,\.... ich kann sie nicht mehr 

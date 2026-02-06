@@ -99,7 +99,12 @@ pub struct Dialogue {
     // These are the cases that warrant writing an explict indent into the TOML patch.
     // This is basically only for times when you can't figure out the indent from the surrounding context.
     pub indent: Option<DynamicInteger>,
-    //pub is_portrait: bool,
+    // Just to make the patch format as clean as possible:
+    // -----
+    // Some(true) = true
+    // Some(false) = false
+    // None = false
+    pub has_portrait: Option<bool>,
     // Helpful field to decipher character name variables (e.g. "\n[1]"), unused during actual patching
     pub character: Option<String>,
     pub original: String,
@@ -112,6 +117,7 @@ pub struct Text {
     pub event: i32,
     pub page: Option<i32>,
     pub command: i32,
+    pub has_portrait: Option<bool>,
     pub original: String,
     pub patched: String,
 }

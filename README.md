@@ -28,9 +28,11 @@
 - `types/`: Assistant binrw types for `structs/`, notably 1-5 byte dynamic integer
 - `wrappers/`: Assistant structures for `structs/` for complex operations (such as a u8 preceded by a 1-5 byte dynamic integer)
 
-## Clipboard / Current Status
 
-**Right now:**
+
+# Clipboard / Current Status
+
+**Right now:** Parse LcfMapTree in order to make the current `has_portrait` game-specific
 
 `Database.toml` and `MapTree.toml`
 
@@ -46,9 +48,10 @@ Your next goals after that are:
 - Port over manual patches functionality
     - Maybe the patch will have an arbitrary path to follow for really jank patches on both maps and databases, be as flexible as possible
     - `arbitrary_path = [23, 1]`
-- Improved patch format (See EasyRPG Editor to help)
-    - See if you can infer `is_portrait` that applies to Aedemphia as well
-        - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
+
+## Non-Immediate
+
+- If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
 
 ## Edge Cases
 

@@ -125,8 +125,15 @@ fn extract_dialogue_and_text_from_commands(
     // Heuristic #3: Check if the last command was a multiple choice selection (20140)
     let mut last_command_indent = 0;
     let mut indent_written_into_patch: Option<DynamicInteger> = None;
+    let mut has_portrait = false;
+    //let mut last_portrait_condition_before_branching = false;
+    // HashMap<indent level, last portrait condition before branching>
+    let mut last_portrait_condition_before_branching: HashMap<i32, bool> = HashMap::new();
 
     for command in &commands.0 {
+        let current_command_code = *command.code;
+        let current_command_indent = *command.indent;
+
         // 10110 as A
         // 20110 as B
         // A o --> [A]
@@ -134,8 +141,6 @@ fn extract_dialogue_and_text_from_commands(
         // A B --> [A,B]
         // A B B --> [A,B,B]
         // A B A --> [A,B] [A]
-        let current_command_code = *command.code;
-        let current_command_indent = *command.indent;
 
         let was_single_line_dialogue = last_command_code == COMMAND_DIALOGUE_START
             && current_command_code != COMMAND_DIALOGUE_CONTINUE;
@@ -165,12 +170,20 @@ fn extract_dialogue_and_text_from_commands(
                 }
             }
 
+            let has_portrait = {
+                match has_portrait {
+                    true => Some(true),
+                    false => None,
+                }
+            };
+
             // Regular dialogue section
             dialogue.push(Dialogue {
                 event,
                 page,
                 command: start_index,
                 indent: indent_written_into_patch,
+                has_portrait,
                 character,
                 original: current_dialogue_text.clone(),
                 patched: current_dialogue_text.clone(),
@@ -236,6 +249,13 @@ fn extract_dialogue_and_text_from_commands(
                 println!("WARNING: [map.{map_name:?}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
             }
         } else if is_other_text {
+            let has_portrait = {
+                match has_portrait {
+                    true => Some(true),
+                    false => None,
+                }
+            };
+
             // Other commands do sometimes have parameters
             // But unlike dialogue where you're splicing in new commands,
             // patching other text doesn't affect existing parameters.
@@ -243,10 +263,96 @@ fn extract_dialogue_and_text_from_commands(
             text.push(Text {
                 event,
                 page,
+                has_portrait,
                 command: command_index,
                 original: command.text.clone(),
                 patched: command.text.clone(),
             });
+        }
+
+        // Check for the current portrait condition
+        // -----
+        // NOTE: This must be placed AFTER adding any dialogue,
+        // because the current dialogue is detected to end when
+        // the next (current) command is non-dialogue. This means the
+        // next (current) command could be clearing the portrait!
+        // -----
+        // NOTE: You also must take branching into account!
+        // -----
+        // has_portrait[0] = false
+        // if some_condition
+        //     has_portrait[1] = false
+        //     if some_other_condition
+        //         has_portrait[2] = false
+        //         portrait(on)
+        //         has_portrait[2] = true
+        //         portrait(off)
+        //         has_portrait[2] = false
+        //     else
+        //         has_portrait[2] = false
+        //         portrait(on)
+        //         has_portrait[2] = true
+        //     has_portrait[1] = false
+        //     portrait(on)
+        //     has_portrait[1] = true
+        // else
+        //     has_portrait[1] = false
+        //     portrait(on)
+        //     has_portrait[1] = true
+        //     if some_other_condition
+        //         has_portrait[1] = true
+        //         portrait(off)
+        //         has_portrait[1] = false
+        //     else
+        //         has_portrait[1] = true
+        // has_portrait[0] = false
+        // -----
+        // If the indent decreases, assume that the dev cleared any portrait condition by then.
+        // If the indent increases, assume the dev has got it all under control.
+        /*if current_command_indent == last_command_indent - 1 {
+            has_portrait = false;
+        }*/
+        // -----
+        // Forgot all the above, the more robust way is to keep track of each indent level's portrait condition.
+        // -----
+        // Never mind. Let's try this again.
+        // If the indent increases, store the condition before branching.
+        if current_command_indent == last_command_indent + 1 {
+            //last_portrait_condition_before_branching = has_portrait;
+            last_portrait_condition_before_branching.insert(last_command_indent, has_portrait);
+        }
+        // And if the indent decreases, rollback to the condition before branching.
+        else if current_command_indent == last_command_indent - 1 {
+            //has_portrait = last_portrait_condition_before_branching;
+            let condition = last_portrait_condition_before_branching.get(&current_command_indent);
+
+            if let Some(condition) = condition {
+                has_portrait = *condition;
+            } else {
+                println!("WARNING: last_portrait HashMap somehow has missing value when decreasing indent?!\n{last_portrait_condition_before_branching:?}");
+            }
+        }
+        // Okay, at this point, I give up. I'll never know the full picture anyway.
+        // Theoretically, you could show a portrait before a split, then some choices could clear the portrait,
+        // meaning after the split ends you'd have inconsistent results.
+        // At this point, best to just leave it to manual editing when necessary.
+        // After all, this is only going to be used for automatic line wrapping.
+        // No need to work so hard on what is essentially an optional feature.
+
+        // But if it happens to land on a change face graphic command at the same time,
+        // then let this override whatever the previous heuristic determined.
+        if current_command_code == COMMAND_CHANGE_FACE_GRAPHIC {
+            has_portrait = !command.text.is_empty();
+        }
+        // Special edge case for Velsarbor, the clear portrait command is abstracted away into a specific global event call
+        else if current_command_code == COMMAND_CALL_GLOBAL_EVENT {
+            let global_event_id = command.parameters.get(1);
+
+            if let Some(global_event_id) = global_event_id {
+                if global_event_id == 118 || global_event_id == 119 {
+                    has_portrait = false;
+                }
+            }
         }
 
         last_command_code = current_command_code;
@@ -265,6 +371,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 page,
                 command: command_index,
                 indent: explicitly_defined_indent,
+                has_portrait: _,
                 character: _,
                 original,
                 patched,
@@ -299,6 +406,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 event,
                 page,
                 command: command_index,
+                has_portrait: _,
                 original: _,
                 patched,
             } = text;
@@ -342,6 +450,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 page: _,
                 command: command_index,
                 indent: explicitly_defined_indent,
+                has_portrait: _,
                 character: _,
                 original,
                 patched,
@@ -373,6 +482,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 event,
                 page: _,
                 command: command_index,
+                has_portrait: _,
                 original: _,
                 patched,
             } = text;
@@ -549,6 +659,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
             page,
             command: _,
             indent: _,
+            has_portrait: _,
             character: _,
             original,
             patched,
@@ -597,6 +708,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
             event,
             page,
             command: _,
+            has_portrait: _,
             original,
             patched,
         } in texts
@@ -649,7 +761,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
 // Removes all escape characters and replaces \\n[#] with characters.
 fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>) -> String {
     static ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\\[^nv](:?\[(\d+?)\])?").unwrap());
+        LazyLock::new(|| Regex::new(r"\\[^NnVv](:?\[(\d+?)\])?").unwrap());
     static MULTI_SPACE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" {2,}").unwrap());
 
     let mut output = String::from(ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN.replace_all(text, ""));

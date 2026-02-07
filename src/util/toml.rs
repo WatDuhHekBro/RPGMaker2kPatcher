@@ -648,8 +648,8 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         for SpliceCommands {
             event,
             page,
-            replace_command_from,
-            replace_command_to,
+            replace_commands_from,
+            replace_commands_to,
             commands,
         } in splice_commands
         {
@@ -658,8 +658,10 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             if let Some(page) = page {
                 output.push_str(&format!("page = {page}\n"));
             }
-            output.push_str(&format!("replace_command_from = {replace_command_from}\n"));
-            output.push_str(&format!("replace_command_to = {replace_command_to}\n"));
+            output.push_str(&format!(
+                "replace_commands_from = {replace_commands_from}\n"
+            ));
+            output.push_str(&format!("replace_commands_to = {replace_commands_to}\n"));
 
             if commands.is_empty() {
                 output.push_str(&format!("commands = []\n\n"));

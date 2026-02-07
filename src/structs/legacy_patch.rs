@@ -88,7 +88,7 @@ impl LegacyMapPatch {
                     text.patched = patched_text.to_string();
                     patch_map.remove(key);
                 } else {
-                    println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent dialogue in its legacy patch!");
+                    println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent text in its legacy patch!");
                 }
             }
         }
@@ -203,7 +203,7 @@ impl LegacyDatabasePatch {
                     text.patched = patched_text.to_string();
                     patch_map.remove(key);
                 } else {
-                    println!("WARNING: [database.event.{event}.command.{command}] found no equivalent dialogue in its legacy patch!");
+                    println!("WARNING: [database.event.{event}.command.{command}] found no equivalent text in its legacy patch!");
                 }
             }
         }

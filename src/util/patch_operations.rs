@@ -451,8 +451,8 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             let SpliceCommands {
                 event,
                 page,
-                replace_command_from,
-                replace_command_to,
+                replace_commands_from,
+                replace_commands_to,
                 commands: patched_commands,
             } = splice_command;
             let event = *event;
@@ -469,8 +469,8 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
 
             splice_arbitrary_commands_and_update_offsets(
                 commands,
-                *replace_command_from,
-                *replace_command_to,
+                *replace_commands_from,
+                *replace_commands_to,
                 patched_commands.clone(),
                 &mut offsets_table,
                 key,
@@ -556,8 +556,8 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
             let SpliceCommands {
                 event,
                 page: _,
-                replace_command_from,
-                replace_command_to,
+                replace_commands_from,
+                replace_commands_to,
                 commands: patched_commands,
             } = splice_command;
             let event = *event;
@@ -571,8 +571,8 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
 
             splice_arbitrary_commands_and_update_offsets(
                 commands,
-                *replace_command_from,
-                *replace_command_to,
+                *replace_commands_from,
+                *replace_commands_to,
                 patched_commands.clone(),
                 &mut offsets_table,
                 key,
@@ -748,6 +748,16 @@ fn splice_dialogue_and_update_offsets(
     // When splicing in more entries, this seems to be a non-issue still.
     let length_difference = (patched_lines_count as isize) - (original_lines_count as isize);
 
+    // Just in case, if you're splicing in more elements than the original,
+    // just extend the array with the existing last offset to avoid index OOB.
+    if length_difference > 0 {
+        let last_offset = offsets[offsets.len() - 1];
+
+        for _ in 0..length_difference {
+            offsets.push(last_offset);
+        }
+    }
+
     for offsets_index in command_index..offsets.len() {
         // If the length_difference is negative, you need to take the distance from the command_index into account.
         // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
@@ -765,8 +775,8 @@ fn splice_dialogue_and_update_offsets(
 
 fn splice_arbitrary_commands_and_update_offsets(
     commands: &mut LcfCommandList,
-    replace_command_from: i32,
-    replace_command_to: i32,
+    replace_commands_from: i32,
+    replace_commands_to: i32,
     patched_commands: Vec<LcfCommand>,
     offsets_table: &mut HashMap<(i32, i32), Vec<isize>>,
     key: (i32, i32),
@@ -789,10 +799,10 @@ fn splice_arbitrary_commands_and_update_offsets(
         .expect("Offsets HashMap should exist by this point!");
 
     // Splice
-    let splice_out_size = replace_command_to - replace_command_from;
+    let splice_out_size = replace_commands_to - replace_commands_from;
     let splice_in_size = patched_commands.len();
 
-    let start_index = ((replace_command_from as isize) + (offsets[replace_command_from as usize]))
+    let start_index = ((replace_commands_from as isize) + (offsets[replace_commands_from as usize]))
         .max(0) as usize;
     let stop_index = start_index + (splice_out_size as usize);
     let splice_range = start_index..stop_index;
@@ -802,13 +812,23 @@ fn splice_arbitrary_commands_and_update_offsets(
     // Then update indexes
     let length_difference = (splice_in_size as isize) - (splice_out_size as isize);
 
-    for offsets_index in (replace_command_from as usize)..offsets.len() {
+    // Just in case, if you're splicing in more elements than the original,
+    // just extend the array with the existing last offset to avoid index OOB.
+    if length_difference > 0 {
+        let last_offset = offsets[offsets.len() - 1];
+
+        for _ in 0..length_difference {
+            offsets.push(last_offset);
+        }
+    }
+
+    for offsets_index in (replace_commands_from as usize)..offsets.len() {
         // If the length_difference is negative, you need to take the distance from the command_index into account.
         // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
         // 0-0 = 0, 0-1 = -1, 0-2 = -2, 0-3 = -3
         if length_difference < 0 {
             let distance_from_original_index =
-                (replace_command_from as isize) - (offsets_index as isize);
+                (replace_commands_from as isize) - (offsets_index as isize);
             offsets[offsets_index] += length_difference.max(distance_from_original_index as isize);
         } else {
             offsets[offsets_index] += length_difference;

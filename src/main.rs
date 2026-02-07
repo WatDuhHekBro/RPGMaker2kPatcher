@@ -17,6 +17,7 @@ fn main() {
     let path_to_workspace = env::var("PATH_TO_WORKSPACE");
     let path_to_patched = env::var("PATH_TO_PATCHED");
     let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY");
+    let path_to_extracted_text = env::var("PATH_TO_EXTRACTED_TEXT");
 
     // CLI Arguments
     let args = env::args().collect::<Vec<String>>();
@@ -57,8 +58,14 @@ fn main() {
             "extractText" => {
                 let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
+                let path_to_extracted_text = path_to_extracted_text.ok();
 
-                file_operations::bulk_extract_text(&path_to_original, &path_to_workspace).unwrap();
+                file_operations::bulk_extract_text(
+                    &path_to_original,
+                    &path_to_workspace,
+                    path_to_extracted_text,
+                )
+                .unwrap();
             }
             "importLegacyPatches" => {
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");

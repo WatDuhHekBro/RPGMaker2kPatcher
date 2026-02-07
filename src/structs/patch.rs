@@ -133,8 +133,8 @@ pub struct Text {
 pub struct SpliceCommands {
     pub event: i32,
     pub page: Option<i32>,
-    pub replace_command_from: i32,
-    pub replace_command_to: i32,
+    pub replace_commands_from: i32,
+    pub replace_commands_to: i32,
     pub commands: Vec<LcfCommand>,
 }
 

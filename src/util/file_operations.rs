@@ -287,15 +287,19 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     Ok(())
 }
 
-pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>>(
+pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     path_to_original: P1,
     path_to_workspace: P2,
+    path_to_extracted_text: Option<P3>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk extracting text...");
 
+    let path_to_extracted_text = match path_to_extracted_text {
+        Some(path_to_extracted_text) => path_to_extracted_text.as_ref().to_path_buf(),
+        None => path_to_workspace.as_ref().join("extracted-text"),
+    };
     // NOTE: Don't forget to create the leading directories if needed!
-    let path_to_extracted = path_to_workspace.as_ref().join("extracted");
-    fs::create_dir_all(&path_to_extracted)?;
+    fs::create_dir_all(&path_to_extracted_text)?;
 
     // You need to read the database before reading any maps for the character names!
     let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
@@ -309,7 +313,7 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>>(
     patch.trim_dialogue_ending_newline();
 
     fs::write(
-        &path_to_extracted.join("Database.patch.txt"),
+        &path_to_extracted_text.join("Database.patch.txt"),
         patch.extract_text(&character_names),
     )?;
 
@@ -331,7 +335,7 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>>(
                     .file_stem()
                     .expect("If Some(extension) exists, why doesn't file_stem exist?!");
                 // "/path/to/workspace/extracted/Map0134.patch.txt"
-                let mut text_path = path_to_extracted.join(file_stem);
+                let mut text_path = path_to_extracted_text.join(file_stem);
                 text_path.set_extension("patch.txt");
                 fs::write(&text_path, patch.extract_text(&character_names))?;
             }

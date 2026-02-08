@@ -6,7 +6,7 @@ use crate::{
         },
         map::*,
         maptree::LcfMapTreeMapHeader,
-        patch::{DatabaseVocabulary, Dialogue, SpliceCommands, Text},
+        patch::{PatchDatabaseVocabulary, PatchDialogue, PatchSpliceCommands, PatchText},
         LcfCommand, LcfDataBase, LcfMapTree, ListEntryHeaderGeneric, Patch,
     },
     types::PascalString,
@@ -586,7 +586,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
     let mut output = String::new();
 
     if let Some(dialogue) = &patch.dialogue {
-        for Dialogue {
+        for PatchDialogue {
             event,
             page,
             command,
@@ -621,7 +621,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
     }
 
     if let Some(text) = &patch.text {
-        for Text {
+        for PatchText {
             event,
             page,
             command,
@@ -645,7 +645,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
     }
 
     if let Some(splice_commands) = &patch.splice_commands {
-        for SpliceCommands {
+        for PatchSpliceCommands {
             event,
             page,
             replace_commands_from,
@@ -686,7 +686,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
     }
 
     if let Some(database_vocabulary) = &patch.database_vocabulary {
-        for DatabaseVocabulary {
+        for PatchDatabaseVocabulary {
             id,
             original,
             patched,

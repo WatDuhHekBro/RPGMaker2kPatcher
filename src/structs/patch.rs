@@ -7,7 +7,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
-// NOTE: Both Dialogue and Text are special options to assume certain paths to avoid repeating constant numbers in the path.
+// NOTE: Both PatchDialogue and PatchText are special options to assume certain paths to avoid repeating constant numbers in the path.
 // - Maps: Header #81 (Map Events) -> ID #5 (Pages) -> ID #52 (Commands)
 // - Database: Header #25 (Global Events) -> ID #22 (Commands)
 // Anything outside that uses different fields that aren't specialized for these common paths.
@@ -15,10 +15,11 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "kebab-case")]
 pub struct Patch {
     // These have to be made optional in order for serde to be able to read the TOML file directly
-    pub dialogue: Option<Vec<Dialogue>>,
-    pub text: Option<Vec<Text>>,
-    pub splice_commands: Option<Vec<SpliceCommands>>,
-    pub database_vocabulary: Option<Vec<DatabaseVocabulary>>,
+    pub dialogue: Option<Vec<PatchDialogue>>,
+    pub text: Option<Vec<PatchText>>,
+    pub splice_commands: Option<Vec<PatchSpliceCommands>>,
+    pub database_vocabulary: Option<Vec<PatchDatabaseVocabulary>>,
+    pub append_page: Option<Vec<PatchMapAppendPage>>,
 }
 
 // I have two ideas on how to add arbitrary patching if I ever need it:
@@ -28,7 +29,7 @@ pub struct Patch {
 impl Patch {
     // No idea why adding this function causes trim_dialogue_ending_newline() to get called twice, but let's just not.
     // Just call trim_dialogue_ending_newline() explicitly each time you deserialize a Patch.
-    /*pub fn new(dialogue: Option<Vec<Dialogue>>, text: Option<Vec<Text>>) -> Patch {
+    /*pub fn new(dialogue: Option<Vec<PatchDialogue>>, text: Option<Vec<PatchText>>) -> Patch {
         let mut patch = Patch {
             dialogue,
             text,
@@ -84,13 +85,27 @@ impl Patch {
         }
     }
 
+    pub fn check_for_out_of_bounds_dialogue(&self) {
+        if let Some(dialogues) = &self.dialogue {
+            for dialogue in dialogues {
+                let has_portrait = dialogue.has_portrait.unwrap_or(false);
+                let lines = dialogue.patched.split("\n").collect::<Vec<&str>>();
+
+                // Only check multiline strings that won't be handled by automatic line wrapping.
+                if lines.len() > 1 {
+                    //...
+                }
+            }
+        }
+    }
+
     pub fn extract_text(&self, character_names: &HashMap<i32, String>) -> String {
         patch_operations::extract_text(&self, character_names)
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Dialogue {
+pub struct PatchDialogue {
     pub event: i32,
     pub page: Option<i32>,
     pub command: i32,
@@ -120,7 +135,7 @@ pub struct Dialogue {
 
 // Specifically for replacing text, not for anything else, so it's not named "Replace".
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Text {
+pub struct PatchText {
     pub event: i32,
     pub page: Option<i32>,
     pub command: i32,
@@ -130,7 +145,7 @@ pub struct Text {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SpliceCommands {
+pub struct PatchSpliceCommands {
     pub event: i32,
     pub page: Option<i32>,
     pub replace_commands_from: i32,
@@ -151,14 +166,14 @@ Or maybe splicing solution is, pre-group all same event/page, then use same offs
 */
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DatabaseVocabulary {
+pub struct PatchDatabaseVocabulary {
     pub id: i32,
     pub original: String,
     pub patched: String,
 }
 
-impl DatabaseVocabulary {
-    pub fn convert_to_hashmap(vocab_list: &Vec<DatabaseVocabulary>) -> HashMap<i32, &String> {
+impl PatchDatabaseVocabulary {
+    pub fn convert_to_hashmap(vocab_list: &Vec<PatchDatabaseVocabulary>) -> HashMap<i32, &String> {
         let mut map = HashMap::new();
 
         for vocab in vocab_list {
@@ -167,4 +182,14 @@ impl DatabaseVocabulary {
 
         map
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PatchMapAppendPage {
+    pub event: i32,
+    pub name: Option<String>,
+    // The nice thing about Rust's TOML serde implementation is that you can
+    // restrict keys to numbers only, throwing an error otherwise.
+    pub headers: HashMap<i32, Vec<u8>>,
+    pub commands: Vec<LcfCommand>,
 }

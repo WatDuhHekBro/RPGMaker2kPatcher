@@ -1,10 +1,18 @@
 use crate::{
     structs::{
         database::LcfDataBaseHeader,
-        patch::{DatabaseVocabulary, Dialogue, SpliceCommands, Text},
-        LcfCommand, LcfCommandList, LcfDataBase, LcfMapUnit, Patch,
+        map::LcfMapUnitPageHeader,
+        patch::{
+            PatchDatabaseVocabulary, PatchDialogue, PatchMapAppendPage, PatchSpliceCommands,
+            PatchText,
+        },
+        LcfCommand, LcfCommandList, LcfDataBase, LcfMapUnit, ListEntry, ListEntryHeaderGeneric,
+        Patch,
     },
-    types::{DynamicInteger, DynamicIntegerArray, PascalString},
+    types::{
+        double_byte_counted::DoubleByteCounted, DynamicInteger, DynamicIntegerArray,
+        NullTerminatedList, PascalString, U8Array,
+    },
     util::constants::*,
 };
 use regex::Regex;
@@ -16,8 +24,8 @@ pub fn generate_patch_from_map(
     map_name: &String,
     game_title: &String,
 ) -> Patch {
-    let mut dialogue: Vec<Dialogue> = vec![];
-    let mut text: Vec<Text> = vec![];
+    let mut dialogue: Vec<PatchDialogue> = vec![];
+    let mut text: Vec<PatchText> = vec![];
 
     // Loop through all commands
     if let Some(events) = map.get_events() {
@@ -62,12 +70,13 @@ pub fn generate_patch_from_map(
         text,
         splice_commands: None,
         database_vocabulary: None,
+        append_page: None,
     }
 }
 
 pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String) -> Patch {
-    let mut dialogue: Vec<Dialogue> = vec![];
-    let mut text: Vec<Text> = vec![];
+    let mut dialogue: Vec<PatchDialogue> = vec![];
+    let mut text: Vec<PatchText> = vec![];
     let character_names = database.extract_character_names();
 
     // Loop through all commands
@@ -109,13 +118,14 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
         text,
         splice_commands: None,
         database_vocabulary: None,
+        append_page: None,
     }
 }
 
 fn extract_dialogue_and_text_from_commands(
     commands: &LcfCommandList,
-    dialogue: &mut Vec<Dialogue>,
-    text: &mut Vec<Text>,
+    dialogue: &mut Vec<PatchDialogue>,
+    text: &mut Vec<PatchText>,
     event: i32,
     page: Option<i32>,
     map_name: &String,
@@ -185,7 +195,7 @@ fn extract_dialogue_and_text_from_commands(
             };
 
             // Regular dialogue section
-            dialogue.push(Dialogue {
+            dialogue.push(PatchDialogue {
                 event,
                 page,
                 command: start_index,
@@ -267,7 +277,7 @@ fn extract_dialogue_and_text_from_commands(
             // But unlike dialogue where you're splicing in new commands,
             // patching other text doesn't affect existing parameters.
             // So no need to alert the user about parameters here.
-            text.push(Text {
+            text.push(PatchText {
                 event,
                 page,
                 has_portrait,
@@ -373,7 +383,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
 
     if let Some(dialogues) = &patch.dialogue {
         for dialogue in dialogues {
-            let Dialogue {
+            let PatchDialogue {
                 event,
                 page,
                 command: command_index,
@@ -409,7 +419,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
 
     if let Some(texts) = &patch.text {
         for text in texts {
-            let Text {
+            let PatchText {
                 event,
                 page,
                 command: command_index,
@@ -448,7 +458,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
 
     if let Some(splice_commands) = &patch.splice_commands {
         for splice_command in splice_commands {
-            let SpliceCommands {
+            let PatchSpliceCommands {
                 event,
                 page,
                 replace_commands_from,
@@ -477,6 +487,74 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             );
         }
     }
+
+    if let Some(append_page) = &patch.append_page {
+        for entry in append_page {
+            let PatchMapAppendPage {
+                event,
+                name,
+                headers: headers_map,
+                commands,
+            } = entry;
+
+            let pages = &mut map
+                .get_event_mut(*event)
+                .expect("Event should exist!")
+                .get_pages_mut()
+                .expect("Pages should exist!");
+            let mut headers: NullTerminatedList<LcfMapUnitPageHeader> =
+                NullTerminatedList(Vec::new());
+
+            // Push name if it exists
+            if let Some(name) = name {
+                headers.push(LcfMapUnitPageHeader::Name(PascalString::from(name)));
+            }
+
+            // Push the commands list
+            headers.push(LcfMapUnitPageHeader::Commands(DoubleByteCounted {
+                inner: LcfCommandList(commands.to_vec()),
+                next_id: DynamicInteger(52),
+            }));
+
+            // Push all of the generic headers
+            for (id, bytes) in headers_map {
+                headers.push(LcfMapUnitPageHeader::Generic(ListEntryHeaderGeneric {
+                    id: DynamicInteger(*id),
+                    value: U8Array(bytes.to_vec()),
+                }));
+            }
+
+            // You MUST make sure to sort the headers in order or the binary output will differ!
+            // -----
+            // Disgusting hardcoded numbers because I can't figure out how to extract the magic numbers of LcfMapUnitPageHeader
+            headers.sort_by(|a, b| {
+                let id_of_a = {
+                    match a {
+                        LcfMapUnitPageHeader::Name(_) => 21,
+                        // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
+                        LcfMapUnitPageHeader::Commands(_) => 52,
+                        LcfMapUnitPageHeader::Generic(header) => *header.id,
+                    }
+                };
+
+                let id_of_b = {
+                    match b {
+                        LcfMapUnitPageHeader::Name(_) => 21,
+                        // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
+                        LcfMapUnitPageHeader::Commands(_) => 52,
+                        LcfMapUnitPageHeader::Generic(header) => *header.id,
+                    }
+                };
+
+                id_of_a.cmp(&id_of_b)
+            });
+
+            pages.push(ListEntry {
+                id: DynamicInteger((pages.len() as i32) + 1),
+                headers,
+            });
+        }
+    }
 }
 
 pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
@@ -484,7 +562,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
 
     if let Some(dialogues) = &patch.dialogue {
         for dialogue in dialogues {
-            let Dialogue {
+            let PatchDialogue {
                 event,
                 page: _,
                 command: command_index,
@@ -517,7 +595,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
 
     if let Some(texts) = &patch.text {
         for text in texts {
-            let Text {
+            let PatchText {
                 event,
                 page: _,
                 command: command_index,
@@ -553,7 +631,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
 
     if let Some(splice_commands) = &patch.splice_commands {
         for splice_command in splice_commands {
-            let SpliceCommands {
+            let PatchSpliceCommands {
                 event,
                 page: _,
                 replace_commands_from,
@@ -581,7 +659,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
     }
 
     if let Some(database_vocabulary) = &patch.database_vocabulary {
-        let vocab_map = DatabaseVocabulary::convert_to_hashmap(database_vocabulary);
+        let vocab_map = PatchDatabaseVocabulary::convert_to_hashmap(database_vocabulary);
 
         for header in &mut **database {
             if let LcfDataBaseHeader::Vocabulary(header) = header {
@@ -847,7 +925,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
         let mut last_event = -1;
         let mut last_page = -1;
 
-        for Dialogue {
+        for PatchDialogue {
             event,
             page,
             command: _,
@@ -897,7 +975,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
         let mut last_event = -1;
         let mut last_page = -1;
 
-        for Text {
+        for PatchText {
             event,
             page,
             command: _,

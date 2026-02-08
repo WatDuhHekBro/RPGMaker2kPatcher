@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    structs::{patch::DatabaseVocabulary, Patch},
+    structs::{patch::PatchDatabaseVocabulary, Patch},
     util::constants::ERROR_MAP_PAGE_NONE,
 };
 use serde::Deserialize;
@@ -130,7 +130,7 @@ impl LegacyDatabasePatch {
     pub fn import_lines_to_toml_database_patch(self, patch: &mut Patch) {
         // 2-tuple identifier [event, command]
         let mut patch_map = HashMap::<(i32, i32), String>::new();
-        let mut vocab_list: Vec<DatabaseVocabulary> = Vec::new();
+        let mut vocab_list: Vec<PatchDatabaseVocabulary> = Vec::new();
 
         // Build patch map for dialogue
         if let Some(old_dialogues) = self.dialogue {
@@ -161,7 +161,7 @@ impl LegacyDatabasePatch {
                         let original = text.original;
                         let patched = text.patch;
 
-                        vocab_list.push(DatabaseVocabulary {
+                        vocab_list.push(PatchDatabaseVocabulary {
                             id,
                             original,
                             patched,

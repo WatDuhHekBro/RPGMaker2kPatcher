@@ -1,12 +1,11 @@
-//mod dialogue; // Dialogue line parsing modules
+mod dialogue; // Dialogue line parsing modules
 mod structs; // Main structures
 mod types; // Custom data types
 mod util;
 
-use crate::{structs::LcfMapTree, util::file_operations};
-use binrw::{BinRead, BinWriterExt};
+use crate::{dialogue::preview::generate_html_preview, util::file_operations};
 use dotenvy::dotenv;
-use std::{env, fs, io::Cursor, path::Path};
+use std::{env, fs, path::Path};
 
 fn main() {
     dotenv().ok();
@@ -20,7 +19,7 @@ fn main() {
     let path_to_extracted_text = env::var("PATH_TO_EXTRACTED_TEXT");
 
     // CLI Arguments
-    let args = env::args().collect::<Vec<String>>();
+    let args: Vec<String> = env::args().collect();
     let command = args.get(1);
     //let command = Some(&String::from("testApplyPatches"));
 
@@ -194,21 +193,20 @@ fn main() {
             "test" => {
                 println!("Testing...");
 
-                let db =
-                    fs::read("/home/watduhhekbro/external/workspace/debug/src/RPG_RT.lmt").unwrap();
-                let mut reader = Cursor::new(db);
-                let db = LcfMapTree::read_be(&mut reader).unwrap();
-                fs::write("test.toml", db.generate_toml_maptree()).unwrap();
-                //println!("{db:?}");
-
-                let mut file = file_operations::overwrite(
-                    "/home/watduhhekbro/external/workspace/debug/out/RPG_RT.lmt",
-                )
-                .unwrap();
-                file.write_be(&db).unwrap();
+                let blob =
+                    fs::read_to_string("/home/watduhhekbro/programming/modding/VelsarborEnglish/patch/Map0013.patch.toml").unwrap();
                 fs::write(
-                    "/home/watduhhekbro/external/workspace/debug/out/MapTree.txt",
-                    format!("{db:?}"),
+                    "/home/watduhhekbro/external/workspace/debug/Map0013.html",
+                    generate_html_preview(
+                        vec![
+                            &String::from("asdf"),
+                            &String::from("zxcv"),
+                            &String::from("qwer"),
+                            &String::from("uiop"),
+                        ],
+                        false,
+                        &String::from("Map0013"),
+                    ),
                 )
                 .unwrap();
             }

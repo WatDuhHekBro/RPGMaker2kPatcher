@@ -39,6 +39,7 @@
 - *(Non-Immediate)* If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
     - This option only applies if the patched line is all on one line. If it's multiline, assume manual newlines, then do error checking on `applyPatches`
 - Generate styled HTML file for dialogue previews, no need to mess with JS (see the `dev` branch). Much easier to look at than a TUI. Also don't need `chars.json`. `rpgmaker2kpatcher generatePreviews` or `previewDialogue`
+- Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
 
 ## Edge Cases
 

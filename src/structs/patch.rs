@@ -89,7 +89,7 @@ impl Patch {
         if let Some(dialogues) = &self.dialogue {
             for dialogue in dialogues {
                 let has_portrait = dialogue.has_portrait.unwrap_or(false);
-                let lines = dialogue.patched.split("\n").collect::<Vec<&str>>();
+                let lines: Vec<&str> = dialogue.patched.split("\n").collect();
 
                 // Only check multiline strings that won't be handled by automatic line wrapping.
                 if lines.len() > 1 {

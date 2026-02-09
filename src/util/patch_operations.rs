@@ -744,7 +744,7 @@ fn splice_dialogue_and_update_offsets(
 
     // Generate patched commands
     let mut patched_commands: Vec<LcfCommand> = Vec::new();
-    let patched_lines = patched.split("\n").collect::<Vec<&str>>();
+    let patched_lines: Vec<&str> = patched.split("\n").collect();
     let patched_lines_count = patched_lines.len();
     let mut is_first_line = true;
 
@@ -773,7 +773,7 @@ fn splice_dialogue_and_update_offsets(
     }
 
     // Splice
-    let original_lines = original.split("\n").collect::<Vec<&str>>();
+    let original_lines: Vec<&str> = original.split("\n").collect();
     let original_lines_count = original_lines.len();
     let stop_index = start_index + original_lines_count;
     let splice_range = start_index..stop_index;

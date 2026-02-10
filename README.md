@@ -1,6 +1,21 @@
 # RPGMaker2kPatcher
 
-## Usage
+## How To Use
+
+***🚧 TODO: Under Construction 🚧***
+
+Dump
+```
+How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to project or general?
+- Rpgmk readme: What each option does specifically and why you'd want to do it.
+- Rpgmk general workflow section (not just commands list)
+- Rpgmk: Short description for GitHub and top of readme
+- Rpgmk: Move command reference down a section
+- Spacing in sections
+- [ ] Documentation is just add what this is all about to an outside observer
+```
+
+## CLI Usage
 
 - `rpgmaker2kpatcher`: Shows the help menu
 - `rpgmaker2kpatcher decompile`: Generates TOML representations for `LcfMapUnit`s
@@ -24,7 +39,7 @@
 - `PATH_TO_WORKSPACE_LEGACY`: Root folder of the patched RPGMaker2000 game.
 - `PATH_TO_EXTRACTED_TEXT`: Optionally redirect the location of extracted text (instead of the `PATH_TO_WORKSPACE`).
 
-## Organization
+## Code Organization
 
 - `structs/`: The main folder to look at to understand each decoded structure
 - `types/`: Assistant binrw types for `structs/`, notably 1-5 byte dynamic integer
@@ -32,12 +47,12 @@
 
 
 
-# Clipboard / Current Status
+# Clipboard / Current Status / Goals
 
-- Review and prune old JS code
 - Clean up documentation and usage
-- *(Non-Immediate)* If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
+- If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
     - This option only applies if the patched line is all on one line. If it's multiline, assume manual newlines, then do error checking on `applyPatches`
+    - Review and prune old JS code (`preview.js`)
 - Generate styled HTML file for dialogue previews, no need to mess with JS (see the `dev` branch). Much easier to look at than a TUI. Also don't need `chars.json`. `rpgmaker2kpatcher generatePreviews` or `previewDialogue`
 - Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
 

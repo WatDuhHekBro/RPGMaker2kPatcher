@@ -9,12 +9,13 @@ mod tests {
         expected_cleaned_text: &str,
     ) {
         let dialogue = Dialogue::from(text, has_portrait);
+        //println!("{dialogue:?}");
 
-        let lines = dialogue.render_to_auto_wrapped_lines();
+        let lines = dialogue.render_to_auto_wrapped_lines(false);
         let output = lines.join("\n");
         assert_eq!(output, expected_text);
 
-        let lines_pretty = dialogue.render_to_auto_wrapped_lines_pretty();
+        let lines_pretty = dialogue.render_to_auto_wrapped_lines(true);
         let output_pretty = lines_pretty.join("\n");
         assert_eq!(output_pretty, expected_cleaned_text);
     }
@@ -171,5 +172,30 @@ geheilt.";
     #[test]
     fn should_warn_on_non_portrait_existing_line_overflow() {
         //
+    }
+
+    #[test]
+    fn can_read_unknown_control() {
+        let text = r"\c[10]Ansager:\c[0] Test \p!!1";
+        let expected_text = r"\c[10]Ansager:\c[0] Test \p!!1";
+        let expected_cleaned_text = r"Ansager: Test !!1";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn can_read_unknown_control_with_number() {
+        let text = r"\c[10]Ansager:\c[0] Test \p[123]!!1";
+        let expected_text = r"\c[10]Ansager:\c[0] Test \p[123]!!1";
+        let expected_cleaned_text = r"Ansager: Test !!1";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn preserves_original_control_character() {
+        let text = r"\c[10]Ansager:\C[0]\S[1]\s[6] Test \N[123]\n[456] and \V[123]\v[456]!!1";
+        let expected_text =
+            r"\c[10]Ansager:\C[0]\S[1]\s[6] Test \N[123]\n[456] and \V[123]\v[456]!!1";
+        let expected_cleaned_text = r"Ansager: Test \N[123]\n[456] and \V[123]\v[456]!!1";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
 }

@@ -56,6 +56,11 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 - Generate styled HTML file for dialogue previews, no need to mess with JS (see the `dev` branch). Much easier to look at than a TUI. Also don't need `chars.json`. `rpgmaker2kpatcher generatePreviews` or `previewDialogue`
 - Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
 
+Dialogue / Line Wrap
+- Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
+- Because to_lines() and to_lines_pretty() have the same line splitting logic, lines and lines_pretty should be added as fields onto Dialogue (because it's essentially just a fancy line splitter anyway).
+- You also need to use a characters HashMap for `\n[123]`.
+
 ## Edge Cases
 
 Edge Case: Aedemphia Map0323 Event #12 Page #1 Command #59 has a control character 7F. When written with custom formatting and read back, the TOML parser throws an error. See how the default TOML formatter deals with this.

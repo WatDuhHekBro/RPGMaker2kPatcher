@@ -58,8 +58,6 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 
 Dialogue / Line Wrap
 - Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
-- Because to_lines() and to_lines_pretty() have the same line splitting logic, lines and lines_pretty should be added as fields onto Dialogue (because it's essentially just a fancy line splitter anyway).
-- You also need to use a characters HashMap for `\n[123]`.
 
 ## Edge Cases
 

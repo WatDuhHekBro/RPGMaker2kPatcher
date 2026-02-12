@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use crate::dialogue::core::*;
 
     fn verify_rendered_dialogue(
@@ -8,16 +10,21 @@ mod tests {
         expected_text: &str,
         expected_cleaned_text: &str,
     ) {
-        let dialogue = Dialogue::from(text, has_portrait);
+        let mut character_names: HashMap<i32, String> = HashMap::new();
+        character_names.insert(1, "Kento".into());
+        character_names.insert(2, "Cibon".into());
+        character_names.insert(3, "Soko".into());
+
+        let dialogue = Dialogue::from(text, has_portrait, &character_names);
         //println!("{dialogue:?}");
 
-        let lines = dialogue.render_to_auto_wrapped_lines(false);
-        let output = lines.join("\n");
+        let output = dialogue.processed_lines.join("\n");
         assert_eq!(output, expected_text);
 
-        let lines_pretty = dialogue.render_to_auto_wrapped_lines(true);
-        let output_pretty = lines_pretty.join("\n");
+        let output_pretty = dialogue.processed_lines_pretty.join("\n");
         assert_eq!(output_pretty, expected_cleaned_text);
+
+        assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 
     #[test]
@@ -124,7 +131,7 @@ mir,...es ist besser so für mich...";
     fn should_preserve_character_names() {
         let text = r"\c[1]\n[1]:\c[0] Tu das.";
         let expected_text = r"\c[1]\n[1]:\c[0] Tu das.";
-        let expected_cleaned_text = r"\n[1]: Tu das.";
+        let expected_cleaned_text = r"Kento: Tu das.";
         verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
     }
 
@@ -134,7 +141,7 @@ mir,...es ist besser so für mich...";
         let expected_text = r"\c[2]\n[2]:\c[0] Nun...\. ich geh dann mal wieder
 hoch und seh mir weiterhin die leere
 Landschaft an...";
-        let expected_cleaned_text = r"\n[2]: Nun... ich geh dann mal wieder
+        let expected_cleaned_text = r"Cibon: Nun... ich geh dann mal wieder
 hoch und seh mir weiterhin die leere
 Landschaft an...";
         verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
@@ -152,26 +159,6 @@ keine Möglichkeit, eure Ausrüstung neu zusammen zu
 stellen oder aufzustocken und ihr werdet nicht
 geheilt.";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
-    }
-
-    #[test]
-    fn should_warn_on_portrait_overflow() {
-        //
-    }
-
-    #[test]
-    fn should_warn_on_non_portrait_overflow() {
-        //
-    }
-
-    #[test]
-    fn should_warn_on_portrait_existing_line_overflow() {
-        //
-    }
-
-    #[test]
-    fn should_warn_on_non_portrait_existing_line_overflow() {
-        //
     }
 
     #[test]
@@ -197,5 +184,40 @@ geheilt.";
             r"\c[10]Ansager:\C[0]\S[1]\s[6] Test \N[123]\n[456] and \V[123]\v[456]!!1";
         let expected_cleaned_text = r"Ansager: Test \N[123]\n[456] and \V[123]\v[456]!!1";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    #[should_panic]
+    fn should_warn_on_portrait_overflow() {
+        let text = r"\c[13]Red-Haired Woman\c[0]:\s[6] Seldan...\. Don't you notice...\. how we're walking in a circle?\. Don't you see...\. how each victory only brings more suffering?\.\.\^ tes";
+        let dialogue = Dialogue::from(text, true, &HashMap::new());
+        assert!(dialogue.check_if_out_of_bounds().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn should_warn_on_non_portrait_overflow() {
+        let text = r"\c[10]Funkdurchsage\c[0]: Ist Ihnen bewusst, was Sie da machen?!\. Das ist blanker SELBSTMORD!\. Selbst mit dem Vel-System werden Sie nicht im Alleingang gegen eine ganze Armee bestehen können! sample text";
+        let dialogue = Dialogue::from(text, false, &HashMap::new());
+        assert!(dialogue.check_if_out_of_bounds().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn should_warn_on_portrait_existing_line_overflow() {
+        let text = r"\c[10]Silkia\c[0]: Anyways.\. Come back
+safely,\. this time the assignment certai
+won't be as easy as before.";
+        let dialogue = Dialogue::from(text, true, &HashMap::new());
+        assert!(dialogue.check_if_out_of_bounds().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn should_warn_on_non_portrait_existing_line_overflow() {
+        let text = r"\c[10]Announcer:\C[0]\S[1]\s[6] Alright, here comes some sample text inn
+it m8?!";
+        let dialogue = Dialogue::from(text, false, &HashMap::new());
+        assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 }

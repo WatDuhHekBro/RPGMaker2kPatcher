@@ -1,5 +1,11 @@
 // Utility structure to handle advanced dialogue operations that need a proper parse tree
 // Basically replaces any `dialogue.split("\n")` calls with this custom line splitter
+// -----
+// Default patch files *should* be identical to the original binaries, because
+// auto line splitting/wrapping is something you need to opt-in to by putting
+// all the text onto one line.
+
+use std::collections::HashMap;
 
 use crate::util::constants::{
     DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
@@ -7,28 +13,13 @@ use crate::util::constants::{
 
 #[derive(Debug)]
 pub struct Dialogue {
-    // Don't keep track of indexes of dialogue length, because it's redundant
-    // You may as well just count fragment rendered character length
-    fragments: Vec<DialogueFragment>,
-    has_portrait: bool,
-    //has_existing_newlines: bool,
-    //is_out_of_bounds: bool,
-    // Don't automatically process lines, because depending on the need, you don't need both processed versions.
-    //pub processed_lines: Vec<String>,
-    //pub processed_lines_pretty: Vec<String>,
+    pub has_portrait: bool,
+    // The reason to automatically process both lines is because
+    // processing both together is O(n) instead of 2 * O(n).
+    // Plus, this is its primary function anyway, being essentially just a fancy line splitter.
+    pub processed_lines: Vec<String>,
+    pub processed_lines_pretty: Vec<String>,
 }
-
-// TODO: See whether or not you need...
-// - Original text index
-// - Original text index for current line
-//     - Current line index
-// - Display index
-/*#[derive(Debug)]
-pub struct DialogueFragmentWrapper {
-    pub fragment: DialogueFragment,
-    // A 1-index
-    pub display_index: Range<i32>,
-}*/
 
 // https://rpgmaker.net/tutorials/43/
 // https://www.yanfly.moe/wiki/Category:Text_Codes_(MV)
@@ -55,11 +46,11 @@ pub enum DialogueFragment {
     // Control w/ Number //
     ///////////////////////
     // The original character used should be readily available just in case there's a difference between uppercase and lowercase
-    SetColor(char, u32),
-    SetSpeed(char, u32),
-    CharacterName(char, u32),
-    Variable(char, u32),
-    UnknownControlWithNumber(char, u32),
+    SetColor(char, i32),
+    SetSpeed(char, i32),
+    CharacterName(char, i32),
+    Variable(char, i32),
+    UnknownControlWithNumber(char, i32),
 }
 
 impl DialogueFragment {
@@ -75,25 +66,25 @@ impl DialogueFragment {
             DialogueFragment::BigDelay => String::from(r"\|"),
             DialogueFragment::AutoContinue => String::from(r"\^"),
             DialogueFragment::Backslash => String::from(r"\\"),
-            DialogueFragment::UnknownControl(character) => format!("\\{character}"),
+            DialogueFragment::UnknownControl(c) => format!("\\{c}"),
             // Control w/ Number
-            DialogueFragment::SetColor(character, number) => format!("\\{character}[{number}]"),
-            DialogueFragment::SetSpeed(character, number) => format!("\\{character}[{number}]"),
-            DialogueFragment::CharacterName(character, number) => {
-                format!("\\{character}[{number}]")
+            DialogueFragment::SetColor(c, number) => format!("\\{c}[{number}]"),
+            DialogueFragment::SetSpeed(c, number) => format!("\\{c}[{number}]"),
+            DialogueFragment::CharacterName(c, number) => {
+                format!("\\{c}[{number}]")
             }
-            DialogueFragment::Variable(character, number) => format!("\\{character}[{number}]"),
-            DialogueFragment::UnknownControlWithNumber(character, number) => {
-                format!("\\{character}[{number}]")
+            DialogueFragment::Variable(c, number) => format!("\\{c}[{number}]"),
+            DialogueFragment::UnknownControlWithNumber(c, number) => {
+                format!("\\{c}[{number}]")
             }
         }
     }
 
-    pub fn to_string_display(&self) -> String {
+    pub fn to_string_display(&self, character_name: Option<&String>) -> String {
         match &self {
             // Normal Text
             DialogueFragment::Normal(fragment_text) => fragment_text.to_string(),
-            DialogueFragment::Punctuation(character) => character.to_string(),
+            DialogueFragment::Punctuation(c) => c.to_string(),
             DialogueFragment::Space => String::from(" "),
             DialogueFragment::Newline => String::new(),
             // Control
@@ -105,10 +96,16 @@ impl DialogueFragment {
             // Control w/ Number
             DialogueFragment::SetColor(_, _) => String::new(),
             DialogueFragment::SetSpeed(_, _) => String::new(),
-            DialogueFragment::CharacterName(character, number) => {
-                format!("\\{character}[{number}]")
+            DialogueFragment::CharacterName(c, number) => {
+                // Convert the call to a character name if it exists
+                // Otherwise, leave it as-is
+                if let Some(character_name) = character_name {
+                    character_name.to_string()
+                } else {
+                    format!("\\{c}[{number}]")
+                }
             }
-            DialogueFragment::Variable(character, number) => format!("\\{character}[{number}]"),
+            DialogueFragment::Variable(c, number) => format!("\\{c}[{number}]"),
             DialogueFragment::UnknownControlWithNumber(_, _) => String::new(),
         }
     }
@@ -136,11 +133,31 @@ pub enum ControlWithNumberType {
 }
 
 impl Dialogue {
+    // Only Dialogue::from() is available, not Dialogue::from_lines(), because
+    // the whole point of Dialogue is to perform the custom line splitting.
+    pub fn from<S: AsRef<str>>(
+        text: S,
+        has_portrait: bool,
+        character_names: &HashMap<i32, String>,
+    ) -> Dialogue {
+        let fragments = Dialogue::parse_into_fragments(text);
+        //println!("{fragments:?}");
+
+        let (processed_lines, processed_lines_pretty) =
+            Dialogue::render_to_auto_wrapped_lines(&fragments, has_portrait, character_names);
+
+        Dialogue {
+            has_portrait,
+            processed_lines,
+            processed_lines_pretty,
+        }
+    }
+
     fn parse_into_fragments<S: AsRef<str>>(text: S) -> Vec<DialogueFragment> {
         let mut parsed: Vec<DialogueFragment> = Vec::new();
         let mut mode = ParsingMode::Normal;
         let mut tmp_text: String = String::new();
-        let mut tmp_number: u32 = 0;
+        let mut tmp_number: i32 = 0;
         let mut tmp_type: ControlWithNumberType = ControlWithNumberType::Unknown('?');
         let mut chars_iterator = text.as_ref().chars().peekable();
 
@@ -243,19 +260,14 @@ impl Dialogue {
                         if character == '[' {
                             tmp_number = 0;
                             mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
-                        }
-                        /*else if let ControlWithNumberType::Unknown(character) = tmp_type {
-                            parsed.push(DialogueFragment::UnknownControl(character));
-                            mode = ParsingMode::Normal;
-                        }*/
-                        else {
+                        } else {
                             panic!("Invalid \\x[#] pattern.");
                         }
                     }
                     ParsingModeProgress::Main => {
                         if character.is_digit(10) {
                             let digit: u8 = character as u8 - 0x30;
-                            let digit = digit as u32;
+                            let digit = digit as i32;
 
                             // 3 -> 38 ===> 3 * 10 + 8
                             tmp_number = tmp_number * 10 + digit;
@@ -289,7 +301,6 @@ impl Dialogue {
             }
         }
 
-        // Do I need to check if the buffer has been flushed?
         if !tmp_text.is_empty() {
             parsed.push(DialogueFragment::Normal(tmp_text));
         }
@@ -298,24 +309,38 @@ impl Dialogue {
     }
 
     // If there's an existing newline anywhere in the original text, preserve those, don't auto-split
-    fn get_already_split_lines_if_exists(&self, is_pretty: bool) -> Option<Vec<String>> {
+    fn get_already_split_lines_if_exists(
+        fragments: &Vec<DialogueFragment>,
+        character_names: &HashMap<i32, String>,
+    ) -> Option<(Vec<String>, Vec<String>)> {
         let mut lines: Vec<String> = Vec::new();
         let mut current_line = String::new();
+
+        let mut lines_pretty: Vec<String> = Vec::new();
+        let mut current_line_pretty = String::new();
+
         let mut has_existing_newlines = false;
 
-        for fragment in &self.fragments {
+        for fragment in fragments {
             match fragment {
                 DialogueFragment::Newline => {
                     lines.push(current_line);
                     current_line = String::new();
+
+                    lines_pretty.push(current_line_pretty);
+                    current_line_pretty = String::new();
+
                     has_existing_newlines = true;
                 }
+                DialogueFragment::CharacterName(_, character_name_id) => {
+                    current_line_pretty.push_str(
+                        &fragment.to_string_display(character_names.get(character_name_id)),
+                    );
+                    current_line.push_str(&fragment.to_string());
+                }
                 fragment => {
-                    if is_pretty {
-                        current_line.push_str(&fragment.to_string_display());
-                    } else {
-                        current_line.push_str(&fragment.to_string());
-                    }
+                    current_line_pretty.push_str(&fragment.to_string_display(None));
+                    current_line.push_str(&fragment.to_string());
                 }
             }
         }
@@ -323,117 +348,142 @@ impl Dialogue {
         if !current_line.is_empty() {
             lines.push(current_line);
         }
+        if !current_line_pretty.is_empty() {
+            lines_pretty.push(current_line_pretty);
+        }
 
         if has_existing_newlines {
-            Some(lines)
+            Some((lines, lines_pretty))
         } else {
             None
         }
     }
 
-    // Only Dialogue::from() is available, not Dialogue::from_lines(),
-    // because Dialogue will automatically determine if there's any existing newlines.
-    pub fn from<S: AsRef<str>>(text: S, has_portrait: bool) -> Dialogue {
-        Dialogue {
-            fragments: Dialogue::parse_into_fragments(text),
-            has_portrait,
-        }
-    }
-
-    pub fn render_to_auto_wrapped_lines(&self, is_pretty: bool) -> Vec<String> {
-        let existing_lines = self.get_already_split_lines_if_exists(is_pretty);
-        if let Some(existing_lines) = existing_lines {
-            return existing_lines;
-        }
-
-        let line_length_limit = match self.has_portrait {
+    pub fn render_to_auto_wrapped_lines(
+        fragments: &Vec<DialogueFragment>,
+        has_portrait: bool,
+        character_names: &HashMap<i32, String>,
+    ) -> (Vec<String>, Vec<String>) {
+        let line_length_limit = match has_portrait {
             true => DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
             false => DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT,
         };
 
+        let existing_lines =
+            Dialogue::get_already_split_lines_if_exists(fragments, character_names);
+        if let Some(existing_lines) = existing_lines {
+            return existing_lines;
+        }
+
         let mut lines: Vec<String> = Vec::new();
         let mut current_line = String::new();
+
+        let mut lines_pretty: Vec<String> = Vec::new();
+        let mut current_line_pretty = String::new();
+
         // You need to keep track of the actual display length separately if it's the raw string
         let mut current_line_displayed_length: usize = 0;
 
-        for fragment in &self.fragments {
+        for fragment in fragments {
             // All line wrap operations go off the assumption of the displayed string
-            let new_fragment = fragment.to_string_display();
+            let fragment_text_pretty =
+                if let DialogueFragment::CharacterName(_, character_name_id) = fragment {
+                    fragment.to_string_display(character_names.get(character_name_id))
+                } else {
+                    fragment.to_string_display(None)
+                };
+
             // NOTE: You cannot use "new_fragment.len()" because it counts bytes, not actual length!
             // NOTE: "Möglichkeit" should be counted as 11 characters but is counted as 12 characters.
-            let new_fragment_displayed_length = new_fragment.chars().count();
+            let fragment_text_displayed_length = fragment_text_pretty.chars().count();
 
             // But whether or not to actually keep it is up to the specific setting
-            let actual_fragment = if is_pretty {
-                new_fragment
-            } else {
-                fragment.to_string()
-            };
+            let fragment_text = fragment.to_string();
 
             // Append to current line or push to new line depending on
             // if a new fragment will exceed the current length
-            if current_line_displayed_length + new_fragment_displayed_length > line_length_limit {
+            if current_line_displayed_length + fragment_text_displayed_length > line_length_limit {
                 // Be sure to clean up any spaces at the end
                 lines.push(current_line.trim_end().to_string());
+                lines_pretty.push(current_line_pretty.trim_end().to_string());
 
                 // Make sure to carry over the current fragment text to the next line and reset the counter
                 // ...unless it's a space (do not start the newline with a space)
                 current_line = {
-                    if actual_fragment != " " {
-                        actual_fragment
+                    if fragment_text != " " {
+                        fragment_text
+                    } else {
+                        String::new()
+                    }
+                };
+                current_line_pretty = {
+                    if fragment_text_pretty != " " {
+                        fragment_text_pretty
                     } else {
                         String::new()
                     }
                 };
                 // Note that because of line rollover, the displayed length is NOT always zero
                 // It is whatever the current_line is
-                current_line_displayed_length = new_fragment_displayed_length;
+                current_line_displayed_length = fragment_text_displayed_length;
             } else {
-                current_line.push_str(&actual_fragment);
-                current_line_displayed_length += new_fragment_displayed_length;
+                current_line.push_str(&fragment_text);
+                current_line_pretty.push_str(&fragment_text_pretty);
+
+                current_line_displayed_length += fragment_text_displayed_length;
             }
         }
 
         if !current_line.is_empty() {
             lines.push(current_line);
         }
-
-        lines
-    }
-
-    /*pub fn render_to_auto_wrapped_lines_pretty(&self) -> Vec<String> {
-        let existing_lines = self.get_already_split_lines_if_exists();
-        if let Some(existing_lines) = existing_lines {
-            return existing_lines;
+        if !current_line_pretty.is_empty() {
+            lines_pretty.push(current_line_pretty);
         }
 
-        let mut lines: Vec<String> = Vec::new();
-        let mut current_line = String::new();
+        (lines, lines_pretty)
+    }
 
+    // This is not a function that should always be run (only for bulk warnings),
+    // so only run it when necessary.
+    pub fn check_if_out_of_bounds(&self) -> Option<String> {
         let line_length_limit = match self.has_portrait {
             true => DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
             false => DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT,
         };
 
-        for fragment in &self.fragments {
-            // Append to current line or push to new line depending on
-            // if a new fragment will exceed the current length
-            let current_line_length = current_line.len();
+        let lines = &self.processed_lines_pretty;
 
-            let new_fragment = fragment.to_string_pretty();
-            let new_fragment_length = new_fragment.len();
+        let mut error_message = String::from("\n[-----]\n");
+        error_message.push_str(&lines.join("\n"));
+        error_message.push_str("\n[-----]\n");
 
-            // Push new line if exceeds bounds
-            if current_line_length + new_fragment_length > line_length_limit {
-                lines.push(current_line);
-                current_line = String::new();
-            }
-            // Otherwise push to current line
-            else {
-                current_line.push_str(&new_fragment);
-            }
+        let mut is_out_of_bounds = false;
+        let mut line_index = 1;
+
+        if lines.len() > 4 {
+            error_message.push_str("- ERROR: Contains more than 4 lines!\n");
+            is_out_of_bounds = true;
         }
 
-        lines
-    }*/
+        for line in lines {
+            // Don't warn about any more lines than the initial 4, it'd be unnecessary
+            if line_index > 4 {
+                break;
+            }
+
+            if line.chars().count() > line_length_limit {
+                error_message.push_str(&format!("- ERROR: Line #{line_index} contains more than {line_length_limit} characters!\n"));
+                is_out_of_bounds = true;
+            }
+
+            line_index += 1;
+        }
+
+        if is_out_of_bounds {
+            Some(error_message)
+        } else {
+            None
+        }
+    }
 }

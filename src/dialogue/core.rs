@@ -50,6 +50,7 @@ pub enum DialogueFragment {
     SetSpeed(char, i32),
     CharacterName(char, i32),
     Variable(char, i32),
+    // preview.js: ['c', 'i', 'n', 'p', 's', 'v']
     UnknownControlWithNumber(char, i32),
 }
 

@@ -10,38 +10,68 @@ html, body {
 	text-align: center;
 }
 
+.dialogue-grid {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: start;
+	justify-content: center;
+}
+
+.dialogue-list {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: start;
+	background-color: lightgray;
+
+	margin: 0.25em;
+	padding: 1em;
+	border-radius: 5%;
+}
+
+.dialogue-list h2 {
+	margin: 0.25em;
+	border-bottom: 3px solid black;
+}
+
 .dialogue {
-	margin: 15px auto;
-}
-
-.lines {
+	display: inline-block;
+	min-height: 3lh;
+	max-height: 3lh;
 	background-color: #00539c;
-	max-width: fit-content;
-	margin: auto;
-}
-
-.lines code {
-	color: white;
-	display: block;
 	text-align: left;
-}
-
-.check {
-	margin: auto;
-	display: block;
-	max-width: fit-content;
-	background-color: green;
-}
-
-.overflow {
 	color: white;
+	border-radius: 2%;
+
+	margin: 0.25em;
+}
+
+.dialogue code {
 	display: block;
+	min-width: 50ch;
+	max-width: 50ch;
+	text-wrap: nowrap;
+}
+
+.dialogue.portrait code {
+	min-width: 38ch;
+	max-width: 38ch;
+}
+
+.dialogue span {
+	background-color: red;
+}
+
+/* Any overflow lines (lines 5+) will automatically display as red. */
+.dialogue code:nth-child(n + 5) {
 	background-color: red;
 }
 		</style>
 	</head>
 	<body>
 		<h1>Dialogue Preview ($MAP_NAME$)</h1>
-        $DIALOGUE_ENTRIES$
+		<div class="dialogue-grid">
+$DIALOGUE_ENTRIES$
+		</div>
 	</body>
 </html>

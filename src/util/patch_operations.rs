@@ -1,5 +1,5 @@
 use crate::{
-    dialogue::preview,
+    dialogue::preview::{self, OverflowEntry},
     structs::{
         database::LcfDataBaseHeader,
         map::LcfMapUnitPageHeader,
@@ -202,6 +202,7 @@ fn extract_dialogue_and_text_from_commands(
                 command: start_index,
                 indent: indent_written_into_patch,
                 has_portrait,
+                ignore_overflow: None,
                 character,
                 original: current_dialogue_text.clone(),
                 patched: current_dialogue_text.clone(),
@@ -282,6 +283,7 @@ fn extract_dialogue_and_text_from_commands(
                 event,
                 page,
                 has_portrait,
+                ignore_overflow: None,
                 command: command_index,
                 original: command.text.clone(),
                 patched: command.text.clone(),
@@ -390,6 +392,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 command: command_index,
                 indent: explicitly_defined_indent,
                 has_portrait: _,
+                ignore_overflow: _,
                 character: _,
                 original,
                 patched,
@@ -425,6 +428,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 page,
                 command: command_index,
                 has_portrait: _,
+                ignore_overflow: _,
                 original: _,
                 patched,
             } = text;
@@ -569,6 +573,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 command: command_index,
                 indent: explicitly_defined_indent,
                 has_portrait: _,
+                ignore_overflow: _,
                 character: _,
                 original,
                 patched,
@@ -601,6 +606,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 page: _,
                 command: command_index,
                 has_portrait: _,
+                ignore_overflow: _,
                 original: _,
                 patched,
             } = text;
@@ -921,12 +927,15 @@ pub fn generate_html_preview(
     patch: &Patch,
     map_name: &String,
     character_names: &HashMap<i32, String>,
+    // Extremely janky mutable reference in order to not have to parse Dialogue all over again
+    overflow_list: &mut Vec<OverflowEntry>,
 ) -> String {
     preview::generate_html_preview(
         &patch.get_ordered_dialogue(),
         &patch.get_ordered_text(),
         map_name,
         character_names,
+        overflow_list,
     )
 }
 
@@ -945,6 +954,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
             command: _,
             indent: _,
             has_portrait: _,
+            ignore_overflow: _,
             character: _,
             original,
             patched,
@@ -994,6 +1004,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
             page,
             command: _,
             has_portrait: _,
+            ignore_overflow: _,
             original,
             patched,
         } in texts

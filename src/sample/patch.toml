@@ -13,6 +13,8 @@ indent = 5
 #length = 3 # Redundant if the original is left expanded
 # If you want the cleaned up version of either, write a program to extract it.
 has_portrait = true
+# Convenience field purely for omitting from the overflow report (report.html) when using extractText.
+ignore_overflow = true
 # Helper field for character name variables (e.g. "\n[1]")
 character = '''Kento'''
 original = '''

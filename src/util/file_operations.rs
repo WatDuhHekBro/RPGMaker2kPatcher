@@ -1,5 +1,5 @@
 use crate::{
-    dialogue::preview::CSS_STRING,
+    dialogue::preview::{generate_overflow_html_preview, OverflowEntry, CSS_STRING},
     structs::{LcfDataBase, LcfMapTree, LcfMapUnit, LegacyDatabasePatch, LegacyMapPatch, Patch},
     util::{
         self,
@@ -320,8 +320,10 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     )?;
 
     // Don't forget to write the shared CSS file!
-    let path_to_css = path_to_extracted_text.join("style.css");
-    fs::write(path_to_css, CSS_STRING)?;
+    fs::write(path_to_extracted_text.join("style.css"), CSS_STRING)?;
+
+    // Extremely janky mutable reference in order to not have to parse Dialogue all over again
+    let mut overflow_list: Vec<OverflowEntry> = Vec::new();
 
     for entry in fs::read_dir(path_to_workspace)? {
         let entry = entry?;
@@ -355,11 +357,18 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
                         &patch,
                         &file_prefix.to_string_lossy().to_string(),
                         &character_names,
+                        &mut overflow_list,
                     ),
                 )?;
             }
         }
     }
+
+    // Create "report.html"
+    fs::write(
+        path_to_extracted_text.join("report.html"),
+        generate_overflow_html_preview(&overflow_list),
+    )?;
 
     Ok(())
 }

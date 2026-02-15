@@ -159,20 +159,6 @@ impl Patch {
         keys
     }
 
-    pub fn check_for_out_of_bounds_dialogue(&self) {
-        if let Some(dialogues) = &self.dialogue {
-            for dialogue in dialogues {
-                let has_portrait = dialogue.has_portrait.unwrap_or(false);
-                let lines: Vec<&str> = dialogue.patched.split("\n").collect();
-
-                // Only check multiline strings that won't be handled by automatic line wrapping.
-                if lines.len() > 1 {
-                    //...
-                }
-            }
-        }
-    }
-
     pub fn extract_text(&self, character_names: &HashMap<i32, String>) -> String {
         patch_operations::extract_text(&self, character_names)
     }
@@ -201,6 +187,7 @@ pub struct PatchDialogue {
     // Some(false) = false
     // None = false
     pub has_portrait: Option<bool>,
+    pub ignore_overflow: Option<bool>,
     // Helpful field to decipher character name variables (e.g. "\n[1]"), unused during actual patching
     pub character: Option<String>,
     pub original: String,
@@ -214,6 +201,7 @@ pub struct PatchText {
     pub page: Option<i32>,
     pub command: i32,
     pub has_portrait: Option<bool>,
+    pub ignore_overflow: Option<bool>,
     pub original: String,
     pub patched: String,
 }

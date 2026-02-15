@@ -592,6 +592,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             command,
             indent: explicitly_defined_indent,
             has_portrait,
+            ignore_overflow,
             character,
             original,
             patched,
@@ -608,6 +609,9 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             }
             if let Some(has_portrait) = has_portrait {
                 output.push_str(&format!("has_portrait = {has_portrait}\n"));
+            }
+            if let Some(ignore_overflow) = ignore_overflow {
+                output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
             }
             if let Some(character) = character {
                 output.push_str(&format!("character = '''{character}'''\n"));
@@ -626,6 +630,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             page,
             command,
             has_portrait,
+            ignore_overflow,
             original,
             patched,
         } in text
@@ -638,6 +643,9 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             output.push_str(&format!("command = {command}\n"));
             if let Some(has_portrait) = has_portrait {
                 output.push_str(&format!("has_portrait = {has_portrait}\n"));
+            }
+            if let Some(ignore_overflow) = ignore_overflow {
+                output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
             }
             output.push_str(&format!("original = '''{original}'''\n"));
             output.push_str(&format!("patched = '''{patched}'''\n\n"));

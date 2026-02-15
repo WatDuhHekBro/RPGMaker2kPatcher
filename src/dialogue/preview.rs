@@ -37,11 +37,28 @@ $DIALOGUE_BOX_ENTRIES$
 const HTML_DIALOGUE_BOX_LINE_TEMPLATE: &str = r#"
 					<code>$DIALOGUE_BOX_LINE_TEXT$</code>"#;
 
+#[derive(Debug)]
+pub struct OverflowEntry {
+    map_name: String,
+    event: i32,
+    page: Option<i32>,
+    area: OverflowEntryType,
+    html: String,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum OverflowEntryType {
+    Dialogue,
+    Text,
+}
+
 pub fn generate_html_preview(
     dialogues_table: &HashMap<(i32, Option<i32>), Vec<&PatchDialogue>>,
     texts_table: &HashMap<(i32, Option<i32>), Vec<&PatchText>>,
     map_name: &String,
     character_names: &HashMap<i32, String>,
+    // Extremely janky mutable reference in order to not have to parse Dialogue all over again
+    overflow_list: &mut Vec<OverflowEntry>,
 ) -> String {
     let mut html_dialogue_groups: Vec<String> = Vec::new();
 
@@ -53,12 +70,29 @@ pub fn generate_html_preview(
 
         for dialogue in dialogues {
             let has_portrait = dialogue.has_portrait.unwrap_or(false);
+            let ignore_overflow = dialogue.ignore_overflow.unwrap_or(false);
             let parsed_dialogue = Dialogue::from(&dialogue.patched, has_portrait, character_names);
 
-            html_dialogue_boxes_list.push(generate_html_dialogue_box_preview(
+            let (html, has_overflow) = generate_html_dialogue_box_preview(
                 &parsed_dialogue.processed_lines_pretty,
                 has_portrait,
-            ));
+                ignore_overflow,
+            );
+
+            if has_overflow {
+                let (event, page) = key;
+
+                // The performance penalty of cloning strings only when needed is negligible
+                overflow_list.push(OverflowEntry {
+                    map_name: map_name.to_string(),
+                    event: *event,
+                    page: *page,
+                    area: OverflowEntryType::Dialogue,
+                    html: html.clone(),
+                });
+            }
+
+            html_dialogue_boxes_list.push(html);
         }
 
         let html_dialogue_list_title = {
@@ -89,12 +123,29 @@ pub fn generate_html_preview(
 
         for text in texts {
             let has_portrait = text.has_portrait.unwrap_or(false);
+            let ignore_overflow = text.ignore_overflow.unwrap_or(false);
             let parsed_dialogue = Dialogue::from(&text.patched, has_portrait, character_names);
 
-            html_dialogue_boxes_list.push(generate_html_dialogue_box_preview(
+            let (html, has_overflow) = generate_html_dialogue_box_preview(
                 &parsed_dialogue.processed_lines_pretty,
                 has_portrait,
-            ));
+                ignore_overflow,
+            );
+
+            if has_overflow {
+                let (event, page) = key;
+
+                // The performance penalty of cloning strings only when needed is negligible
+                overflow_list.push(OverflowEntry {
+                    map_name: map_name.to_string(),
+                    event: *event,
+                    page: *page,
+                    area: OverflowEntryType::Text,
+                    html: html.clone(),
+                });
+            }
+
+            html_dialogue_boxes_list.push(html);
         }
 
         let html_dialogue_list_title = {
@@ -127,12 +178,14 @@ pub fn generate_html_preview(
 pub fn generate_html_dialogue_box_preview(
     cleaned_lines: &Vec<String>,
     has_portrait: bool,
-) -> String {
+    ignore_overflow: bool,
+) -> (String, bool) {
     let dialogue_box_length = match has_portrait {
         true => DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
         false => DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT,
     };
     let mut html_lines: Vec<String> = Vec::new();
+    let mut has_overflow = false;
 
     // CSS will automatically mark lines 5+ as red
     // You simply need to add characters beyond the 38/50 length into a <span> to mark as red
@@ -140,6 +193,10 @@ pub fn generate_html_dialogue_box_preview(
         let length = line.chars().count();
 
         let html_line = if length > dialogue_box_length {
+            if !ignore_overflow {
+                has_overflow = true;
+            }
+
             // Query the correct index with Unicode strings
             // https://stackoverflow.com/a/72589022
             let (index, _) = line
@@ -170,7 +227,75 @@ pub fn generate_html_dialogue_box_preview(
         HTML_DIALOGUE_BOX_TEMPLATE
     };
 
-    template
+    let html = template
         .replacen("\n", "", 1)
-        .replace("$DIALOGUE_BOX_ENTRIES$", &html_lines.join("\n"))
+        .replace("$DIALOGUE_BOX_ENTRIES$", &html_lines.join("\n"));
+
+    (html, has_overflow)
+}
+
+pub fn generate_overflow_html_preview(overflow_list: &Vec<OverflowEntry>) -> String {
+    let mut html_dialogue_groups: Vec<String> = Vec::new();
+    let mut html_dialogue_boxes_list: Vec<String> = Vec::new();
+
+    // NOTE: Due to the Vec, you'll need to keep track of last_x variables to group dialogue together.
+    let mut last_map_name = String::new();
+    let mut last_event = -1;
+    let mut last_page: Option<i32> = None;
+    let mut last_area = OverflowEntryType::Dialogue;
+    let mut has_encountered_first_group = false;
+
+    for overflow_entry in overflow_list {
+        let OverflowEntry {
+            map_name,
+            event,
+            page,
+            area,
+            html,
+        } = overflow_entry;
+
+        if (last_map_name != *map_name)
+            || (last_event != *event)
+            || (last_page != *page)
+            || (last_area != *area)
+        {
+            if has_encountered_first_group {
+                let html_dialogue_list_title = {
+                    let area_str = match last_area {
+                        OverflowEntryType::Dialogue => "Dialogue",
+                        OverflowEntryType::Text => "Text",
+                    };
+
+                    if let Some(last_page) = last_page {
+                        format!("Map {last_map_name}: Event #{last_event} Page #{last_page} ({area_str})")
+                    } else {
+                        format!("Map {last_map_name}: Event #{last_event} ({area_str})")
+                    }
+                };
+                html_dialogue_groups.push(
+                    HTML_DIALOGUE_LIST_TEMPLATE
+                        .replacen("\n", "", 1)
+                        .replace("$DIALOGUE_LIST_TITLE$", &html_dialogue_list_title)
+                        .replace(
+                            "$DIALOGUE_LIST_ENTRIES$",
+                            &html_dialogue_boxes_list.join("\n"),
+                        ),
+                );
+                html_dialogue_boxes_list = Vec::new();
+            }
+
+            has_encountered_first_group = true;
+        }
+
+        last_map_name = map_name.to_string();
+        last_event = *event;
+        last_page = *page;
+        last_area = *area;
+
+        html_dialogue_boxes_list.push(html.to_string());
+    }
+
+    HTML_PREVIEW_TEMPLATE
+        .replace("$MAP_NAME$", "Overflow Report")
+        .replace("$DIALOGUE_ENTRIES$", &html_dialogue_groups.join("\n"))
 }

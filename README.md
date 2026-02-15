@@ -68,6 +68,8 @@ Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big a
 - `checkDialogue`? Change path to extracted text to be like `PATH_TO_DIALOGUE_PREVIEW`, containing both extracted text and HTML previews.
     - `report.txt`? And if you're checking for line overflows with the HTML preview anyway... **TODO:** `report.html` with the title `Dialogue Overflow Report`. Also an easy GUI way to check what you're missing and what you can safely ignore.
     - Also make a field on Patch named `ignore_overflow = true` if you want to ignore something for the report and leave it as-is at the same time
+    - `Map0013: Event #119 Page #2`
+    - **How about this?** Or just change all instances of "extracted text" to just "preview(s)". `extracted-text` = `preview(s)`. That is an accurate statement after all.
 
 `extractText` - Convert to ordered HashMap + use Dialogue parsing module
 

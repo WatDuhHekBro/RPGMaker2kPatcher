@@ -57,7 +57,18 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 - Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
 
 Dialogue / Line Wrap
-- Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
+- Test: Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
+- Rule for ellipses, continuous punctuation String (do not split `...`)
+    - Do this by having Dialogue punctuation be counted as Normal text, but act differently via `is_punctuation_mode_active` flag. As soon as punctuation returns to something non-punctuation, then it splits the text up.
+    - Also cases like "word?!" and "word?!word" 
+
+Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big auxiliary operation? Same logic (that you can refine by adding a `HashMap<(event, page), ...>`), roughly the same outputs (only different in specific file types, txt, html, or console warnings).
+- Pass sorted HashMap as reference to 3 functions
+- `checkDialogue`? Change path to extracted text to be like `PATH_TO_DIALOGUE_PREVIEW`, containing both extracted text and HTML previews.
+
+`extractText` - Convert to ordered HashMap + use Dialogue parsing module
+
+**TODO:** `cargo clippy`
 
 ## Edge Cases
 

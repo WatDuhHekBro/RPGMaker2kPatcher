@@ -1,4 +1,5 @@
 use crate::{
+    dialogue::preview,
     structs::{
         database::LcfDataBaseHeader,
         map::LcfMapUnitPageHeader,
@@ -379,7 +380,7 @@ fn extract_dialogue_and_text_from_commands(
 }
 
 pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
-    let mut offsets_table: HashMap<(i32, i32), Vec<isize>> = HashMap::new();
+    let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
     if let Some(dialogues) = &patch.dialogue {
         for dialogue in dialogues {
@@ -395,7 +396,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             } = dialogue;
             let event = *event;
             let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, page);
+            let key = (event, Some(page));
 
             let commands = &mut map
                 .get_event_mut(event)
@@ -429,7 +430,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             } = text;
             let event = *event;
             let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, page);
+            let key = (event, Some(page));
 
             let commands = &mut map
                 .get_event_mut(event)
@@ -467,7 +468,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
             } = splice_command;
             let event = *event;
             let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, page);
+            let key = (event, Some(page));
 
             let commands = &mut map
                 .get_event_mut(event)
@@ -558,7 +559,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
 }
 
 pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
-    let mut offsets_table: HashMap<(i32, i32), Vec<isize>> = HashMap::new();
+    let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
     if let Some(dialogues) = &patch.dialogue {
         for dialogue in dialogues {
@@ -573,7 +574,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 patched,
             } = dialogue;
             let event = *event;
-            let key = (event, 0);
+            let key = (event, None);
 
             let commands = &mut database
                 .get_event_mut(event)
@@ -604,7 +605,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 patched,
             } = text;
             let event = *event;
-            let key = (event, 0);
+            let key = (event, None);
 
             let commands = &mut database
                 .get_event_mut(event)
@@ -639,7 +640,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 commands: patched_commands,
             } = splice_command;
             let event = *event;
-            let key = (event, 0);
+            let key = (event, None);
 
             let commands = &mut database
                 .get_event_mut(event)
@@ -690,8 +691,8 @@ fn splice_dialogue_and_update_offsets(
     explicitly_defined_indent: &Option<DynamicInteger>,
     original: &String,
     patched: &String,
-    offsets_table: &mut HashMap<(i32, i32), Vec<isize>>,
-    key: (i32, i32),
+    offsets_table: &mut HashMap<(i32, Option<i32>), Vec<isize>>,
+    key: (i32, Option<i32>),
 ) {
     // Create offset entry if it hasn't worked on this key yet
     if !offsets_table.contains_key(&key) {
@@ -856,8 +857,8 @@ fn splice_arbitrary_commands_and_update_offsets(
     replace_commands_from: i32,
     replace_commands_to: i32,
     patched_commands: Vec<LcfCommand>,
-    offsets_table: &mut HashMap<(i32, i32), Vec<isize>>,
-    key: (i32, i32),
+    offsets_table: &mut HashMap<(i32, Option<i32>), Vec<isize>>,
+    key: (i32, Option<i32>),
 ) {
     // Create offset entry if it hasn't worked on this key yet
     if !offsets_table.contains_key(&key) {
@@ -914,6 +915,19 @@ fn splice_arbitrary_commands_and_update_offsets(
     }
 
     //println!("{offsets:?} <== {length_difference}");
+}
+
+pub fn generate_html_preview(
+    patch: &Patch,
+    map_name: &String,
+    character_names: &HashMap<i32, String>,
+) -> String {
+    preview::generate_html_preview(
+        &patch.get_ordered_dialogue(),
+        &patch.get_ordered_text(),
+        map_name,
+        character_names,
+    )
 }
 
 pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> String {

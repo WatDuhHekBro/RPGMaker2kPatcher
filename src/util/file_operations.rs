@@ -3,6 +3,7 @@ use crate::{
     util::{
         self,
         constants::{ERROR_NO_FILE_DATABASE, ERROR_NO_FILE_MAPTREE},
+        patch_operations,
     },
 };
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
@@ -330,14 +331,27 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
                 let mut patch = toml::from_str::<Patch>(&fs::read_to_string(&path)?)?;
                 patch.trim_dialogue_ending_newline();
 
-                // "Map0134.patch"
-                let file_stem = path
-                    .file_stem()
-                    .expect("If Some(extension) exists, why doesn't file_stem exist?!");
+                // "Map0134"
+                let file_prefix = path
+                    .file_prefix()
+                    .expect("If Some(extension) exists, why doesn't file_prefix exist?!");
+
                 // "/path/to/workspace/extracted/Map0134.patch.txt"
-                let mut text_path = path_to_extracted_text.join(file_stem);
+                let mut text_path = path_to_extracted_text.join(file_prefix);
                 text_path.set_extension("patch.txt");
                 fs::write(&text_path, patch.extract_text(&character_names))?;
+
+                // "/path/to/workspace/extracted/Map0134.patch.html"
+                let mut html_path = path_to_extracted_text.join(file_prefix);
+                html_path.set_extension("patch.html");
+                fs::write(
+                    &html_path,
+                    patch_operations::generate_html_preview(
+                        &patch,
+                        &file_prefix.to_string_lossy().to_string(),
+                        &character_names,
+                    ),
+                )?;
             }
         }
     }

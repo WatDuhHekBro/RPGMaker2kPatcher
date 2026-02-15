@@ -3,7 +3,7 @@ mod structs; // Main structures
 mod types; // Custom data types
 mod util;
 
-use crate::{dialogue::preview::generate_html_preview, util::file_operations};
+use crate::util::file_operations;
 use dotenvy::dotenv;
 use std::{env, fs, path::Path};
 
@@ -21,7 +21,7 @@ fn main() {
     // CLI Arguments
     let args: Vec<String> = env::args().collect();
     let command = args.get(1);
-    //let command = Some(&String::from("testApplyPatches"));
+    let command = Some(&String::from("extractText"));
 
     match command {
         Some(command) => match command.as_str() {
@@ -192,23 +192,6 @@ fn main() {
             }
             "test" => {
                 println!("Testing...");
-
-                let blob =
-                    fs::read_to_string("/home/watduhhekbro/programming/modding/VelsarborEnglish/patch/Map0013.patch.toml").unwrap();
-                fs::write(
-                    "/home/watduhhekbro/external/workspace/debug/Map0013.html",
-                    generate_html_preview(
-                        vec![
-                            &String::from("asdf"),
-                            &String::from("zxcv"),
-                            &String::from("qwer"),
-                            &String::from("uiop"),
-                        ],
-                        false,
-                        &String::from("Map0013"),
-                    ),
-                )
-                .unwrap();
             }
             _ => {
                 println!("Unknown command!");

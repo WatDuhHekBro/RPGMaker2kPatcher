@@ -85,6 +85,80 @@ impl Patch {
         }
     }
 
+    /**
+     * Returns two things:
+     * - A HashMap of all the Dialogue associated with an event-page pair
+     * - A Vec of all the keys in order
+     */
+    pub fn get_ordered_dialogue(&self) -> HashMap<(i32, Option<i32>), Vec<&PatchDialogue>> {
+        let mut table = HashMap::new();
+
+        if let Some(dialogues) = &self.dialogue {
+            for dialogue in dialogues {
+                let key = (dialogue.event, dialogue.page);
+
+                // Create entry if it hasn't reached this key yet
+                if !table.contains_key(&key) {
+                    table.insert(key, Vec::new());
+                }
+
+                // Then work off the existing offsets table.
+                let list = table
+                    .get_mut(&key)
+                    .expect("get_ordered_dialogue() HashMap should exist by this point!");
+
+                list.push(dialogue);
+            }
+        }
+
+        table
+    }
+
+    pub fn get_sorted_dialogue_keys<'a>(
+        table: &'a HashMap<(i32, Option<i32>), Vec<&'a PatchDialogue>>,
+    ) -> Vec<&'a (i32, Option<i32>)> {
+        let mut keys: Vec<&(i32, Option<i32>)> = table.keys().collect();
+        keys.sort_by(|a, b| a.cmp(b));
+        keys
+    }
+
+    /**
+     * Returns two things:
+     * - A HashMap of all the Text associated with an event-page pair
+     * - A Vec of all the keys in order
+     */
+    pub fn get_ordered_text(&self) -> HashMap<(i32, Option<i32>), Vec<&PatchText>> {
+        let mut table = HashMap::new();
+
+        if let Some(texts) = &self.text {
+            for text in texts {
+                let key = (text.event, text.page);
+
+                // Create entry if it hasn't reached this key yet
+                if !table.contains_key(&key) {
+                    table.insert(key, Vec::new());
+                }
+
+                // Then work off the existing offsets table.
+                let list = table
+                    .get_mut(&key)
+                    .expect("get_ordered_dialogue() HashMap should exist by this point!");
+
+                list.push(text);
+            }
+        }
+
+        table
+    }
+
+    pub fn get_sorted_text_keys<'a>(
+        table: &'a HashMap<(i32, Option<i32>), Vec<&'a PatchText>>,
+    ) -> Vec<&'a (i32, Option<i32>)> {
+        let mut keys: Vec<&(i32, Option<i32>)> = table.keys().collect();
+        keys.sort_by(|a, b| a.cmp(b));
+        keys
+    }
+
     pub fn check_for_out_of_bounds_dialogue(&self) {
         if let Some(dialogues) = &self.dialogue {
             for dialogue in dialogues {

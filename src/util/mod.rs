@@ -1,3 +1,4 @@
+mod assumptions;
 pub mod constants;
 pub mod file_operations;
 pub mod patch_operations;

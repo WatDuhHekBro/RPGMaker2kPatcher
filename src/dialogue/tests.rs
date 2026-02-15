@@ -220,4 +220,16 @@ it m8?!";
         let dialogue = Dialogue::from(text, false, &HashMap::new());
         assert!(dialogue.check_if_out_of_bounds().is_none());
     }
+
+    #[test]
+    fn can_parse_abstract_numbers() {
+        let text = r"\>\c[\v[81]]\n[30]\v[95]  \c[\v[82]]\n[31]\v[102]  \c[\v[83]]\n[32]\v[109]  \c[\v[84]]\n[33]\v[116]
+\>\c[0]\n[34]\n[35]
+\>\c[3](\n[36]\c[3]\n[37]\c[3]\n[38]\c[3]\n[39]\c[3]\n[40]\c[3]\n[41]\c[3]\n[42])";
+        let expected_text = text;
+        let expected_cleaned_text = r"\n[30]\v[95]  \n[31]\v[102]  \n[32]\v[109]  \n[33]\v[116]
+\n[34]\n[35]
+(\n[36]\n[37]\n[38]\n[39]\n[40]\n[41]\n[42])";
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
 }

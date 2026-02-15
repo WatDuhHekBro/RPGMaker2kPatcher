@@ -5,11 +5,10 @@
 // auto line splitting/wrapping is something you need to opt-in to by putting
 // all the text onto one line.
 
-use std::collections::HashMap;
-
 use crate::util::constants::{
     DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
 };
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
 pub struct Dialogue {
@@ -55,7 +54,7 @@ pub enum DialogueFragment {
 }
 
 impl DialogueFragment {
-    pub fn to_string(&self) -> String {
+    pub fn render(&self) -> String {
         match &self {
             // Normal Text
             DialogueFragment::Normal(fragment_text) => fragment_text.to_string(),
@@ -81,7 +80,7 @@ impl DialogueFragment {
         }
     }
 
-    pub fn to_string_display(&self, character_name: Option<&String>) -> String {
+    pub fn render_display(&self, character_name: Option<&String>) -> String {
         match &self {
             // Normal Text
             DialogueFragment::Normal(fragment_text) => fragment_text.to_string(),
@@ -133,10 +132,21 @@ pub enum ControlWithNumberType {
     Unknown(char),
 }
 
+// The character name can be nested with a variable actually
+// "\c[\v[123]]"
+// So you need to create an abstract number case
+// I assume \v[#] is a number
+pub enum AbstractNumber {
+    // "\c[123]"
+    Normal(i32),
+    // "\c[\v[123]]"
+    Variable(i32),
+}
+
 impl Dialogue {
     // Only Dialogue::from() is available, not Dialogue::from_lines(), because
     // the whole point of Dialogue is to perform the custom line splitting.
-    pub fn from<S: AsRef<str>>(
+    pub fn from<S: AsRef<str> + Display>(
         text: S,
         has_portrait: bool,
         character_names: &HashMap<i32, String>,
@@ -154,7 +164,7 @@ impl Dialogue {
         }
     }
 
-    fn parse_into_fragments<S: AsRef<str>>(text: S) -> Vec<DialogueFragment> {
+    fn parse_into_fragments<S: AsRef<str> + Display>(text: S) -> Vec<DialogueFragment> {
         let mut parsed: Vec<DialogueFragment> = Vec::new();
         let mut mode = ParsingMode::Normal;
         let mut tmp_text: String = String::new();
@@ -262,7 +272,7 @@ impl Dialogue {
                             tmp_number = 0;
                             mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
                         } else {
-                            panic!("Invalid \\x[#] pattern.");
+                            panic!("Invalid \\x[#] pattern for:\n{text}");
                         }
                     }
                     ParsingModeProgress::Main => {
@@ -295,7 +305,7 @@ impl Dialogue {
                             parsed.push(fragment_type);
                             mode = ParsingMode::Normal;
                         } else {
-                            panic!("Invalid \\x[#] pattern.");
+                            panic!("Invalid \\x[#] pattern for:\n{text}");
                         }
                     }
                 },
@@ -334,14 +344,13 @@ impl Dialogue {
                     has_existing_newlines = true;
                 }
                 DialogueFragment::CharacterName(_, character_name_id) => {
-                    current_line_pretty.push_str(
-                        &fragment.to_string_display(character_names.get(character_name_id)),
-                    );
-                    current_line.push_str(&fragment.to_string());
+                    current_line_pretty
+                        .push_str(&fragment.render_display(character_names.get(character_name_id)));
+                    current_line.push_str(&fragment.render());
                 }
                 fragment => {
-                    current_line_pretty.push_str(&fragment.to_string_display(None));
-                    current_line.push_str(&fragment.to_string());
+                    current_line_pretty.push_str(&fragment.render_display(None));
+                    current_line.push_str(&fragment.render());
                 }
             }
         }
@@ -389,9 +398,9 @@ impl Dialogue {
             // All line wrap operations go off the assumption of the displayed string
             let fragment_text_pretty =
                 if let DialogueFragment::CharacterName(_, character_name_id) = fragment {
-                    fragment.to_string_display(character_names.get(character_name_id))
+                    fragment.render_display(character_names.get(character_name_id))
                 } else {
-                    fragment.to_string_display(None)
+                    fragment.render_display(None)
                 };
 
             // NOTE: You cannot use "new_fragment.len()" because it counts bytes, not actual length!
@@ -399,7 +408,7 @@ impl Dialogue {
             let fragment_text_displayed_length = fragment_text_pretty.chars().count();
 
             // But whether or not to actually keep it is up to the specific setting
-            let fragment_text = fragment.to_string();
+            let fragment_text = fragment.render();
 
             // Append to current line or push to new line depending on
             // if a new fragment will exceed the current length

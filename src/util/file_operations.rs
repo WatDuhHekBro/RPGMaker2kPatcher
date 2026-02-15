@@ -1,4 +1,5 @@
 use crate::{
+    dialogue::preview::CSS_STRING,
     structs::{LcfDataBase, LcfMapTree, LcfMapUnit, LegacyDatabasePatch, LegacyMapPatch, Patch},
     util::{
         self,
@@ -317,6 +318,10 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         &path_to_extracted_text.join("Database.patch.txt"),
         patch.extract_text(&character_names),
     )?;
+
+    // Don't forget to write the shared CSS file!
+    let path_to_css = path_to_extracted_text.join("style.css");
+    fs::write(path_to_css, CSS_STRING)?;
 
     for entry in fs::read_dir(path_to_workspace)? {
         let entry = entry?;

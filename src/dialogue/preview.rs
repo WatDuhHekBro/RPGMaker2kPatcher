@@ -15,6 +15,7 @@ use std::collections::HashMap;
 pub const CSS_STRING: &str = include_str!("style.css");
 // Variables: $MAP_NAME$ and $DIALOGUE_ENTRIES$
 const HTML_PREVIEW_TEMPLATE: &str = include_str!("template.html");
+// NOTE: All templates should call '.replacen("\n", "", 1)' in order to remove the leading newline!
 const HTML_DIALOGUE_LIST_TEMPLATE: &str = r#"
 			<div class="dialogue-list">
 				<h2>$DIALOGUE_LIST_TITLE$</h2>
@@ -23,8 +24,11 @@ $DIALOGUE_LIST_ENTRIES$
 const HTML_DIALOGUE_BOX_TEMPLATE: &str = r#"
 				<div class="dialogue">
 $DIALOGUE_BOX_ENTRIES$
-				</div>
-        "#;
+				</div>"#;
+const HTML_DIALOGUE_BOX_PORTRAIT_TEMPLATE: &str = r#"
+				<div class="dialogue portrait">
+$DIALOGUE_BOX_ENTRIES$
+				</div>"#;
 const HTML_DIALOGUE_BOX_LINE_TEMPLATE: &str = r#"
 					<code>$DIALOGUE_BOX_LINE_TEXT$</code>"#;
 
@@ -63,6 +67,7 @@ pub fn generate_html_preview(
         };
         html_dialogue_groups.push(
             HTML_DIALOGUE_LIST_TEMPLATE
+                .replacen("\n", "", 1)
                 .replace("$DIALOGUE_LIST_TITLE$", &html_dialogue_list_title)
                 .replace(
                     "$DIALOGUE_LIST_ENTRIES$",
@@ -98,6 +103,7 @@ pub fn generate_html_preview(
         };
         html_dialogue_groups.push(
             HTML_DIALOGUE_LIST_TEMPLATE
+                .replacen("\n", "", 1)
                 .replace("$DIALOGUE_LIST_TITLE$", &html_dialogue_list_title)
                 .replace(
                     "$DIALOGUE_LIST_ENTRIES$",
@@ -136,9 +142,20 @@ pub fn generate_html_dialogue_box_preview(
             line
         };
 
-        html_lines
-            .push(HTML_DIALOGUE_BOX_LINE_TEMPLATE.replace("$DIALOGUE_BOX_LINE_TEXT$", html_line));
+        html_lines.push(
+            HTML_DIALOGUE_BOX_LINE_TEMPLATE
+                .replacen("\n", "", 1)
+                .replace("$DIALOGUE_BOX_LINE_TEXT$", html_line),
+        );
     }
 
-    HTML_DIALOGUE_BOX_TEMPLATE.replace("$DIALOGUE_BOX_ENTRIES$", &html_lines.join("\n"))
+    let template = if has_portrait {
+        HTML_DIALOGUE_BOX_PORTRAIT_TEMPLATE
+    } else {
+        HTML_DIALOGUE_BOX_TEMPLATE
+    };
+
+    template
+        .replacen("\n", "", 1)
+        .replace("$DIALOGUE_BOX_ENTRIES$", &html_lines.join("\n"))
 }

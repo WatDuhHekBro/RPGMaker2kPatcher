@@ -4,11 +4,19 @@
 // Default patch files *should* be identical to the original binaries, because
 // auto line splitting/wrapping is something you need to opt-in to by putting
 // all the text onto one line.
+// -----
+// Because of unforeseen roadblocks, the parser does not truly parse one character at a time.
+// The special case of "\c[\v[123]]" iterates past multiple characters in one round.
+// -----
+// No idea how to split up the parsing function. It has an ungodly amount of nesting.
 
 use crate::util::constants::{
     DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
 };
-use std::{collections::HashMap, fmt::Display};
+use std::{
+    collections::HashMap,
+    fmt::{self, Display},
+};
 
 #[derive(Debug)]
 pub struct Dialogue {
@@ -45,12 +53,12 @@ pub enum DialogueFragment {
     // Control w/ Number //
     ///////////////////////
     // The original character used should be readily available just in case there's a difference between uppercase and lowercase
-    SetColor(char, i32),
-    SetSpeed(char, i32),
-    CharacterName(char, i32),
-    Variable(char, i32),
+    SetColor(char, AbstractNumber),
+    SetSpeed(char, AbstractNumber),
+    CharacterName(char, AbstractNumber),
+    Variable(char, AbstractNumber),
     // preview.js: ['c', 'i', 'n', 'p', 's', 'v']
-    UnknownControlWithNumber(char, i32),
+    UnknownControlWithNumber(char, AbstractNumber),
 }
 
 impl DialogueFragment {
@@ -121,6 +129,14 @@ pub enum ParsingMode {
 pub enum ParsingModeProgress {
     Start,
     Main,
+    // Assumption: Only 1 level of nesting
+    Nested(ParsingModeProgressNested),
+}
+
+#[derive(Clone, Copy)]
+pub enum ParsingModeProgressNested {
+    Start,
+    Main,
 }
 
 #[derive(PartialEq)]
@@ -136,11 +152,31 @@ pub enum ControlWithNumberType {
 // "\c[\v[123]]"
 // So you need to create an abstract number case
 // I assume \v[#] is a number
+#[derive(Debug)]
 pub enum AbstractNumber {
     // "\c[123]"
     Normal(i32),
     // "\c[\v[123]]"
     Variable(i32),
+}
+
+impl AbstractNumber {
+    fn get_number(&self) -> &i32 {
+        match self {
+            AbstractNumber::Normal(number) => number,
+            AbstractNumber::Variable(number) => number,
+        }
+    }
+}
+
+impl Display for AbstractNumber {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let output = match self {
+            AbstractNumber::Normal(number) => number.to_string(),
+            AbstractNumber::Variable(number) => format!("\\v[{number}]"),
+        };
+        write!(formatter, "{output}")
+    }
 }
 
 impl Dialogue {
@@ -268,9 +304,42 @@ impl Dialogue {
                 },
                 ParsingMode::ControlWithNumber(progress) => match progress {
                     ParsingModeProgress::Start => {
+                        // "\c[\v[123]]"
+                        //    ^
                         if character == '[' {
                             tmp_number = 0;
-                            mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
+                            let mut is_nested = false;
+
+                            // "\c[\v[123]]"
+                            //     ^
+                            let next_character = chars_iterator.peek();
+
+                            if let Some(next_character) = next_character {
+                                if *next_character == '\\' {
+                                    is_nested = true;
+                                    chars_iterator.next();
+                                }
+                            }
+
+                            if is_nested {
+                                // "\c[\v[123]]"
+                                //      ^
+                                let next_character = chars_iterator.peek();
+
+                                if let Some(next_character) = next_character {
+                                    if *next_character == 'v' {
+                                        chars_iterator.next();
+                                    } else {
+                                        panic!("Invalid \\x[\\v[#]] pattern for:\n{text}");
+                                    }
+                                }
+
+                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Nested(
+                                    ParsingModeProgressNested::Start,
+                                ))
+                            } else {
+                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
+                            }
                         } else {
                             panic!("Invalid \\x[#] pattern for:\n{text}");
                         }
@@ -285,20 +354,33 @@ impl Dialogue {
                         } else if character == ']' {
                             let fragment_type = match tmp_type {
                                 ControlWithNumberType::SetColor(character) => {
-                                    DialogueFragment::SetColor(character, tmp_number)
+                                    DialogueFragment::SetColor(
+                                        character,
+                                        AbstractNumber::Normal(tmp_number),
+                                    )
                                 }
                                 ControlWithNumberType::SetSpeed(character) => {
-                                    DialogueFragment::SetSpeed(character, tmp_number)
+                                    DialogueFragment::SetSpeed(
+                                        character,
+                                        AbstractNumber::Normal(tmp_number),
+                                    )
                                 }
                                 ControlWithNumberType::CharacterName(character) => {
-                                    DialogueFragment::CharacterName(character, tmp_number)
+                                    DialogueFragment::CharacterName(
+                                        character,
+                                        AbstractNumber::Normal(tmp_number),
+                                    )
                                 }
                                 ControlWithNumberType::Variable(character) => {
-                                    DialogueFragment::Variable(character, tmp_number)
+                                    DialogueFragment::Variable(
+                                        character,
+                                        AbstractNumber::Normal(tmp_number),
+                                    )
                                 }
                                 ControlWithNumberType::Unknown(character) => {
                                     DialogueFragment::UnknownControlWithNumber(
-                                        character, tmp_number,
+                                        character,
+                                        AbstractNumber::Normal(tmp_number),
                                     )
                                 }
                             };
@@ -308,6 +390,76 @@ impl Dialogue {
                             panic!("Invalid \\x[#] pattern for:\n{text}");
                         }
                     }
+                    ParsingModeProgress::Nested(nested_progress) => match nested_progress {
+                        ParsingModeProgressNested::Start => {
+                            if character == '[' {
+                                tmp_number = 0;
+                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Nested(
+                                    ParsingModeProgressNested::Main,
+                                ))
+                            } else {
+                                panic!("Invalid \\x[#] pattern for:\n{text}");
+                            }
+                        }
+                        ParsingModeProgressNested::Main => {
+                            if character.is_digit(10) {
+                                let digit: u8 = character as u8 - 0x30;
+                                let digit = digit as i32;
+
+                                // 3 -> 38 ===> 3 * 10 + 8
+                                tmp_number = tmp_number * 10 + digit;
+                            } else if character == ']' {
+                                let fragment_type = match tmp_type {
+                                    ControlWithNumberType::SetColor(character) => {
+                                        DialogueFragment::SetColor(
+                                            character,
+                                            AbstractNumber::Variable(tmp_number),
+                                        )
+                                    }
+                                    ControlWithNumberType::SetSpeed(character) => {
+                                        DialogueFragment::SetSpeed(
+                                            character,
+                                            AbstractNumber::Variable(tmp_number),
+                                        )
+                                    }
+                                    ControlWithNumberType::CharacterName(character) => {
+                                        DialogueFragment::CharacterName(
+                                            character,
+                                            AbstractNumber::Variable(tmp_number),
+                                        )
+                                    }
+                                    ControlWithNumberType::Variable(character) => {
+                                        DialogueFragment::Variable(
+                                            character,
+                                            AbstractNumber::Variable(tmp_number),
+                                        )
+                                    }
+                                    ControlWithNumberType::Unknown(character) => {
+                                        DialogueFragment::UnknownControlWithNumber(
+                                            character,
+                                            AbstractNumber::Variable(tmp_number),
+                                        )
+                                    }
+                                };
+                                parsed.push(fragment_type);
+                                mode = ParsingMode::Normal;
+
+                                // "\c[\v[123]]"
+                                //           ^
+                                let next_character = chars_iterator.peek();
+
+                                if let Some(next_character) = next_character {
+                                    if *next_character == ']' {
+                                        chars_iterator.next();
+                                    } else {
+                                        panic!("Invalid \\x[\\v[#]] pattern for:\n{text}");
+                                    }
+                                }
+                            } else {
+                                panic!("Invalid \\x[#] pattern for:\n{text}");
+                            }
+                        }
+                    },
                 },
             }
         }
@@ -344,8 +496,10 @@ impl Dialogue {
                     has_existing_newlines = true;
                 }
                 DialogueFragment::CharacterName(_, character_name_id) => {
-                    current_line_pretty
-                        .push_str(&fragment.render_display(character_names.get(character_name_id)));
+                    current_line_pretty.push_str(
+                        &fragment
+                            .render_display(character_names.get(character_name_id.get_number())),
+                    );
                     current_line.push_str(&fragment.render());
                 }
                 fragment => {
@@ -398,7 +552,7 @@ impl Dialogue {
             // All line wrap operations go off the assumption of the displayed string
             let fragment_text_pretty =
                 if let DialogueFragment::CharacterName(_, character_name_id) = fragment {
-                    fragment.render_display(character_names.get(character_name_id))
+                    fragment.render_display(character_names.get(character_name_id.get_number()))
                 } else {
                     fragment.render_display(None)
                 };

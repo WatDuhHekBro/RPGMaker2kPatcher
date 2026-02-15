@@ -21,7 +21,7 @@ fn main() {
     // CLI Arguments
     let args: Vec<String> = env::args().collect();
     let command = args.get(1);
-    let command = Some(&String::from("extractText"));
+    //let command = Some(&String::from("extractText"));
 
     match command {
         Some(command) => match command.as_str() {

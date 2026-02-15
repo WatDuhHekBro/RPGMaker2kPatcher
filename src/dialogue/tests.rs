@@ -230,6 +230,14 @@ it m8?!";
         let expected_cleaned_text = r"\n[30]\v[95]  \n[31]\v[102]  \n[32]\v[109]  \n[33]\v[116]
 \n[34]\n[35]
 (\n[36]\n[37]\n[38]\n[39]\n[40]\n[41]\n[42])";
-        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+
+        // Copied and modified because it'll always be out of the character limit
+        let dialogue = Dialogue::from(text, false, &HashMap::new());
+
+        let output = dialogue.processed_lines.join("\n");
+        assert_eq!(output, expected_text);
+
+        let output_pretty = dialogue.processed_lines_pretty.join("\n");
+        assert_eq!(output_pretty, expected_cleaned_text);
     }
 }

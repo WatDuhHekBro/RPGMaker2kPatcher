@@ -20,7 +20,7 @@ use std::{
 
 #[derive(Debug)]
 pub struct Dialogue {
-    pub has_portrait: bool,
+    has_portrait: bool,
     // The reason to automatically process both lines is because
     // processing both together is O(n) instead of 2 * O(n).
     // Plus, this is its primary function anyway, being essentially just a fancy line splitter.

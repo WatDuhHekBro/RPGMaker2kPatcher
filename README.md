@@ -14,6 +14,9 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 - Spacing in sections
 - [ ] Documentation is just add what this is all about to an outside observer
 - Patch fields, what can be added, what the purpose is of each one (also stuff like has_portrait being optional and it doesn't affect how the text renders by default)
+
+Workflow:
+- Make sure to binary identical, git repo, ignore_overflow if necessary or a [[splice-commands]] for leading newlines
 ```
 
 ## CLI Usage
@@ -59,6 +62,7 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 
 Dialogue / Line Wrap
 - Test: Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
+    - I have a feeling there might be some weird edge case with a long single line. *Maybe `ignore_overflow` in `applyPatches` should also disable line splitting?* After all, if you're taking it out of the overflow report, you're basically dealing with it manually. Think of it as a manual override for single line dialogues.
 - Rule for ellipses, continuous punctuation String (do not split `...`)
     - Do this by having Dialogue punctuation be counted as Normal text, but act differently via `is_punctuation_mode_active` flag. As soon as punctuation returns to something non-punctuation, then it splits the text up.
     - Also cases like "word?!" and "word?!word" 
@@ -72,6 +76,11 @@ Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big a
     - **How about this?** Or just change all instances of "extracted text" to just "preview(s)". `extracted-text` = `preview(s)`. That is an accurate statement after all.
 
 `extractText` - Convert to ordered HashMap + use Dialogue parsing module
+
+**Main Functionality TODO:**
+- Check if binary identical
+- `ignore_overflow` disables line splitting?
+- Dialogue punctuation
 
 **TODO:** `cargo clippy`
 

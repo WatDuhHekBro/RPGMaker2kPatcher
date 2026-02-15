@@ -1,5 +1,8 @@
 use crate::{
-    dialogue::preview::{self, OverflowEntry},
+    dialogue::{
+        core::Dialogue,
+        preview::{self, OverflowEntry},
+    },
     structs::{
         database::LcfDataBaseHeader,
         map::LcfMapUnitPageHeader,
@@ -381,7 +384,11 @@ fn extract_dialogue_and_text_from_commands(
     }
 }
 
-pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
+pub fn apply_patch_map(
+    map: &mut LcfMapUnit,
+    patch: &Patch,
+    character_names: &HashMap<i32, String>,
+) {
     let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
     if let Some(dialogues) = &patch.dialogue {
@@ -391,7 +398,7 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 page,
                 command: command_index,
                 indent: explicitly_defined_indent,
-                has_portrait: _,
+                has_portrait,
                 ignore_overflow: _,
                 character: _,
                 original,
@@ -409,12 +416,15 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
                 .get_commands_mut()
                 .expect("Commands should exist!");
 
+            let has_portrait = has_portrait.unwrap_or(false);
+            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+
             splice_dialogue_and_update_offsets(
                 commands,
                 *command_index,
                 explicitly_defined_indent,
                 original,
-                patched,
+                &dialogue.processed_lines,
                 &mut offsets_table,
                 key,
             );
@@ -562,7 +572,11 @@ pub fn apply_patch_map(map: &mut LcfMapUnit, patch: &Patch) {
     }
 }
 
-pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
+pub fn apply_patch_database(
+    database: &mut LcfDataBase,
+    patch: &Patch,
+    character_names: &HashMap<i32, String>,
+) {
     let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
     if let Some(dialogues) = &patch.dialogue {
@@ -572,7 +586,7 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 page: _,
                 command: command_index,
                 indent: explicitly_defined_indent,
-                has_portrait: _,
+                has_portrait,
                 ignore_overflow: _,
                 character: _,
                 original,
@@ -587,12 +601,15 @@ pub fn apply_patch_database(database: &mut LcfDataBase, patch: &Patch) {
                 .get_commands_mut()
                 .expect("Commands should exist!");
 
+            let has_portrait = has_portrait.unwrap_or(false);
+            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+
             splice_dialogue_and_update_offsets(
                 commands,
                 *command_index,
                 explicitly_defined_indent,
                 original,
-                patched,
+                &dialogue.processed_lines,
                 &mut offsets_table,
                 key,
             );
@@ -696,7 +713,7 @@ fn splice_dialogue_and_update_offsets(
     command_index: i32,
     explicitly_defined_indent: &Option<DynamicInteger>,
     original: &String,
-    patched: &String,
+    patched_lines: &Vec<String>,
     offsets_table: &mut HashMap<(i32, Option<i32>), Vec<isize>>,
     key: (i32, Option<i32>),
 ) {
@@ -751,7 +768,6 @@ fn splice_dialogue_and_update_offsets(
 
     // Generate patched commands
     let mut patched_commands: Vec<LcfCommand> = Vec::new();
-    let patched_lines: Vec<&str> = patched.split("\n").collect();
     let patched_lines_count = patched_lines.len();
     let mut is_first_line = true;
 
@@ -1055,7 +1071,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
 }
 
 // Removes all escape characters and replaces \\n[#] with characters.
-fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>) -> String {
+pub fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>) -> String {
     static ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\\[^NnVv](:?\[(\d+?)\])?").unwrap());
     static MULTI_SPACE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" {2,}").unwrap());

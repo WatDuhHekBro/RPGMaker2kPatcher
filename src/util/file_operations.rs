@@ -9,6 +9,7 @@ use crate::{
 };
 use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt};
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io,
     path::Path,
@@ -58,6 +59,7 @@ pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pat
     path_to_lcfmapunit: P1,
     path_to_patch: P2,
     path_to_patched_lcfmapunit: P3,
+    character_names: &HashMap<i32, String>,
 ) -> Result<LcfMapUnit, Box<dyn std::error::Error>> {
     // Read map
     let file_map = fs::read(path_to_lcfmapunit)?;
@@ -70,7 +72,7 @@ pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pat
     patch.trim_dialogue_ending_newline();
 
     // Apply patch to map
-    map.apply_patch(&patch);
+    map.apply_patch(&patch, character_names);
 
     // Write the patched map
     let mut patched_output_file = overwrite(path_to_patched_lcfmapunit)?;
@@ -83,11 +85,12 @@ pub fn read_lcfdatabase_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pa
     path_to_lcfdatabase: P1,
     path_to_patch: P2,
     path_to_patched_lcfdatabase: P3,
-) -> Result<LcfDataBase, Box<dyn std::error::Error>> {
+) -> Result<(LcfDataBase, HashMap<i32, String>), Box<dyn std::error::Error>> {
     // Read database
     let file_map = fs::read(path_to_lcfdatabase)?;
     let mut reader = Cursor::new(file_map);
     let mut database = LcfDataBase::read_be(&mut reader)?;
+    let character_names = database.extract_character_names();
 
     // Read patch
     let patch_file_string = &fs::read_to_string(path_to_patch)?;
@@ -95,13 +98,13 @@ pub fn read_lcfdatabase_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pa
     patch.trim_dialogue_ending_newline();
 
     // Apply patch to map
-    database.apply_patch(&patch);
+    database.apply_patch(&patch, &character_names);
 
     // Write the patched map
     let mut patched_output_file = overwrite(path_to_patched_lcfdatabase)?;
     patched_output_file.write_be(&database)?;
 
-    Ok(database)
+    Ok((database, character_names))
 }
 
 // Actually, these operations are so fast that I don't even need to worry about implementing concurrency at all.
@@ -246,7 +249,7 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     let path_to_patch = path_to_workspace.as_ref().join("Database.patch.toml");
     let path_to_patched_lcfdatabase = path_to_patched.as_ref().join("RPG_RT.ldb");
 
-    read_lcfdatabase_and_patch(
+    let (_, character_names) = read_lcfdatabase_and_patch(
         path_to_lcfdatabase,
         path_to_patch,
         path_to_patched_lcfdatabase,
@@ -280,7 +283,7 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
                     patched_path.set_extension("lmu");
 
                     // Write
-                    read_lcfmapunit_and_patch(&path, &toml_path, &patched_path)?;
+                    read_lcfmapunit_and_patch(&path, &toml_path, &patched_path, &character_names)?;
                 }
             }
         }

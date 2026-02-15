@@ -101,8 +101,8 @@ impl LcfDataBase {
         generate_toml_patch(&patch)
     }
 
-    pub fn apply_patch(&mut self, patch: &Patch) {
-        patch_operations::apply_patch_database(self, patch);
+    pub fn apply_patch(&mut self, patch: &Patch, character_names: &HashMap<i32, String>) {
+        patch_operations::apply_patch_database(self, patch, character_names);
     }
 }
 

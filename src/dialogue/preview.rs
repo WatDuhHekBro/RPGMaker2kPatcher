@@ -13,7 +13,10 @@ use crate::{
         patch::{PatchDialogue, PatchText},
         Patch,
     },
-    util::constants::{DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT},
+    util::{
+        constants::{DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT},
+        patch_operations,
+    },
 };
 use std::collections::HashMap;
 
@@ -73,6 +76,15 @@ pub fn generate_html_preview(
             let ignore_overflow = dialogue.ignore_overflow.unwrap_or(false);
             let parsed_dialogue = Dialogue::from(&dialogue.patched, has_portrait, character_names);
 
+            if !ignore_overflow {
+                let error_message = parsed_dialogue.check_if_out_of_bounds();
+
+                // May as well print out errors to the console as well if you're already running the check dialogue function
+                if let Some(error_message) = error_message {
+                    eprintln!("{error_message}- See the generated \"report.html\" for details.");
+                }
+            }
+
             let (html, has_overflow) = generate_html_dialogue_box_preview(
                 &parsed_dialogue.processed_lines_pretty,
                 has_portrait,
@@ -124,13 +136,11 @@ pub fn generate_html_preview(
         for text in texts {
             let has_portrait = text.has_portrait.unwrap_or(false);
             let ignore_overflow = text.ignore_overflow.unwrap_or(false);
-            let parsed_dialogue = Dialogue::from(&text.patched, has_portrait, character_names);
+            let parsed_dialogue =
+                patch_operations::clean_escaped_text(&text.patched, character_names);
 
-            let (html, has_overflow) = generate_html_dialogue_box_preview(
-                &parsed_dialogue.processed_lines_pretty,
-                has_portrait,
-                ignore_overflow,
-            );
+            let (html, has_overflow) =
+                generate_html_text_box_preview(&parsed_dialogue, has_portrait, ignore_overflow);
 
             if has_overflow {
                 let (event, page) = key;
@@ -234,6 +244,57 @@ pub fn generate_html_dialogue_box_preview(
     (html, has_overflow)
 }
 
+pub fn generate_html_text_box_preview(
+    line: &String,
+    has_portrait: bool,
+    ignore_overflow: bool,
+) -> (String, bool) {
+    let dialogue_box_length = match has_portrait {
+        true => DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
+        false => DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT,
+    };
+    let mut has_overflow = false;
+
+    let length = line.chars().count();
+
+    let html_line = if length > dialogue_box_length {
+        if !ignore_overflow {
+            has_overflow = true;
+        }
+
+        // Query the correct index with Unicode strings
+        // https://stackoverflow.com/a/72589022
+        let (index, _) = line
+            .char_indices()
+            .nth(dialogue_box_length)
+            .expect(&format!(
+                "There should be at least {dialogue_box_length} entries for this substring!"
+            ));
+
+        let line_in_bounds = &line[0..index];
+        let line_out_of_bounds = &line[index..];
+
+        &format!("{line_in_bounds}<span>{line_out_of_bounds}</span>")
+    } else {
+        line
+    };
+
+    let template = if has_portrait {
+        HTML_DIALOGUE_BOX_PORTRAIT_TEMPLATE
+    } else {
+        HTML_DIALOGUE_BOX_TEMPLATE
+    };
+
+    let html = template.replacen("\n", "", 1).replace(
+        "$DIALOGUE_BOX_ENTRIES$",
+        &HTML_DIALOGUE_BOX_LINE_TEMPLATE
+            .replacen("\n", "", 1)
+            .replace("$DIALOGUE_BOX_LINE_TEXT$", html_line),
+    );
+
+    (html, has_overflow)
+}
+
 pub fn generate_overflow_html_preview(overflow_list: &Vec<OverflowEntry>) -> String {
     let mut html_dialogue_groups: Vec<String> = Vec::new();
     let mut html_dialogue_boxes_list: Vec<String> = Vec::new();
@@ -267,9 +328,11 @@ pub fn generate_overflow_html_preview(overflow_list: &Vec<OverflowEntry>) -> Str
                     };
 
                     if let Some(last_page) = last_page {
-                        format!("Map {last_map_name}: Event #{last_event} Page #{last_page} ({area_str})")
+                        format!(
+                            "{last_map_name}: Event #{last_event} Page #{last_page} ({area_str})"
+                        )
                     } else {
-                        format!("Map {last_map_name}: Event #{last_event} ({area_str})")
+                        format!("{last_map_name}: Event #{last_event} ({area_str})")
                     }
                 };
                 html_dialogue_groups.push(

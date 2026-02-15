@@ -81,8 +81,8 @@ impl LcfMapUnit {
         generate_toml_patch(&patch)
     }
 
-    pub fn apply_patch(&mut self, patch: &Patch) {
-        patch_operations::apply_patch_map(self, patch);
+    pub fn apply_patch(&mut self, patch: &Patch, character_names: &HashMap<i32, String>) {
+        patch_operations::apply_patch_map(self, patch, character_names);
     }
 }
 

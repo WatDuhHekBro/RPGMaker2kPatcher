@@ -13,6 +13,7 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 - Rpgmk: Move command reference down a section
 - Spacing in sections
 - [ ] Documentation is just add what this is all about to an outside observer
+- Patch fields, what can be added, what the purpose is of each one (also stuff like has_portrait being optional and it doesn't affect how the text renders by default)
 ```
 
 ## CLI Usage
@@ -54,7 +55,6 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
     - This option only applies if the patched line is all on one line. If it's multiline, assume manual newlines, then do error checking on `applyPatches`
     - Separate command `checkDialogue`
 - Generate styled HTML file for dialogue previews, no need to mess with JS (see the `dev` branch). Much easier to look at than a TUI. Also don't need `chars.json`. `rpgmaker2kpatcher generatePreviews` or `previewDialogue`
-    - `generateHTMLLines` method for taking color into account
 - Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
 
 Dialogue / Line Wrap
@@ -66,6 +66,8 @@ Dialogue / Line Wrap
 Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big auxiliary operation? Same logic (that you can refine by adding a `HashMap<(event, page), ...>`), roughly the same outputs (only different in specific file types, txt, html, or console warnings).
 - Pass sorted HashMap as reference to 3 functions
 - `checkDialogue`? Change path to extracted text to be like `PATH_TO_DIALOGUE_PREVIEW`, containing both extracted text and HTML previews.
+    - `report.txt`? And if you're checking for line overflows with the HTML preview anyway... **TODO:** `report.html` with the title `Dialogue Overflow Report`. Also an easy GUI way to check what you're missing and what you can safely ignore.
+    - Also make a field on Patch named `ignore_overflow = true` if you want to ignore something for the report and leave it as-is at the same time
 
 `extractText` - Convert to ordered HashMap + use Dialogue parsing module
 

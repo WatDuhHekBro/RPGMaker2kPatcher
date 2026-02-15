@@ -1,6 +1,11 @@
 // The following code is concerned with generating HTML previews of all the dialogue in a map.
 // It is NOT concerned with the text fields, since those (usually) aren't a concern w.r.t. dialogue box length.
 // It uses direct string replacement because it does NOT need advanced features of HTML templating engines.
+// -----
+// NOTE: Although you *could* try and represent color in the HTML previews...
+// Should you? Should you really spend all the extra effort for that tiny gain?
+// The HTML dialogue preview is a tool to easily see text overflows.
+// Beyond that, anything else is severely diminishing returns.
 
 use crate::{
     dialogue::core::Dialogue,
@@ -135,8 +140,18 @@ pub fn generate_html_dialogue_box_preview(
         let length = line.chars().count();
 
         let html_line = if length > dialogue_box_length {
-            let line_in_bounds = &line[0..dialogue_box_length];
-            let line_out_of_bounds = &line[dialogue_box_length..];
+            // Query the correct index with Unicode strings
+            // https://stackoverflow.com/a/72589022
+            let (index, _) = line
+                .char_indices()
+                .nth(dialogue_box_length)
+                .expect(&format!(
+                    "There should be at least {dialogue_box_length} entries for this substring!"
+                ));
+
+            let line_in_bounds = &line[0..index];
+            let line_out_of_bounds = &line[index..];
+
             &format!("{line_in_bounds}<span>{line_out_of_bounds}</span>")
         } else {
             line

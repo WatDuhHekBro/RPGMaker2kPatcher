@@ -590,6 +590,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         indent: explicitly_defined_indent,
         has_portrait,
         ignore_overflow,
+        should_use_custom_line_wrapping: _,
         character,
         original,
         patched,

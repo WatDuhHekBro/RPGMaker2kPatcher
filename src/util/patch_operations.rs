@@ -174,6 +174,8 @@ fn extract_dialogue_and_text_from_commands(
                 indent: indent_written_into_patch,
                 has_portrait,
                 ignore_overflow: None,
+                // Only used when reading patch file
+                should_use_custom_line_wrapping: true,
                 character,
                 original: current_dialogue_text.clone(),
                 patched: current_dialogue_text.clone(),
@@ -367,6 +369,7 @@ pub fn apply_patch_map(
             indent: explicitly_defined_indent,
             has_portrait,
             ignore_overflow: _,
+            should_use_custom_line_wrapping,
             character: _,
             original,
             patched,
@@ -383,15 +386,22 @@ pub fn apply_patch_map(
             .get_commands_mut()
             .expect("Commands should exist!");
 
-        let has_portrait = has_portrait.unwrap_or(false);
-        let dialogue = Dialogue::from(patched, has_portrait, character_names);
+        // Get split lines
+        let patched_lines = if *should_use_custom_line_wrapping {
+            let has_portrait = has_portrait.unwrap_or(false);
+            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+            dialogue.processed_lines
+        } else {
+            let patched_lines: Vec<&str> = patched.split("\n").collect();
+            patched_lines.iter().map(|line| line.to_string()).collect()
+        };
 
         splice_dialogue_and_update_offsets(
             commands,
             *command_index,
             explicitly_defined_indent,
             original,
-            &dialogue.processed_lines,
+            &patched_lines,
             &mut offsets_table,
             key,
         );
@@ -546,6 +556,7 @@ pub fn apply_patch_database(
             indent: explicitly_defined_indent,
             has_portrait,
             ignore_overflow: _,
+            should_use_custom_line_wrapping,
             character: _,
             original,
             patched,
@@ -559,15 +570,22 @@ pub fn apply_patch_database(
             .get_commands_mut()
             .expect("Commands should exist!");
 
-        let has_portrait = has_portrait.unwrap_or(false);
-        let dialogue = Dialogue::from(patched, has_portrait, character_names);
+        // Get split lines
+        let patched_lines = if *should_use_custom_line_wrapping {
+            let has_portrait = has_portrait.unwrap_or(false);
+            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+            dialogue.processed_lines
+        } else {
+            let patched_lines: Vec<&str> = patched.split("\n").collect();
+            patched_lines.iter().map(|line| line.to_string()).collect()
+        };
 
         splice_dialogue_and_update_offsets(
             commands,
             *command_index,
             explicitly_defined_indent,
             original,
-            &dialogue.processed_lines,
+            &patched_lines,
             &mut offsets_table,
             key,
         );

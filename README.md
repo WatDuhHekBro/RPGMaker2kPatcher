@@ -70,6 +70,10 @@ Workflow:
 
 **Current Commit:** `a`
 
+**What was I doing just now?**
+
+-----
+
 - Clean up documentation and usage
 - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
     - This option only applies if the patched line is all on one line. If it's multiline, assume manual newlines, then do error checking on `applyPatches`

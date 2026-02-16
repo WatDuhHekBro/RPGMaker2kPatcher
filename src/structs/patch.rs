@@ -72,13 +72,20 @@ impl Patch {
             let char_that_should_be_newline_patched = &dialogue.patched.pop();
 
             if let Some(c) = char_that_should_be_newline_original {
-                if *c != '\n' {
+                let c = *c;
+
+                if c != '\n' {
                     println!("WARNING: Character of original line should end with newline! Found '{c}' instead!\n{}", dialogue.original);
+                    dialogue.original.push(c);
                 }
             }
             if let Some(c) = char_that_should_be_newline_patched {
-                if *c != '\n' {
-                    println!("WARNING: Character of patched line should end with newline! Found '{c}' instead!\n{}", dialogue.patched);
+                let c = *c;
+
+                if c != '\n' {
+                    //println!("WARNING: Character of patched line should end with newline! Found '{c}' instead!\n{}", dialogue.patched);
+                    dialogue.should_use_custom_line_wrapping = true;
+                    dialogue.patched.push(c);
                 }
             }
             if let None = char_that_should_be_newline_original {
@@ -92,6 +99,11 @@ impl Patch {
                     "WARNING: No character was popped from patched line! Was it empty?\n{}",
                     dialogue.patched
                 );
+            }
+
+            // Regardless of the auto-detection above, user's choice overrides the line wrap setting
+            if let Some(ignore_overflow) = dialogue.ignore_overflow {
+                dialogue.should_use_custom_line_wrapping = !ignore_overflow;
             }
         }
     }
@@ -198,8 +210,12 @@ pub struct PatchDialogue {
     // The actual value of ignore_overflow
     // - User input overrides the setting
     // - But if not set by the user, it checks whether or not the string ends with a trailing newline, indicating if the patch was machine-generated
-    //#[serde(skip_serializing)]
-    //pub should_ignore_overflow: bool,
+    // - This field is only used internally by the program
+    // - Defaults to false, so it should be the opposite of "should_ignore_overflow"
+    // Check if there's a trailing newline
+    // This determines whether or not to use custom line wrapping
+    #[serde(skip)]
+    pub should_use_custom_line_wrapping: bool,
     // Helpful field to decipher character name variables (e.g. "\n[1]"), unused during actual patching
     pub character: Option<String>,
     pub original: String,

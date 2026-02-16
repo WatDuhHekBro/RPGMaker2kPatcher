@@ -44,7 +44,7 @@ pub fn generate_patch_from_map(
                             *event.id,
                             Some(*page.id),
                             map_name,
-                            &character_names,
+                            character_names,
                             game_title,
                         );
                     }
@@ -54,7 +54,7 @@ pub fn generate_patch_from_map(
     }
 
     let dialogue = {
-        if dialogue.len() > 0 {
+        if !dialogue.is_empty() {
             Some(dialogue)
         } else {
             None
@@ -62,7 +62,7 @@ pub fn generate_patch_from_map(
     };
 
     let text = {
-        if text.len() > 0 {
+        if !text.is_empty() {
             Some(text)
         } else {
             None
@@ -102,7 +102,7 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
     }
 
     let dialogue = {
-        if dialogue.len() > 0 {
+        if !dialogue.is_empty() {
             Some(dialogue)
         } else {
             None
@@ -110,7 +110,7 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
     };
 
     let text = {
-        if text.len() > 0 {
+        if !text.is_empty() {
             Some(text)
         } else {
             None
@@ -255,7 +255,7 @@ fn extract_dialogue_and_text_from_commands(
                 println!("WARNING: [map.{map_name}.event.{event}.page.{page:?}.command.{command_index}] (dialogue) contains an unwritten parameter!");
             }
         } else if current_command_code == COMMAND_DIALOGUE_CONTINUE {
-            current_dialogue_text.push_str("\n");
+            current_dialogue_text.push('\n');
             current_dialogue_text.push_str(command.text.as_str());
 
             // And then just make sure there's no conflicting indent in any continue statements.
@@ -712,21 +712,14 @@ fn splice_dialogue_and_update_offsets(
     commands: &mut LcfCommandList,
     command_index: i32,
     explicitly_defined_indent: &Option<DynamicInteger>,
-    original: &String,
+    original: &str,
     patched_lines: &Vec<String>,
     offsets_table: &mut HashMap<(i32, Option<i32>), Vec<isize>>,
     key: (i32, Option<i32>),
 ) {
     // Create offset entry if it hasn't worked on this key yet
     if !offsets_table.contains_key(&key) {
-        let commands_len = commands.len();
-        let mut offsets: Vec<isize> = Vec::with_capacity(commands_len);
-
-        for _ in 0..commands_len {
-            offsets.push(0);
-        }
-
-        offsets_table.insert(key, offsets);
+        offsets_table.insert(key, vec![0; commands.len()]);
     }
 
     // Then work off the existing offsets table.
@@ -741,28 +734,26 @@ fn splice_dialogue_and_update_offsets(
     let previous_indent = {
         if let Some(indent) = explicitly_defined_indent {
             indent.0
-        } else {
-            if start_index > 0 {
-                let last_command = &commands[start_index - 1];
-                let last_command_indent = last_command.indent.0;
-                let last_command_code = *last_command.code;
+        } else if start_index > 0 {
+            let last_command = &commands[start_index - 1];
+            let last_command_indent = last_command.indent.0;
+            let last_command_code = *last_command.code;
 
-                if last_command_code == COMMAND_BRANCH_IF
-                    || last_command_code == COMMAND_BRANCH_ELSE
-                    || last_command_code == COMMAND_LOOP
-                    || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
-                    || last_command_code == COMMAND_TRANSACTION
-                    || last_command_code == COMMAND_NO_TRANSACTION
-                {
-                    last_command_indent + 1
-                } else if last_command_code == COMMAND_DECREASE_INDENT {
-                    (last_command_indent - 1).max(0)
-                } else {
-                    last_command_indent
-                }
+            if last_command_code == COMMAND_BRANCH_IF
+                || last_command_code == COMMAND_BRANCH_ELSE
+                || last_command_code == COMMAND_LOOP
+                || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
+                || last_command_code == COMMAND_TRANSACTION
+                || last_command_code == COMMAND_NO_TRANSACTION
+            {
+                last_command_indent + 1
+            } else if last_command_code == COMMAND_DECREASE_INDENT {
+                (last_command_indent - 1).max(0)
             } else {
-                0
+                last_command_indent
             }
+        } else {
+            0
         }
     };
 
@@ -956,114 +947,86 @@ pub fn generate_html_preview(
 }
 
 pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> String {
-    let mut output_original = String::new();
-    let mut output_patched = String::new();
+    let dialogues_table = patch.get_ordered_dialogue();
+    let texts_table = patch.get_ordered_text();
+    let mut output_original =
+        String::from("#######################\n# Original (Dialogue) #\n#######################\n");
+    let mut output_patched =
+        String::from("\n######################\n# Patched (Dialogue) #\n######################\n");
     let mut is_patched_identical_to_original = true;
 
-    if let Some(dialogues) = &patch.dialogue {
-        let mut last_event = -1;
-        let mut last_page = -1;
+    for key in Patch::get_sorted_dialogue_keys(&dialogues_table) {
+        let dialogues = dialogues_table
+            .get(key)
+            .expect("Invalid Key! extract_text -> Patch::get_sorted_dialogue_keys()");
+        let (event, page) = key;
 
-        for PatchDialogue {
-            event,
-            page,
-            command: _,
-            indent: _,
-            has_portrait: _,
-            ignore_overflow: _,
-            character: _,
-            original,
-            patched,
-        } in dialogues
-        {
-            if let Some(page) = page {
-                if last_event != *event || last_page != *page {
-                    output_original.push_str(&format!(
-                        "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
-                    ));
-                    output_patched.push_str(&format!(
-                        "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
-                    ));
-                }
+        if let Some(page) = page {
+            output_original.push_str(&format!(
+                "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
+            ));
+            output_patched.push_str(&format!(
+                "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
+            ));
+        } else {
+            output_original.push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
+            output_patched.push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
+        }
 
-                last_event = *event;
-                last_page = *page;
-            } else {
-                if last_event != *event {
-                    output_original
-                        .push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
-                    output_patched
-                        .push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
-                }
-
-                last_event = *event;
-            }
+        for dialogue in dialogues {
+            let original = &dialogue.original;
+            let patched = &dialogue.patched;
 
             if is_patched_identical_to_original && (original != patched) {
                 is_patched_identical_to_original = false;
             }
 
-            output_original.push_str(&clean_escaped_text(original, &character_names));
-            output_patched.push_str(&clean_escaped_text(patched, &character_names));
+            output_original.push_str(&clean_escaped_text(original, character_names));
+            output_patched.push_str(&clean_escaped_text(patched, character_names));
         }
     }
 
-    if let Some(texts) = &patch.text {
+    if patch.text.is_some() {
         output_original
             .push_str("\n###################\n# Original (Text) #\n###################\n");
         output_patched.push_str("\n##################\n# Patched (Text) #\n##################\n");
-        let mut last_event = -1;
-        let mut last_page = -1;
+    }
 
-        for PatchText {
-            event,
-            page,
-            command: _,
-            has_portrait: _,
-            ignore_overflow: _,
-            original,
-            patched,
-        } in texts
-        {
-            if let Some(page) = page {
-                if last_event != *event || last_page != *page {
-                    output_original.push_str(&format!(
-                        "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
-                    ));
-                    output_patched.push_str(&format!(
-                        "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
-                    ));
-                }
+    for key in Patch::get_sorted_text_keys(&texts_table) {
+        let texts = texts_table
+            .get(key)
+            .expect("Invalid Key! extract_text -> Patch::get_sorted_text_keys()");
+        let (event, page) = key;
 
-                last_event = *event;
-                last_page = *page;
-            } else {
-                if last_event != *event {
-                    output_original
-                        .push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
-                    output_patched
-                        .push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
-                }
+        if let Some(page) = page {
+            output_original.push_str(&format!(
+                "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
+            ));
+            output_patched.push_str(&format!(
+                "\n==========[ Event #{event} / Page #{page} ]==========\n\n"
+            ));
+        } else {
+            output_original.push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
+            output_patched.push_str(&format!("\n==========[ Event #{event} ]==========\n\n"));
+        }
 
-                last_event = *event;
-            }
+        for text in texts {
+            let original = &text.original;
+            let patched = &text.patched;
 
             if is_patched_identical_to_original && (original != patched) {
                 is_patched_identical_to_original = false;
             }
 
-            output_original.push_str(&clean_escaped_text(original, &character_names));
-            output_patched.push_str(&clean_escaped_text(patched, &character_names));
+            output_original.push_str(&clean_escaped_text(original, character_names));
+            output_patched.push_str(&clean_escaped_text(patched, character_names));
         }
     }
 
     let mut output = String::new();
-    output.push_str("#######################\n# Original (Dialogue) #\n#######################\n");
     output.push_str(&output_original);
 
     if !is_patched_identical_to_original {
-        output
-            .push_str("\n######################\n# Patched (Dialogue) #\n######################\n");
         output.push_str(&output_patched);
     }
 
@@ -1084,7 +1047,7 @@ pub fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>)
 
     let output = output.replace("\n", " ");
     let mut output = MULTI_SPACE_PATTERN.replace_all(&output, " ").to_string();
-    output.push_str("\n");
+    output.push('\n');
 
     output
 }

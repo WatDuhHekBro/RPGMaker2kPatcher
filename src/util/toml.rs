@@ -69,11 +69,9 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                 let commands = &**commands;
 
                                                 if commands.is_empty() {
-                                                    output_current_page
-                                                        .push_str(&format!("commands = []\n"));
+                                                    output_current_page.push_str("commands = []\n");
                                                 } else {
-                                                    output_current_page
-                                                        .push_str(&format!("commands = [\n"));
+                                                    output_current_page.push_str("commands = [\n");
                                                     let mut index = 0;
 
                                                     for LcfCommand {
@@ -87,20 +85,20 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                         index += 1;
                                                     }
 
-                                                    output_current_page.push_str(&format!("]\n"));
+                                                    output_current_page.push_str("]\n");
                                                 }
                                             }
                                         }
                                     }
 
-                                    output_current_page.push_str(&format!("\n"));
+                                    output_current_page.push('\n');
                                     output_pages.push_str(&output_current_page);
                                 }
                             }
                         }
                     }
 
-                    output_current_event.push_str("\n");
+                    output_current_event.push('\n');
                     output_current_event.push_str(&output_pages);
                     output_events.push_str(&output_current_event);
                     output_events.push_str("\n\n");
@@ -116,7 +114,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
 
     // Cleanup
     let mut output = output.trim_end().to_string();
-    output.push_str("\n");
+    output.push('\n');
 
     output
 }
@@ -503,9 +501,9 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                                 let mut output_commands = String::new();
 
                                 if commands.is_empty() {
-                                    output_commands.push_str(&format!("commands = []\n\n"));
+                                    output_commands.push_str("commands = []\n\n");
                                 } else {
-                                    output_commands.push_str(&format!("commands = [\n"));
+                                    output_commands.push_str("commands = [\n");
                                     let mut index = 0;
 
                                     for LcfCommand {
@@ -519,7 +517,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                                         index += 1;
                                     }
 
-                                    output_commands.push_str(&format!("]\n\n"));
+                                    output_commands.push_str("]\n\n");
                                 }
 
                                 output_commands
@@ -542,7 +540,7 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
 
     // Cleanup
     let mut output = output.trim_end().to_string();
-    output.push_str("\n");
+    output.push('\n');
 
     output
 }
@@ -571,12 +569,12 @@ pub fn generate_toml_maptree(maptree: &LcfMapTree) -> String {
             output.push_str(&line);
         }
 
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Cleanup
     let mut output = output.trim_end().to_string();
-    output.push_str("\n");
+    output.push('\n');
 
     output
 }
@@ -672,9 +670,9 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             output.push_str(&format!("replace_commands_to = {replace_commands_to}\n"));
 
             if commands.is_empty() {
-                output.push_str(&format!("commands = []\n\n"));
+                output.push_str("commands = []\n\n");
             } else {
-                output.push_str(&format!("commands = [\n"));
+                output.push_str("commands = [\n");
 
                 for LcfCommand {
                     code,
@@ -688,7 +686,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
                     ));
                 }
 
-                output.push_str(&format!("]\n\n"));
+                output.push_str("]\n\n");
             }
         }
     }
@@ -709,7 +707,7 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
 
     // Cleanup
     let mut output = output.trim_end().to_string();
-    output.push_str("\n");
+    output.push('\n');
 
     output
     //toml::to_string(patch).unwrap()

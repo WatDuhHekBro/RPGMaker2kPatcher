@@ -4,7 +4,20 @@
 
 ***🚧 TODO: Under Construction 🚧***
 
-Dump
+### Installation
+
+...
+
+### Project Setup
+
+...
+
+### Project Workflow
+
+...
+
+### Dump
+
 ```
 How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to project or general?
 - Rpgmk readme: What each option does specifically and why you'd want to do it.
@@ -17,6 +30,7 @@ How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to 
 
 Workflow:
 - Make sure to binary identical, git repo, ignore_overflow if necessary or a [[splice-commands]] for leading newlines
+- Basically, how to use (from existing, and from scratch - two sections)
 ```
 
 ## CLI Usage
@@ -25,13 +39,15 @@ Workflow:
 - `rpgmaker2kpatcher decompile`: Generates TOML representations for `LcfMapUnit`s
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_REFERENCE`
 - `rpgmaker2kpatcher generatePatches`: Generates TOML patches to apply to `LcfMapUnit`s
+    - **Alias:** `rpgmaker2kpatcher generate`
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE`
 - `rpgmaker2kpatcher applyPatches`: Applies TOML patches to `LcfMapUnit`s and generates patched files in another directory
+    - **Alias:** `rpgmaker2kpatcher apply`
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE` and `PATH_TO_PATCHED`
     - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
-- `rpgmaker2kpatcher extractText`: Cleans and extracts all text to a separate text file.
+- `rpgmaker2kpatcher preview`: Cleans and extracts all text to a separate text file, generates HTML previews of text boxes for easier debugging, and generates an HTML file named `report.html` for any overflowing lines.
     - Uses `PATH_TO_ORIGINAL` (for the database) and `PATH_TO_WORKSPACE`
-    - Optionally uses `PATH_TO_EXTRACTED_TEXT`
+    - Optionally uses `PATH_TO_PREVIEW`
 - `rpgmaker2kpatcher importLegacyPatches`: Convert old JSON patches to the new TOML patches
     - Uses `PATH_TO_WORKSPACE` and `PATH_TO_WORKSPACE_LEGACY`
 
@@ -40,18 +56,19 @@ Workflow:
 - `PATH_TO_REFERENCE`: Location of TOML maps. Do not commit this to version control.
 - `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
 - `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
-- `PATH_TO_WORKSPACE_LEGACY`: Root folder of the patched RPGMaker2000 game.
-- `PATH_TO_EXTRACTED_TEXT`: Optionally redirect the location of extracted text (instead of the `PATH_TO_WORKSPACE`).
+- `PATH_TO_PREVIEW`: Optionally redirect the location of extracted text, HTML dialogue previews, and the HTML overflow report (instead of the `PATH_TO_WORKSPACE`).
+- `PATH_TO_WORKSPACE_LEGACY`: Location of the old JSON patches.
 
 ## Code Organization
 
 - `structs/`: The main folder to look at to understand each decoded structure
 - `types/`: Assistant binrw types for `structs/`, notably 1-5 byte dynamic integer
-- `wrappers/`: Assistant structures for `structs/` for complex operations (such as a u8 preceded by a 1-5 byte dynamic integer)
 
 
 
 # Clipboard / Current Status / Goals
+
+**Current Commit:** `a`
 
 - Clean up documentation and usage
 - If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
@@ -83,6 +100,23 @@ Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big a
 - Dialogue punctuation
 
 **TODO:** `cargo clippy`
+
+More
+- Dialogue cleanup: `fn advance_???() -> ParsingMode`
+- Dialogue only splits if it's one line, so by setting `ignore_overflow` on, you both ignore the error as well as preserve that one line property.
+    - Maybe trailing newline because auto vs manual line?
+    - So like `disable_auto_splitting` field calculated on Patch read
+
+Basically:
+```toml
+# This is an auto-generated single line
+patched = '''
+Single line.
+'''
+# While this is an opt-in single line. Programmatic difference of trailing newline.
+patched = '''Single line.'''
+# Recommended to opt-in to all line wrap so you can preview it to see how it looks before you ship it.
+```
 
 ## Edge Cases
 

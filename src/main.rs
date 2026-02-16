@@ -15,8 +15,8 @@ fn main() {
     let path_to_reference = env::var("PATH_TO_REFERENCE");
     let path_to_workspace = env::var("PATH_TO_WORKSPACE");
     let path_to_patched = env::var("PATH_TO_PATCHED");
+    let path_to_preview = env::var("PATH_TO_PREVIEW");
     let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY");
-    let path_to_extracted_text = env::var("PATH_TO_EXTRACTED_TEXT");
 
     // CLI Arguments
     let args: Vec<String> = env::args().collect();
@@ -35,14 +35,14 @@ fn main() {
                 )
                 .unwrap();
             }
-            "generatePatches" => {
+            "generatePatches" | "generate" => {
                 let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
 
                 file_operations::bulk_generate_toml_patches(&path_to_original, &path_to_workspace)
                     .unwrap();
             }
-            "applyPatches" => {
+            "applyPatches" | "apply" => {
                 let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
                 let path_to_patched = path_to_patched.expect(".env PATH_TO_PATCHED missing!");
@@ -54,15 +54,15 @@ fn main() {
                 )
                 .unwrap();
             }
-            "extractText" => {
+            "preview" => {
                 let path_to_original = path_to_original.expect(".env PATH_TO_ORIGINAL missing!");
                 let path_to_workspace = path_to_workspace.expect(".env PATH_TO_WORKSPACE missing!");
-                let path_to_extracted_text = path_to_extracted_text.ok();
+                let path_to_preview = path_to_preview.ok();
 
-                file_operations::bulk_extract_text(
+                file_operations::bulk_generate_previews(
                     &path_to_original,
                     &path_to_workspace,
-                    path_to_extracted_text,
+                    path_to_preview,
                 )
                 .unwrap();
             }
@@ -198,7 +198,7 @@ fn main() {
             }
         },
         None => {
-            println!("Available commands: decompile, generatePatches, applyPatches, extractText, importLegacyPatches");
+            println!("Available commands: decompile, generatePatches / generate, applyPatches / apply, preview, importLegacyPatches");
         }
     }
 }

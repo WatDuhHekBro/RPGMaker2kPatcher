@@ -292,19 +292,19 @@ pub fn bulk_apply_toml_patches<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>
     Ok(())
 }
 
-pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
+pub fn bulk_generate_previews<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     path_to_original: P1,
     path_to_workspace: P2,
-    path_to_extracted_text: Option<P3>,
+    path_to_preview: Option<P3>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk extracting text...");
 
-    let path_to_extracted_text = match path_to_extracted_text {
-        Some(path_to_extracted_text) => path_to_extracted_text.as_ref().to_path_buf(),
-        None => path_to_workspace.as_ref().join("extracted-text"),
+    let path_to_preview = match path_to_preview {
+        Some(path_to_preview) => path_to_preview.as_ref().to_path_buf(),
+        None => path_to_workspace.as_ref().join("previews"),
     };
     // NOTE: Don't forget to create the leading directories if needed!
-    fs::create_dir_all(&path_to_extracted_text)?;
+    fs::create_dir_all(&path_to_preview)?;
 
     // You need to read the database before reading any maps for the character names!
     let path_to_database = path_to_original.as_ref().join("RPG_RT.ldb");
@@ -318,12 +318,12 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     patch.trim_dialogue_ending_newline();
 
     fs::write(
-        &path_to_extracted_text.join("Database.patch.txt"),
+        path_to_preview.join("Database.patch.txt"),
         patch.extract_text(&character_names),
     )?;
 
     // Don't forget to write the shared CSS file!
-    fs::write(path_to_extracted_text.join("style.css"), CSS_STRING)?;
+    fs::write(path_to_preview.join("style.css"), CSS_STRING)?;
 
     // Extremely janky mutable reference in order to not have to parse Dialogue all over again
     let mut overflow_list: Vec<OverflowEntry> = Vec::new();
@@ -347,12 +347,12 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
                     .expect("If Some(extension) exists, why doesn't file_prefix exist?!");
 
                 // "/path/to/workspace/extracted/Map0134.patch.txt"
-                let mut text_path = path_to_extracted_text.join(file_prefix);
+                let mut text_path = path_to_preview.join(file_prefix);
                 text_path.set_extension("patch.txt");
                 fs::write(&text_path, patch.extract_text(&character_names))?;
 
                 // "/path/to/workspace/extracted/Map0134.patch.html"
-                let mut html_path = path_to_extracted_text.join(file_prefix);
+                let mut html_path = path_to_preview.join(file_prefix);
                 html_path.set_extension("patch.html");
                 fs::write(
                     &html_path,
@@ -369,7 +369,7 @@ pub fn bulk_extract_text<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
 
     // Create "report.html"
     fs::write(
-        path_to_extracted_text.join("report.html"),
+        path_to_preview.join("report.html"),
         generate_overflow_html_preview(&overflow_list),
     )?;
 

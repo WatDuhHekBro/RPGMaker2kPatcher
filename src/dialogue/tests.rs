@@ -15,7 +15,7 @@ mod tests {
         character_names.insert(2, "Cibon".into());
         character_names.insert(3, "Soko".into());
 
-        let dialogue = Dialogue::from(text, has_portrait, &character_names);
+        let dialogue = Dialogue::from(text, has_portrait, &character_names, true);
         //println!("{dialogue:?}");
 
         let output = dialogue.processed_lines.join("\n");
@@ -190,7 +190,7 @@ geheilt.";
     #[should_panic]
     fn should_warn_on_portrait_overflow() {
         let text = r"\c[13]Red-Haired Woman\c[0]:\s[6] Seldan...\. Don't you notice...\. how we're walking in a circle?\. Don't you see...\. how each victory only brings more suffering?\.\.\^ tes";
-        let dialogue = Dialogue::from(text, true, &HashMap::new());
+        let dialogue = Dialogue::from(text, true, &HashMap::new(), true);
         assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 
@@ -198,7 +198,7 @@ geheilt.";
     #[should_panic]
     fn should_warn_on_non_portrait_overflow() {
         let text = r"\c[10]Funkdurchsage\c[0]: Ist Ihnen bewusst, was Sie da machen?!\. Das ist blanker SELBSTMORD!\. Selbst mit dem Vel-System werden Sie nicht im Alleingang gegen eine ganze Armee bestehen können! sample text";
-        let dialogue = Dialogue::from(text, false, &HashMap::new());
+        let dialogue = Dialogue::from(text, false, &HashMap::new(), true);
         assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 
@@ -208,7 +208,7 @@ geheilt.";
         let text = r"\c[10]Silkia\c[0]: Anyways.\. Come back
 safely,\. this time the assignment certai
 won't be as easy as before.";
-        let dialogue = Dialogue::from(text, true, &HashMap::new());
+        let dialogue = Dialogue::from(text, true, &HashMap::new(), true);
         assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 
@@ -217,7 +217,7 @@ won't be as easy as before.";
     fn should_warn_on_non_portrait_existing_line_overflow() {
         let text = r"\c[10]Announcer:\C[0]\S[1]\s[6] Alright, here comes some sample text inn
 it m8?!";
-        let dialogue = Dialogue::from(text, false, &HashMap::new());
+        let dialogue = Dialogue::from(text, false, &HashMap::new(), true);
         assert!(dialogue.check_if_out_of_bounds().is_none());
     }
 
@@ -232,7 +232,7 @@ it m8?!";
 (\n[36]\n[37]\n[38]\n[39]\n[40]\n[41]\n[42])";
 
         // Copied and modified because it'll always be out of the character limit
-        let dialogue = Dialogue::from(text, false, &HashMap::new());
+        let dialogue = Dialogue::from(text, false, &HashMap::new(), true);
 
         let output = dialogue.processed_lines.join("\n");
         assert_eq!(output, expected_text);

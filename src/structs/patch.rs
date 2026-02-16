@@ -101,10 +101,13 @@ impl Patch {
                 );
             }
 
+            // Ignore the code below, "ignore_overflow" should NOT affect the lines,
+            // because you already determine that via the trailing newline.
+            // -----
             // Regardless of the auto-detection above, user's choice overrides the line wrap setting
-            if let Some(ignore_overflow) = dialogue.ignore_overflow {
+            /*if let Some(ignore_overflow) = dialogue.ignore_overflow {
                 dialogue.should_use_custom_line_wrapping = !ignore_overflow;
-            }
+            }*/
         }
     }
 

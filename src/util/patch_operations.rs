@@ -387,14 +387,13 @@ pub fn apply_patch_map(
             .expect("Commands should exist!");
 
         // Get split lines
-        let patched_lines = if *should_use_custom_line_wrapping {
-            let has_portrait = has_portrait.unwrap_or(false);
-            let dialogue = Dialogue::from(patched, has_portrait, character_names);
-            dialogue.processed_lines
-        } else {
-            let patched_lines: Vec<&str> = patched.split("\n").collect();
-            patched_lines.iter().map(|line| line.to_string()).collect()
-        };
+        let has_portrait = has_portrait.unwrap_or(false);
+        let (patched_lines, _) = Dialogue::get_split_lines(
+            patched,
+            has_portrait,
+            character_names,
+            *should_use_custom_line_wrapping,
+        );
 
         splice_dialogue_and_update_offsets(
             commands,
@@ -571,14 +570,13 @@ pub fn apply_patch_database(
             .expect("Commands should exist!");
 
         // Get split lines
-        let patched_lines = if *should_use_custom_line_wrapping {
-            let has_portrait = has_portrait.unwrap_or(false);
-            let dialogue = Dialogue::from(patched, has_portrait, character_names);
-            dialogue.processed_lines
-        } else {
-            let patched_lines: Vec<&str> = patched.split("\n").collect();
-            patched_lines.iter().map(|line| line.to_string()).collect()
-        };
+        let has_portrait = has_portrait.unwrap_or(false);
+        let (patched_lines, _) = Dialogue::get_split_lines(
+            patched,
+            has_portrait,
+            character_names,
+            *should_use_custom_line_wrapping,
+        );
 
         splice_dialogue_and_update_offsets(
             commands,

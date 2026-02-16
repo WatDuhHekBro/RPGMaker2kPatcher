@@ -188,18 +188,55 @@ impl Dialogue {
         text: S,
         has_portrait: bool,
         character_names: &HashMap<i32, String>,
+        should_use_custom_line_wrapping: bool,
     ) -> Dialogue {
         let fragments = Dialogue::parse_into_fragments(text);
         //println!("{fragments:?}");
 
-        let (processed_lines, processed_lines_pretty) =
-            Dialogue::render_to_auto_wrapped_lines(&fragments, has_portrait, character_names);
+        let (processed_lines, processed_lines_pretty) = Dialogue::render_to_auto_wrapped_lines(
+            &fragments,
+            has_portrait,
+            character_names,
+            should_use_custom_line_wrapping,
+        );
 
         Dialogue {
             has_portrait,
             processed_lines,
             processed_lines_pretty,
         }
+    }
+
+    // This method fully ensures that the binary identical version will be returned unless opt-in
+    // Because if you opt out, you fully bypass the Dialogue custom parsing/wrapping
+    // -----
+    // Note that this is to generate ORIGINAL text, with all the escape characters
+    // If you want to then generate a preview out of this, you do NOT modify this function directly,
+    // you instead parse it again.
+    pub fn get_split_lines(
+        patched: &String,
+        has_portrait: bool,
+        character_names: &HashMap<i32, String>,
+        should_use_custom_line_wrapping: bool,
+    ) -> (Vec<String>, Option<String>) {
+        /*if should_use_custom_line_wrapping {
+            let dialogue = Dialogue::from(patched, has_portrait, character_names, should_use_custom_line_wrapping);
+            let error_message = dialogue.check_if_out_of_bounds();
+            (dialogue.processed_lines, error_message)
+        } else {
+            let patched_lines: Vec<&str> = patched.split("\n").collect();
+            let patched_lines: Vec<String> = patched_lines.iter().map(|line| line.to_string()).collect();
+            (patched_lines, None)
+        }*/
+
+        let dialogue = Dialogue::from(
+            patched,
+            has_portrait,
+            character_names,
+            should_use_custom_line_wrapping,
+        );
+        let error_message = dialogue.check_if_out_of_bounds();
+        (dialogue.processed_lines, error_message)
     }
 
     fn parse_into_fragments<S: AsRef<str> + Display>(text: S) -> Vec<DialogueFragment> {
@@ -479,6 +516,7 @@ impl Dialogue {
     fn get_already_split_lines_if_exists(
         fragments: &Vec<DialogueFragment>,
         character_names: &HashMap<i32, String>,
+        should_use_custom_line_wrapping: bool,
     ) -> Option<(Vec<String>, Vec<String>)> {
         let mut lines: Vec<String> = Vec::new();
         let mut current_line = String::new();
@@ -520,7 +558,7 @@ impl Dialogue {
             lines_pretty.push(current_line_pretty);
         }
 
-        if has_existing_newlines {
+        if has_existing_newlines || !should_use_custom_line_wrapping {
             Some((lines, lines_pretty))
         } else {
             None
@@ -531,14 +569,18 @@ impl Dialogue {
         fragments: &Vec<DialogueFragment>,
         has_portrait: bool,
         character_names: &HashMap<i32, String>,
+        should_use_custom_line_wrapping: bool,
     ) -> (Vec<String>, Vec<String>) {
         let line_length_limit = match has_portrait {
             true => DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
             false => DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT,
         };
 
-        let existing_lines =
-            Dialogue::get_already_split_lines_if_exists(fragments, character_names);
+        let existing_lines = Dialogue::get_already_split_lines_if_exists(
+            fragments,
+            character_names,
+            should_use_custom_line_wrapping,
+        );
         if let Some(existing_lines) = existing_lines {
             return existing_lines;
         }

@@ -297,7 +297,7 @@ pub fn bulk_generate_previews<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>
     path_to_workspace: P2,
     path_to_preview: Option<P3>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Bulk extracting text...");
+    println!("Bulk generating text and HTML previews...");
 
     let path_to_preview = match path_to_preview {
         Some(path_to_preview) => path_to_preview.as_ref().to_path_buf(),

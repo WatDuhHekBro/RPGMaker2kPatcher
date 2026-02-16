@@ -14,10 +14,7 @@
 use crate::util::constants::{
     DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
 };
-use std::{
-    collections::HashMap,
-    fmt::{self, Display},
-};
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
 pub struct Dialogue {
@@ -43,21 +40,24 @@ pub enum DialogueFragment {
     /////////////
     // Control //
     /////////////
-    Delay,        // \.
-    BigDelay,     // \|
-    AutoContinue, // \^
-    Backslash,    // \\
+    Delay,          // \.
+    BigDelay,       // \|
+    AutoContinue,   // \^
+    Backslash,      // \\
+    ZeroDelayStart, // \>
+    ZeroDelayStop,  // \<
     UnknownControl(char),
     ///////////////////////
     // Control w/ Number //
     ///////////////////////
     // The original character used should be readily available just in case there's a difference between uppercase and lowercase
-    SetColor(char, AbstractNumber),
-    SetSpeed(char, AbstractNumber),
-    CharacterName(char, AbstractNumber),
-    Variable(char, AbstractNumber),
+    // The string is kept, only converted into a number when necessary.
+    SetColor(char, String),
+    SetSpeed(char, String),
+    CharacterName(char, String),
+    Variable(char, String),
     // preview.js: ['c', 'i', 'n', 'p', 's', 'v']
-    UnknownControlWithNumber(char, AbstractNumber),
+    UnknownControlWithNumber(char, String),
 }
 
 impl DialogueFragment {
@@ -72,6 +72,8 @@ impl DialogueFragment {
             DialogueFragment::BigDelay => String::from(r"\|"),
             DialogueFragment::AutoContinue => String::from(r"\^"),
             DialogueFragment::Backslash => String::from(r"\\"),
+            DialogueFragment::ZeroDelayStart => String::from(r"\>"),
+            DialogueFragment::ZeroDelayStop => String::from(r"\<"),
             DialogueFragment::UnknownControl(c) => format!("\\{c}"),
             // Control w/ Number
             DialogueFragment::SetColor(c, number) => format!("\\{c}[{number}]"),
@@ -97,6 +99,8 @@ impl DialogueFragment {
             DialogueFragment::BigDelay => String::new(),
             DialogueFragment::AutoContinue => String::new(),
             DialogueFragment::Backslash => String::from(r"\\"),
+            DialogueFragment::ZeroDelayStart => String::new(),
+            DialogueFragment::ZeroDelayStop => String::new(),
             DialogueFragment::UnknownControl(_) => String::new(),
             // Control w/ Number
             DialogueFragment::SetColor(_, _) => String::new(),
@@ -119,19 +123,13 @@ impl DialogueFragment {
 pub enum ParsingMode {
     Normal,
     Control,
+    // The character name can be nested with a variable actually
+    // "\c[\v[123]]"
     ControlWithNumber(ParsingModeProgress),
 }
 
 #[derive(Clone, Copy)]
 pub enum ParsingModeProgress {
-    Start,
-    Main,
-    // Assumption: Only 1 level of nesting
-    Nested(ParsingModeProgressNested),
-}
-
-#[derive(Clone, Copy)]
-pub enum ParsingModeProgressNested {
     Start,
     Main,
 }
@@ -143,39 +141,6 @@ pub enum ControlWithNumberType {
     CharacterName(char),
     Variable(char),
     Unknown(char),
-}
-
-// The character name can be nested with a variable actually
-// "\c[\v[123]]"
-// So you need to create an abstract number case
-// I assume \v[#] is a number
-// -----
-// NOTE: For source text errors like "\c[c]", it'll instead spit out "\c[0]" and print a warning to the console.
-#[derive(Debug)]
-pub enum AbstractNumber {
-    // "\c[123]"
-    Normal(i32),
-    // "\c[\v[123]]"
-    Variable(i32),
-}
-
-impl AbstractNumber {
-    fn get_number(&self) -> &i32 {
-        match self {
-            AbstractNumber::Normal(number) => number,
-            AbstractNumber::Variable(number) => number,
-        }
-    }
-}
-
-impl Display for AbstractNumber {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = match self {
-            AbstractNumber::Normal(number) => number.to_string(),
-            AbstractNumber::Variable(number) => format!("\\v[{number}]"),
-        };
-        write!(formatter, "{output}")
-    }
 }
 
 impl Dialogue {
@@ -208,7 +173,7 @@ impl Dialogue {
         let mut parsed: Vec<DialogueFragment> = Vec::new();
         let mut mode = ParsingMode::Normal;
         let mut tmp_text: String = String::new();
-        let mut tmp_number: i32 = 0;
+        let mut tmp_nesting_level: i32 = 0;
         let mut tmp_type: ControlWithNumberType = ControlWithNumberType::Unknown('?');
         let mut chars_iterator = text.as_ref().chars().peekable();
 
@@ -298,6 +263,14 @@ impl Dialogue {
                         parsed.push(DialogueFragment::Backslash);
                         mode = ParsingMode::Normal;
                     }
+                    '>' => {
+                        parsed.push(DialogueFragment::ZeroDelayStart);
+                        mode = ParsingMode::Normal;
+                    }
+                    '<' => {
+                        parsed.push(DialogueFragment::ZeroDelayStop);
+                        mode = ParsingMode::Normal;
+                    }
                     // You don't know if an unknown control type is of format "\x" or "\x[123]", so test both
                     _ => {
                         // You need to peek at the next character and not consume it
@@ -327,161 +300,54 @@ impl Dialogue {
                         // "\C{2]Gagné: 100 points d'expérience pour"
                         // I can't believe it! It's another stupid edge case!
                         if character == '[' || character == '{' {
-                            tmp_number = 0;
-                            let mut is_nested = false;
-
-                            // "\c[\v[123]]"
-                            //     ^
-                            let next_character = chars_iterator.peek();
-
-                            if let Some(next_character) = next_character {
-                                if *next_character == '\\' {
-                                    is_nested = true;
-                                    chars_iterator.next();
-                                }
-                            }
-
-                            if is_nested {
-                                // "\c[\v[123]]"
-                                //      ^
-                                let next_character = chars_iterator.peek();
-
-                                if let Some(next_character) = next_character {
-                                    if *next_character == 'v' {
-                                        chars_iterator.next();
-                                    } else {
-                                        panic!("Invalid \\x[\\v[#]] pattern for:\n{text}");
-                                    }
-                                }
-
-                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Nested(
-                                    ParsingModeProgressNested::Start,
-                                ))
-                            } else {
-                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
-                            }
+                            tmp_nesting_level = 0;
+                            tmp_text = String::new();
+                            mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Main)
                         } else {
                             panic!("Invalid \\x[#] pattern for:\n{text}");
                         }
                     }
                     ParsingModeProgress::Main => {
-                        if character.is_ascii_digit() {
-                            let digit: u8 = character as u8 - 0x30;
-                            let digit = digit as i32;
-
-                            // 3 -> 38 ===> 3 * 10 + 8
-                            tmp_number = tmp_number * 10 + digit;
+                        if character == '[' {
+                            // "\c[\v[123]]"
+                            //       ^
+                            tmp_text.push(character);
+                            tmp_nesting_level += 1;
                         } else if character == ']' {
-                            let fragment_type = match tmp_type {
-                                ControlWithNumberType::SetColor(character) => {
-                                    DialogueFragment::SetColor(
-                                        character,
-                                        AbstractNumber::Normal(tmp_number),
-                                    )
-                                }
-                                ControlWithNumberType::SetSpeed(character) => {
-                                    DialogueFragment::SetSpeed(
-                                        character,
-                                        AbstractNumber::Normal(tmp_number),
-                                    )
-                                }
-                                ControlWithNumberType::CharacterName(character) => {
-                                    DialogueFragment::CharacterName(
-                                        character,
-                                        AbstractNumber::Normal(tmp_number),
-                                    )
-                                }
-                                ControlWithNumberType::Variable(character) => {
-                                    DialogueFragment::Variable(
-                                        character,
-                                        AbstractNumber::Normal(tmp_number),
-                                    )
-                                }
-                                ControlWithNumberType::Unknown(character) => {
-                                    DialogueFragment::UnknownControlWithNumber(
-                                        character,
-                                        AbstractNumber::Normal(tmp_number),
-                                    )
-                                }
-                            };
-                            parsed.push(fragment_type);
-                            mode = ParsingMode::Normal;
-                        } else {
-                            eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
-                        }
-                    }
-                    ParsingModeProgress::Nested(nested_progress) => match nested_progress {
-                        ParsingModeProgressNested::Start => {
-                            if character == '[' {
-                                tmp_number = 0;
-                                mode = ParsingMode::ControlWithNumber(ParsingModeProgress::Nested(
-                                    ParsingModeProgressNested::Main,
-                                ))
+                            // "\c[\v[123]]"
+                            //           ^
+                            if tmp_nesting_level > 0 {
+                                tmp_text.push(character);
+                                tmp_nesting_level -= 1;
                             } else {
-                                eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
-                            }
-                        }
-                        ParsingModeProgressNested::Main => {
-                            if character.is_ascii_digit() {
-                                let digit: u8 = character as u8 - 0x30;
-                                let digit = digit as i32;
-
-                                // 3 -> 38 ===> 3 * 10 + 8
-                                tmp_number = tmp_number * 10 + digit;
-                            } else if character == ']' {
                                 let fragment_type = match tmp_type {
                                     ControlWithNumberType::SetColor(character) => {
-                                        DialogueFragment::SetColor(
-                                            character,
-                                            AbstractNumber::Variable(tmp_number),
-                                        )
+                                        DialogueFragment::SetColor(character, tmp_text)
                                     }
                                     ControlWithNumberType::SetSpeed(character) => {
-                                        DialogueFragment::SetSpeed(
-                                            character,
-                                            AbstractNumber::Variable(tmp_number),
-                                        )
+                                        DialogueFragment::SetSpeed(character, tmp_text)
                                     }
                                     ControlWithNumberType::CharacterName(character) => {
-                                        DialogueFragment::CharacterName(
-                                            character,
-                                            AbstractNumber::Variable(tmp_number),
-                                        )
+                                        DialogueFragment::CharacterName(character, tmp_text)
                                     }
                                     ControlWithNumberType::Variable(character) => {
-                                        DialogueFragment::Variable(
-                                            character,
-                                            AbstractNumber::Variable(tmp_number),
-                                        )
+                                        DialogueFragment::Variable(character, tmp_text)
                                     }
                                     ControlWithNumberType::Unknown(character) => {
                                         DialogueFragment::UnknownControlWithNumber(
-                                            character,
-                                            AbstractNumber::Variable(tmp_number),
+                                            character, tmp_text,
                                         )
                                     }
                                 };
+                                tmp_text = String::new();
                                 parsed.push(fragment_type);
                                 mode = ParsingMode::Normal;
-
-                                // "\c[\v[123]]"
-                                //           ^
-                                let next_character = chars_iterator.peek();
-
-                                if let Some(next_character) = next_character {
-                                    if *next_character == ']' {
-                                        chars_iterator.next();
-                                    } else {
-                                        eprintln!(
-                                            "WARNING: Invalid \\x[\\v[#]] pattern for:\n{text}"
-                                        );
-                                    }
-                                }
-                            } else {
-                                eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
                             }
+                        } else {
+                            //eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
+                            tmp_text.push(character);
                         }
-                    },
+                    }
                 },
             }
         }
@@ -524,10 +390,11 @@ impl Dialogue {
                     ends_with_trailing_newline = true;
                 }
                 DialogueFragment::CharacterName(_, character_name_id) => {
-                    current_line_pretty.push_str(
-                        &fragment
-                            .render_display(character_names.get(character_name_id.get_number())),
-                    );
+                    let character_name_id = character_name_id.parse::<i32>().ok();
+                    let character_name = character_name_id
+                        .and_then(|character_name_id| character_names.get(&character_name_id));
+
+                    current_line_pretty.push_str(&fragment.render_display(character_name));
                     current_line.push_str(&fragment.render());
                 }
                 fragment => {
@@ -584,7 +451,11 @@ impl Dialogue {
             // All line wrap operations go off the assumption of the displayed string
             let fragment_text_pretty =
                 if let DialogueFragment::CharacterName(_, character_name_id) = fragment {
-                    fragment.render_display(character_names.get(character_name_id.get_number()))
+                    let character_name_id = character_name_id.parse::<i32>().ok();
+                    let character_name = character_name_id
+                        .and_then(|character_name_id| character_names.get(&character_name_id));
+
+                    fragment.render_display(character_name)
                 } else {
                     fragment.render_display(None)
                 };

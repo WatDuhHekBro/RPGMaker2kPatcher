@@ -305,4 +305,53 @@ sample text";
         let expected_cleaned_text = expected_text;
         verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
     }
+
+    // Fixes binary inconsistencies, producing a ton of noise when diffing
+    #[test]
+    fn preserves_leading_zeroes_in_control() {
+        let text = r"\c[0010]Jorn:\c[0000] Wieso verwendest du Trottel
+auch den \s[06]VORDEREINGANG?!";
+        let expected_text = text;
+        let expected_cleaned_text = r"Jorn: Wieso verwendest du Trottel
+auch den VORDEREINGANG?!";
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn should_not_perform_unnecessary_lookahead_for_angle_brackets() {
+        let text = r"\>EP     \n[30]\v[30]
+\>[Geld] \n[31]\v[31]";
+        let expected_text = text;
+        let expected_cleaned_text = r"EP     \n[30]\v[30]
+[Geld] \n[31]\v[31]";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }
+
+    // Edge Case: Aedemphia Map0516
+    #[test]
+    fn can_handle_curly_brace_start() {
+        let text = r"\C[2]Reçu: Collier de joyaux!\C[0] (Objets/autres)
+\C{2]Gagné: 100 points d'expérience pour
+avoir réussi le prendre de force sans payer!\C[0]";
+        let expected_text = r"\C[2]Reçu: Collier de joyaux!\C[0] (Objets/autres)
+\C[2]Gagné: 100 points d'expérience pour
+avoir réussi le prendre de force sans payer!\C[0]";
+        let expected_cleaned_text = r"Reçu: Collier de joyaux! (Objets/autres)
+Gagné: 100 points d'expérience pour
+avoir réussi le prendre de force sans payer!";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }
+
+    // Edge Case: Aedemphia Map1580
+    // Oh well, it's a jank setup on the creator's end.
+    // The only thing this tells you is roughly what to expect.
+    /*#[test]
+    fn can_handle_dangling_control() {
+        let text = r"C'est important pour moi.\.\.\S[5 S'il te plaît.";
+        //let expected_text = r"C'est important pour moi.\.\.\S[5] S'il te plaît.";
+        let expected_text = r"C'est important pour moi.\.\.5 S'il te plaît.";
+        //let expected_cleaned_text = r"C'est important pour moi. S'il te plaît.";
+        let expected_cleaned_text = r"C'est important pour moi.5 S'il te plaît.";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
+    }*/
 }

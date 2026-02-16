@@ -9,6 +9,7 @@
 // The special case of "\c[\v[123]]" iterates past multiple characters in one round.
 // -----
 // No idea how to split up the parsing function. It has an ungodly amount of nesting.
+// Potential Refactor: "fn advance_???() -> ParsingMode"
 
 use crate::util::constants::{
     DIALOGUE_BOX_MAX_LENGTH_NON_PORTRAIT, DIALOGUE_BOX_MAX_LENGTH_PORTRAIT,
@@ -362,7 +363,7 @@ impl Dialogue {
                         }
                     }
                     ParsingModeProgress::Main => {
-                        if character.is_digit(10) {
+                        if character.is_ascii_digit() {
                             let digit: u8 = character as u8 - 0x30;
                             let digit = digit as i32;
 
@@ -419,7 +420,7 @@ impl Dialogue {
                             }
                         }
                         ParsingModeProgressNested::Main => {
-                            if character.is_digit(10) {
+                            if character.is_ascii_digit() {
                                 let digit: u8 = character as u8 - 0x30;
                                 let digit = digit as i32;
 

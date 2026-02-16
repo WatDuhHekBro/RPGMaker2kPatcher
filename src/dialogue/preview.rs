@@ -218,9 +218,7 @@ pub fn generate_html_dialogue_box_preview(
             let (index, _) = line
                 .char_indices()
                 .nth(dialogue_box_length)
-                .expect(&format!(
-                    "There should be at least {dialogue_box_length} entries for this substring!"
-                ));
+                .unwrap_or_else(|| panic!("There should be at least {dialogue_box_length} entries for this substring!"));
 
             let line_in_bounds = &line[0..index];
             let line_out_of_bounds = &line[index..];
@@ -273,9 +271,9 @@ pub fn generate_html_text_box_preview(
         let (index, _) = line
             .char_indices()
             .nth(dialogue_box_length)
-            .expect(&format!(
-                "There should be at least {dialogue_box_length} entries for this substring!"
-            ));
+            .unwrap_or_else(|| {
+                panic!("There should be at least {dialogue_box_length} entries for this substring!")
+            });
 
         let line_in_bounds = &line[0..index];
         let line_out_of_bounds = &line[index..];

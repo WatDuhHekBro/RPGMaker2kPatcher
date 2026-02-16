@@ -58,10 +58,12 @@ impl BinWrite for PascalString {
         args: Self::Args<'_>,
     ) -> BinResult<()> {
         // Using String::len() will cause it to miscount the characters
-        let count: i32 = self.0.chars().count().try_into().expect(&format!(
-            "The length of the PascalString {} could not fit into an i32!",
-            self.0
-        ));
+        let count: i32 = self.0.chars().count().try_into().unwrap_or_else(|_| {
+            panic!(
+                "The length of the PascalString {} could not fit into an i32!",
+                self.0
+            )
+        });
 
         DynamicInteger(count).write_options(writer, endian, args)?;
 

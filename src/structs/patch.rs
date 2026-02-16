@@ -88,13 +88,13 @@ impl Patch {
                     dialogue.patched.push(c);
                 }
             }
-            if let None = char_that_should_be_newline_original {
+            if char_that_should_be_newline_original.is_none() {
                 println!(
                     "WARNING: No character was popped from original line! Was it empty?\n{}",
                     dialogue.original
                 );
             }
-            if let None = char_that_should_be_newline_patched {
+            if char_that_should_be_newline_patched.is_none() {
                 println!(
                     "WARNING: No character was popped from patched line! Was it empty?\n{}",
                     dialogue.patched
@@ -123,9 +123,7 @@ impl Patch {
             let key = (dialogue.event, dialogue.page);
 
             // Create entry if it hasn't reached this key yet
-            if !table.contains_key(&key) {
-                table.insert(key, Vec::new());
-            }
+            table.entry(key).or_insert_with(Vec::new);
 
             // Then work off the existing offsets table.
             let list = table
@@ -142,7 +140,7 @@ impl Patch {
         table: &'a HashMap<(i32, Option<i32>), Vec<&'a PatchDialogue>>,
     ) -> Vec<&'a (i32, Option<i32>)> {
         let mut keys: Vec<&(i32, Option<i32>)> = table.keys().collect();
-        keys.sort_by(|a, b| a.cmp(b));
+        keys.sort();
         keys
     }
 
@@ -158,9 +156,7 @@ impl Patch {
             let key = (text.event, text.page);
 
             // Create entry if it hasn't reached this key yet
-            if !table.contains_key(&key) {
-                table.insert(key, Vec::new());
-            }
+            table.entry(key).or_insert_with(Vec::new);
 
             // Then work off the existing offsets table.
             let list = table
@@ -177,12 +173,12 @@ impl Patch {
         table: &'a HashMap<(i32, Option<i32>), Vec<&'a PatchText>>,
     ) -> Vec<&'a (i32, Option<i32>)> {
         let mut keys: Vec<&(i32, Option<i32>)> = table.keys().collect();
-        keys.sort_by(|a, b| a.cmp(b));
+        keys.sort();
         keys
     }
 
     pub fn extract_text(&self, character_names: &HashMap<i32, String>) -> String {
-        patch_operations::extract_text(&self, character_names)
+        patch_operations::extract_text(self, character_names)
     }
 }
 

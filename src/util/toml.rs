@@ -72,22 +72,21 @@ pub fn generate_toml_map(map: &LcfMapUnit, disable_decompile_indexes: bool) -> S
                                                     output_current_page.push_str("commands = []\n");
                                                 } else {
                                                     output_current_page.push_str("commands = [\n");
-                                                    let mut index = 0;
 
-                                                    for LcfCommand {
-                                                        code,
-                                                        indent,
-                                                        text,
-                                                        parameters,
-                                                    } in &**commands
+                                                    for (index, command) in
+                                                        commands.iter().enumerate()
                                                     {
+                                                        let LcfCommand {
+                                                            code,
+                                                            indent,
+                                                            text,
+                                                            parameters,
+                                                        } = command;
                                                         if disable_decompile_indexes {
                                                             output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}],\n"));
                                                         } else {
                                                             output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
                                                         }
-
-                                                        index += 1;
                                                     }
 
                                                     output_current_page.push_str("]\n");
@@ -509,22 +508,20 @@ pub fn generate_toml_database(database: &LcfDataBase, disable_decompile_indexes:
                                     output_commands.push_str("commands = []\n\n");
                                 } else {
                                     output_commands.push_str("commands = [\n");
-                                    let mut index = 0;
 
-                                    for LcfCommand {
-                                        code,
-                                        indent,
-                                        text,
-                                        parameters,
-                                    } in &**commands
-                                    {
+                                    for (index, command) in commands.iter().enumerate() {
+                                        let LcfCommand {
+                                            code,
+                                            indent,
+                                            text,
+                                            parameters,
+                                        } = command;
+
                                         if disable_decompile_indexes {
                                             output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}],\n"));
                                         } else {
                                             output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
                                         }
-
-                                        index += 1;
                                     }
 
                                     output_commands.push_str("]\n\n");

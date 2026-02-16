@@ -69,4 +69,23 @@ mod tests {
         assert_eq!(keys[6], &(420, None));
         assert_eq!(keys[7], &(420, Some(2)));
     }
+
+    #[test]
+    fn assumption_toml_value_serialize_7f() {
+        let mut value = String::new();
+
+        serde::Serialize::serialize(
+            &String::from("as\\\\d\x7Ff\nasdf\nz"),
+            toml::ser::ValueSerializer::new(&mut value),
+        )
+        .unwrap();
+
+        assert_eq!(
+            value,
+            r#""""
+as\\\\d\u007Ff
+asdf
+z""""#
+        );
+    }
 }

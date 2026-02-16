@@ -40,10 +40,12 @@ impl BinWrite for U8Array {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<()> {
-        let count: i32 = self.0.len().try_into().expect(&format!(
-            "The length of the u8 array {:?} could not fit into an i32!",
-            self.0
-        ));
+        let count: i32 = self.0.len().try_into().unwrap_or_else(|_| {
+            panic!(
+                "The length of the u8 array {:?} could not fit into an i32!",
+                self.0
+            )
+        });
 
         DynamicInteger(count).write_options(writer, endian, args)?;
         self.0.write_options(writer, endian, args)?;

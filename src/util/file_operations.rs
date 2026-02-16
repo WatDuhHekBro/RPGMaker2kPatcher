@@ -35,24 +35,24 @@ where
 pub fn read_lcfmapunit<P: AsRef<Path>>(path: P) -> Result<LcfMapUnit, binrw::Error> {
     let file = fs::read(path)?;
     let mut reader = Cursor::new(file);
-    let map = LcfMapUnit::read_be(&mut reader);
-    map
+
+    LcfMapUnit::read_be(&mut reader)
 }
 
 // Assume that only one database exists, named "RPG_RT.ldb" in the same directory.
 pub fn read_lcfdatabase<P: AsRef<Path>>(path: P) -> Result<LcfDataBase, binrw::Error> {
     let file = fs::read(path).expect(ERROR_NO_FILE_DATABASE);
     let mut reader = Cursor::new(file);
-    let database = LcfDataBase::read_be(&mut reader);
-    database
+
+    LcfDataBase::read_be(&mut reader)
 }
 
 // Assume that only one map tree exists, named "RPG_RT.lmt" in the same directory.
 pub fn read_lcfmaptree<P: AsRef<Path>>(path: P) -> Result<LcfMapTree, binrw::Error> {
     let file = fs::read(path).expect(ERROR_NO_FILE_MAPTREE);
     let mut reader = Cursor::new(file);
-    let maptree = LcfMapTree::read_be(&mut reader);
-    maptree
+
+    LcfMapTree::read_be(&mut reader)
 }
 
 pub fn read_lcfmapunit_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(

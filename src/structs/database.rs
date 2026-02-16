@@ -55,15 +55,8 @@ impl LcfDataBase {
     }*/
 
     pub fn get_event_mut(&mut self, id: i32) -> Option<&mut LcfDataBaseGlobalEvent> {
-        self.get_events_mut().and_then(|events| {
-            for event in events {
-                if event.id == id {
-                    return Some(event);
-                }
-            }
-
-            None
-        })
+        self.get_events_mut()
+            .and_then(|events| events.iter_mut().find(|event| event.id == id))
     }
 
     pub fn extract_character_names(&self) -> HashMap<i32, String> {
@@ -93,11 +86,11 @@ impl LcfDataBase {
     }
 
     pub fn generate_toml_database(&self, disable_decompile_indexes: bool) -> String {
-        generate_toml_database(&self, disable_decompile_indexes)
+        generate_toml_database(self, disable_decompile_indexes)
     }
 
     pub fn generate_toml_patch(&self, game_title: &String) -> String {
-        let patch = Patch::generate_from_database(&self, game_title);
+        let patch = Patch::generate_from_database(self, game_title);
         generate_toml_patch(&patch)
     }
 

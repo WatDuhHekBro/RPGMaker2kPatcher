@@ -46,10 +46,12 @@ impl BinWrite for DynamicIntegerArray {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<()> {
-        let count: i32 = self.0.len().try_into().expect(&format!(
-            "The length of the DynamicInteger array {:?} could not fit into an i32!",
-            self.0
-        ));
+        let count: i32 = self.0.len().try_into().unwrap_or_else(|_| {
+            panic!(
+                "The length of the DynamicInteger array {:?} could not fit into an i32!",
+                self.0
+            )
+        });
 
         DynamicInteger(count).write_be(writer)?;
         self.0.write_options(writer, endian, args)?;

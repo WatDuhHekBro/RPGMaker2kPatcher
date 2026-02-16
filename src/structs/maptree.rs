@@ -38,7 +38,7 @@ impl LcfMapTree {
     }
 
     pub fn generate_toml_maptree(&self) -> String {
-        generate_toml_maptree(&self)
+        generate_toml_maptree(self)
     }
 }
 

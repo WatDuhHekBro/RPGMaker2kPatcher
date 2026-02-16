@@ -104,7 +104,6 @@ fn extract_dialogue_and_text_from_commands(
     character_names: &HashMap<i32, String>,
     game_title: &String,
 ) {
-    let mut command_index = 0;
     let mut start_index = 0;
     let mut last_command_code = -1;
     let mut current_dialogue_text = String::new();
@@ -119,7 +118,8 @@ fn extract_dialogue_and_text_from_commands(
     // HashMap<indent level, last portrait condition before branching>
     let mut last_portrait_condition_before_branching: HashMap<i32, bool> = HashMap::new();
 
-    for command in &commands.0 {
+    for (command_index, command) in commands.iter().enumerate() {
+        let command_index = command_index as i32;
         let current_command_code = *command.code;
         let current_command_indent = *command.indent;
 
@@ -198,18 +198,17 @@ fn extract_dialogue_and_text_from_commands(
                     // 22010 (Branch Else) indent+1
                     let indent_difference = current_command_indent - last_command_indent;
 
-                    if indent_difference == 1
+                    let can_infer_increasing_indent = indent_difference == 1
                         && (last_command_code == COMMAND_BRANCH_IF
                             || last_command_code == COMMAND_BRANCH_ELSE
                             || last_command_code == COMMAND_LOOP
                             || last_command_code == COMMAND_MULTIPLE_CHOICE_SELECTION
                             || last_command_code == COMMAND_TRANSACTION
-                            || last_command_code == COMMAND_NO_TRANSACTION)
-                    {
-                        None
-                    } else if indent_difference == -1
-                        && last_command_code == COMMAND_DECREASE_INDENT
-                    {
+                            || last_command_code == COMMAND_NO_TRANSACTION);
+                    let can_infer_decreasing_indent =
+                        indent_difference == -1 && last_command_code == COMMAND_DECREASE_INDENT;
+
+                    if can_infer_increasing_indent || can_infer_decreasing_indent {
                         None
                     } else {
                         Some(DynamicInteger(current_command_indent))
@@ -350,7 +349,6 @@ fn extract_dialogue_and_text_from_commands(
 
         last_command_code = current_command_code;
         last_command_indent = current_command_indent;
-        command_index += 1;
     }
 }
 
@@ -687,9 +685,9 @@ fn splice_dialogue_and_update_offsets(
     key: (i32, Option<i32>),
 ) {
     // Create offset entry if it hasn't worked on this key yet
-    if !offsets_table.contains_key(&key) {
-        offsets_table.insert(key, vec![0; commands.len()]);
-    }
+    offsets_table
+        .entry(key)
+        .or_insert_with(|| vec![0; commands.len()]);
 
     // Then work off the existing offsets table.
     let offsets = offsets_table
@@ -819,15 +817,15 @@ fn splice_dialogue_and_update_offsets(
         }
     }
 
-    for offsets_index in command_index..offsets.len() {
+    for (offsets_index, offset) in offsets.iter_mut().enumerate().skip(command_index) {
         // If the length_difference is negative, you need to take the distance from the command_index into account.
         // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
         // 0-0 = 0, 0-1 = -1, 0-2 = -2, 0-3 = -3
         if length_difference < 0 {
             let distance_from_original_index = (command_index as isize) - (offsets_index as isize);
-            offsets[offsets_index] += length_difference.max(distance_from_original_index as isize);
+            *offset += length_difference.max(distance_from_original_index);
         } else {
-            offsets[offsets_index] += length_difference;
+            *offset += length_difference;
         }
     }
 
@@ -843,16 +841,9 @@ fn splice_arbitrary_commands_and_update_offsets(
     key: (i32, Option<i32>),
 ) {
     // Create offset entry if it hasn't worked on this key yet
-    if !offsets_table.contains_key(&key) {
-        let commands_len = commands.len();
-        let mut offsets: Vec<isize> = Vec::with_capacity(commands_len);
-
-        for _ in 0..commands_len {
-            offsets.push(0);
-        }
-
-        offsets_table.insert(key, offsets);
-    }
+    offsets_table
+        .entry(key)
+        .or_insert_with(|| vec![0; commands.len()]);
 
     // Then work off the existing offsets table.
     let offsets = offsets_table
@@ -883,16 +874,20 @@ fn splice_arbitrary_commands_and_update_offsets(
         }
     }
 
-    for offsets_index in (replace_commands_from as usize)..offsets.len() {
+    for (offsets_index, offset) in offsets
+        .iter_mut()
+        .enumerate()
+        .skip(replace_commands_from as usize)
+    {
         // If the length_difference is negative, you need to take the distance from the command_index into account.
         // Event #75, lines 0-2 => 0 (diff = -2), offsets = [0, -1, -2, -2, -2, ...]
         // 0-0 = 0, 0-1 = -1, 0-2 = -2, 0-3 = -3
         if length_difference < 0 {
             let distance_from_original_index =
                 (replace_commands_from as isize) - (offsets_index as isize);
-            offsets[offsets_index] += length_difference.max(distance_from_original_index as isize);
+            *offset += length_difference.max(distance_from_original_index);
         } else {
-            offsets[offsets_index] += length_difference;
+            *offset += length_difference;
         }
     }
 
@@ -1003,7 +998,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
 }
 
 // Removes all escape characters and replaces \\n[#] with characters.
-pub fn clean_escaped_text(text: &String, character_names: &HashMap<i32, String>) -> String {
+pub fn clean_escaped_text(text: &str, character_names: &HashMap<i32, String>) -> String {
     static ESCAPED_EXCLUDING_CHAR_AND_VAR_PATTERN: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\\[^NnVv](:?\[(\d+?)\])?").unwrap());
     static MULTI_SPACE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" {2,}").unwrap());

@@ -108,7 +108,6 @@ Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big a
 **TODO:** `cargo clippy`
 
 More
-- Dialogue cleanup: `fn advance_???() -> ParsingMode`
 - Dialogue only splits if it's one line, so by setting `ignore_overflow` on, you both ignore the error as well as preserve that one line property.
     - Maybe trailing newline because auto vs manual line?
     - So like `disable_auto_splitting` field calculated on Patch read

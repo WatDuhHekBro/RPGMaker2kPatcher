@@ -67,8 +67,8 @@ impl LcfMapUnit {
         })
     }
 
-    pub fn generate_toml_map(&self) -> String {
-        generate_toml_map(&self)
+    pub fn generate_toml_map(&self, disable_decompile_indexes: bool) -> String {
+        generate_toml_map(&self, disable_decompile_indexes)
     }
 
     pub fn generate_toml_patch(

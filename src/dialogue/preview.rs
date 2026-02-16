@@ -75,22 +75,16 @@ pub fn generate_html_preview(
             let has_portrait = dialogue.has_portrait.unwrap_or(false);
             let ignore_overflow = dialogue.ignore_overflow.unwrap_or(false);
 
-            // Generate the lines that would be in the resulting binaries
-            let (parsed_dialogue, error_message) = Dialogue::get_split_lines(
+            let parsed_dialogue = Dialogue::from(
                 &dialogue.patched,
-                has_portrait,
-                character_names,
-                dialogue.should_use_custom_line_wrapping,
-            );
-            // Then parse THAT in order to generate HTML preview lines
-            let dialogue = Dialogue::from(
-                parsed_dialogue.join("\n"),
                 has_portrait,
                 character_names,
                 dialogue.should_use_custom_line_wrapping,
             );
 
             if !ignore_overflow {
+                let error_message = parsed_dialogue.check_if_out_of_bounds();
+
                 // May as well print out errors to the console as well if you're already running the check dialogue function
                 if let Some(error_message) = error_message {
                     eprintln!("{error_message}- See the generated \"report.html\" for details.");
@@ -98,7 +92,7 @@ pub fn generate_html_preview(
             }
 
             let (html, has_overflow) = generate_html_dialogue_box_preview(
-                &dialogue.processed_lines_pretty,
+                &parsed_dialogue.processed_lines_pretty,
                 has_portrait,
                 ignore_overflow,
             );

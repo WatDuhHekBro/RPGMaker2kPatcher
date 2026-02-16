@@ -17,6 +17,7 @@ fn main() {
     let path_to_patched = env::var("PATH_TO_PATCHED");
     let path_to_preview = env::var("PATH_TO_PREVIEW");
     let path_to_legacy_workspace = env::var("PATH_TO_WORKSPACE_LEGACY");
+    let disable_decompile_indexes = env::var("DISABLE_DECOMPILE_INDEXES").ok().is_some();
 
     // CLI Arguments
     let args: Vec<String> = env::args().collect();
@@ -32,6 +33,7 @@ fn main() {
                 file_operations::bulk_generate_toml_representations(
                     &path_to_original,
                     &path_to_reference,
+                    disable_decompile_indexes,
                 )
                 .unwrap();
             }
@@ -117,11 +119,13 @@ fn main() {
                 file_operations::bulk_generate_toml_representations(
                     &path_to_original,
                     &subpath_original_toml,
+                    disable_decompile_indexes,
                 )
                 .unwrap();
                 file_operations::bulk_generate_toml_representations(
                     &subpath_reference,
                     &subpath_reference_toml,
+                    disable_decompile_indexes,
                 )
                 .unwrap();
 
@@ -140,6 +144,7 @@ fn main() {
                 file_operations::bulk_generate_toml_representations(
                     &subpath_patched_default,
                     &subpath_patched_default_toml,
+                    disable_decompile_indexes,
                 )
                 .unwrap();
 
@@ -164,6 +169,7 @@ fn main() {
                     file_operations::bulk_generate_toml_representations(
                         &subpath_patched_custom,
                         &subpath_patched_custom_toml,
+                        disable_decompile_indexes,
                     )
                     .unwrap();
                 } else {
@@ -187,6 +193,7 @@ fn main() {
                 file_operations::bulk_generate_toml_representations(
                     &path_to_patched,
                     &path_to_patched,
+                    disable_decompile_indexes,
                 )
                 .unwrap();
             }

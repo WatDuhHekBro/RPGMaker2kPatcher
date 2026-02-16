@@ -58,6 +58,7 @@ Workflow:
 - `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
 - `PATH_TO_PREVIEW`: Optionally redirect the location of extracted text, HTML dialogue previews, and the HTML overflow report (instead of the `PATH_TO_WORKSPACE`).
 - `PATH_TO_WORKSPACE_LEGACY`: Location of the old JSON patches.
+- `DISABLE_DECOMPILE_INDEXES`: Disables printing array indexes in decompiled TOML, significantly useful for better git diffing for binary identical testing. If set to any value (such as `1`), it will enable this flag.
 
 ## Code Organization
 
@@ -100,6 +101,7 @@ Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big a
 
 **Main Functionality TODO:**
 - Check if binary identical
+    - Need to add edge case of trailing newline in actual text for consistency
 - `ignore_overflow` disables line splitting?
 - Dialogue punctuation
 

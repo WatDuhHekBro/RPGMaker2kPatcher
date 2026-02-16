@@ -92,8 +92,8 @@ impl LcfDataBase {
         character_names
     }
 
-    pub fn generate_toml_database(&self) -> String {
-        generate_toml_database(&self)
+    pub fn generate_toml_database(&self, disable_decompile_indexes: bool) -> String {
+        generate_toml_database(&self, disable_decompile_indexes)
     }
 
     pub fn generate_toml_patch(&self, game_title: &String) -> String {

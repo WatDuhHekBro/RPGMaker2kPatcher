@@ -112,6 +112,7 @@ pub fn read_lcfdatabase_and_patch<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Pa
 pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
     path_to_original: P1,
     path_to_reference: P2,
+    disable_decompile_indexes: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Bulk generating TOML representations...");
 
@@ -138,7 +139,7 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
 
     fs::write(
         path_to_reference.as_ref().join("Database.toml"),
-        database.generate_toml_database(),
+        database.generate_toml_database(disable_decompile_indexes),
     )?;
 
     for entry in fs::read_dir(path_to_original)? {
@@ -162,7 +163,7 @@ pub fn bulk_generate_toml_representations<P1: AsRef<Path>, P2: AsRef<Path>>(
                 toml_path.set_extension("toml");
 
                 // Write
-                fs::write(toml_path, map.generate_toml_map())?;
+                fs::write(toml_path, map.generate_toml_map(disable_decompile_indexes))?;
             }
         }
     }

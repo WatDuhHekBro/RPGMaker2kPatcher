@@ -388,7 +388,8 @@ pub fn apply_patch_map(
 
         // Get split lines
         let has_portrait = has_portrait.unwrap_or(false);
-        let (patched_lines, _) = Dialogue::get_split_lines(
+
+        let parsed_dialogue = Dialogue::from(
             patched,
             has_portrait,
             character_names,
@@ -400,7 +401,7 @@ pub fn apply_patch_map(
             *command_index,
             explicitly_defined_indent,
             original,
-            &patched_lines,
+            &parsed_dialogue.processed_lines,
             &mut offsets_table,
             key,
         );
@@ -571,7 +572,8 @@ pub fn apply_patch_database(
 
         // Get split lines
         let has_portrait = has_portrait.unwrap_or(false);
-        let (patched_lines, _) = Dialogue::get_split_lines(
+
+        let parsed_dialogue = Dialogue::from(
             patched,
             has_portrait,
             character_names,
@@ -583,7 +585,7 @@ pub fn apply_patch_database(
             *command_index,
             explicitly_defined_indent,
             original,
-            &patched_lines,
+            &parsed_dialogue.processed_lines,
             &mut offsets_table,
             key,
         );

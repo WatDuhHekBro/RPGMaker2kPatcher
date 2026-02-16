@@ -20,7 +20,7 @@ const DISCLAIMER_TEXT: &str = "# This binary representation has been serialized 
 const HEADER_SIGNPOST_START: &str = "#############\n# Header ";
 const HEADER_SIGNPOST_END: &str = " #\n#############\n\n";
 
-pub fn generate_toml_map(map: &LcfMapUnit) -> String {
+pub fn generate_toml_map(map: &LcfMapUnit, disable_decompile_indexes: bool) -> String {
     let mut output = String::from(DISCLAIMER_TEXT);
 
     ////////////
@@ -81,7 +81,12 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
                                                         parameters,
                                                     } in &**commands
                                                     {
-                                                        output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                                        if disable_decompile_indexes {
+                                                            output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}],\n"));
+                                                        } else {
+                                                            output_current_page.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                                        }
+
                                                         index += 1;
                                                     }
 
@@ -119,7 +124,7 @@ pub fn generate_toml_map(map: &LcfMapUnit) -> String {
     output
 }
 
-pub fn generate_toml_database(database: &LcfDataBase) -> String {
+pub fn generate_toml_database(database: &LcfDataBase, disable_decompile_indexes: bool) -> String {
     let mut output = String::from(DISCLAIMER_TEXT);
     output.push_str("[header]\ntype = '''LcfDataBase'''\n\n");
 
@@ -513,7 +518,12 @@ pub fn generate_toml_database(database: &LcfDataBase) -> String {
                                         parameters,
                                     } in &**commands
                                     {
-                                        output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                        if disable_decompile_indexes {
+                                            output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}],\n"));
+                                        } else {
+                                            output_commands.push_str(&format!("\t[{code}, {indent}, '''{text}''', {parameters}], #{index}\n"));
+                                        }
+
                                         index += 1;
                                     }
 

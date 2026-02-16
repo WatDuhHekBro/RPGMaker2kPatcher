@@ -122,7 +122,7 @@ mir,...es ist besser so für mich...";
     #[test]
     fn should_preserve_variables() {
         let text = r"\c[10]Ansager:\c[0] Euer aktueller Rang ist \v[1886]";
-        let expected_text = r"\c[10]Ansager:\c[0] Euer aktueller Rang ist \v[1886]";
+        let expected_text = text;
         let expected_cleaned_text = r"Ansager: Euer aktueller Rang ist \v[1886]";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
@@ -130,7 +130,7 @@ mir,...es ist besser so für mich...";
     #[test]
     fn should_preserve_character_names() {
         let text = r"\c[1]\n[1]:\c[0] Tu das.";
-        let expected_text = r"\c[1]\n[1]:\c[0] Tu das.";
+        let expected_text = text;
         let expected_cleaned_text = r"Kento: Tu das.";
         verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
     }
@@ -164,7 +164,7 @@ geheilt.";
     #[test]
     fn can_read_unknown_control() {
         let text = r"\c[10]Ansager:\c[0] Test \p!!1";
-        let expected_text = r"\c[10]Ansager:\c[0] Test \p!!1";
+        let expected_text = text;
         let expected_cleaned_text = r"Ansager: Test !!1";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
@@ -172,7 +172,7 @@ geheilt.";
     #[test]
     fn can_read_unknown_control_with_number() {
         let text = r"\c[10]Ansager:\c[0] Test \p[123]!!1";
-        let expected_text = r"\c[10]Ansager:\c[0] Test \p[123]!!1";
+        let expected_text = text;
         let expected_cleaned_text = r"Ansager: Test !!1";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
@@ -180,8 +180,7 @@ geheilt.";
     #[test]
     fn preserves_original_control_character() {
         let text = r"\c[10]Ansager:\C[0]\S[1]\s[6] Test \N[123]\n[456] and \V[123]\v[456]!!1";
-        let expected_text =
-            r"\c[10]Ansager:\C[0]\S[1]\s[6] Test \N[123]\n[456] and \V[123]\v[456]!!1";
+        let expected_text = text;
         let expected_cleaned_text = r"Ansager: Test \N[123]\n[456] and \V[123]\v[456]!!1";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
@@ -239,5 +238,17 @@ it m8?!";
 
         let output_pretty = dialogue.processed_lines_pretty.join("\n");
         assert_eq!(output_pretty, expected_cleaned_text);
+    }
+
+    #[test]
+    fn preserves_unnecessary_trailing_newline_for_consistency() {
+        let text = r"\c[1]\n[1]\c[0]: Was tut der Nachname schon 
+zur Sache? 
+";
+        let expected_text = text;
+        let expected_cleaned_text = r"Kento: Was tut der Nachname schon 
+zur Sache? 
+";
+        verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
 }

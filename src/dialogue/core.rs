@@ -493,8 +493,12 @@ impl Dialogue {
         let mut current_line_pretty = String::new();
 
         let mut has_existing_newlines = false;
+        // Preserve unnecessary newline if the text ends with a newline
+        let mut ends_with_trailing_newline = false;
 
         for fragment in fragments {
+            ends_with_trailing_newline = false;
+
             match fragment {
                 DialogueFragment::Newline => {
                     lines.push(current_line);
@@ -504,6 +508,7 @@ impl Dialogue {
                     current_line_pretty = String::new();
 
                     has_existing_newlines = true;
+                    ends_with_trailing_newline = true;
                 }
                 DialogueFragment::CharacterName(_, character_name_id) => {
                     current_line_pretty.push_str(
@@ -519,10 +524,10 @@ impl Dialogue {
             }
         }
 
-        if !current_line.is_empty() {
+        if !current_line.is_empty() || ends_with_trailing_newline {
             lines.push(current_line);
         }
-        if !current_line_pretty.is_empty() {
+        if !current_line_pretty.is_empty() || ends_with_trailing_newline {
             lines_pretty.push(current_line_pretty);
         }
 

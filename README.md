@@ -73,6 +73,10 @@ Workflow:
 
 **What was I doing just now?**
 
+**Coding:**
+- Preserve `\s[06]`
+- `\x[String]` except for `\n[123]` which uses actual (and it's optional function call anyway of `Option<i32>` which attempts to parse the number)
+
 -----
 
 - Clean up documentation and usage
@@ -124,11 +128,6 @@ patched = '''Single line.'''
 ```
 
 ## Edge Cases
-
-Edge Case: Aedemphia Map0323 Event #12 Page #1 Command #59 has a control character 7F. When written with custom formatting and read back, the TOML parser throws an error. See how the default TOML formatter deals with this.
-https://stackoverflow.com/questions/26741455/how-to-remove-control-characters-from-string `(str.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""))`
-- Then again, how often does it happen anyway? Just manually convert it to a double string literal so you can escape the control character.
-- Also Map1426 Event #42 Page #1 Command #2 has the same 7F issue
 
 Edge Case: Tara's Adventure Map1180 Event #16 Page #1 Command #23 - One line itself has a bunch of newlines. Then because the original length gets counted differently, the binary output is tangibly different because of splicing the wrong indexes.
 - For this edge case, you could probably just add a `[[splice-commands]]` entry to deal with it manually.

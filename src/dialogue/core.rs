@@ -324,7 +324,9 @@ impl Dialogue {
                     ParsingModeProgress::Start => {
                         // "\c[\v[123]]"
                         //    ^
-                        if character == '[' {
+                        // "\C{2]Gagné: 100 points d'expérience pour"
+                        // I can't believe it! It's another stupid edge case!
+                        if character == '[' || character == '{' {
                             tmp_number = 0;
                             let mut is_nested = false;
 

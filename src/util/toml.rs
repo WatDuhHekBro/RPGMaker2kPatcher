@@ -586,6 +586,16 @@ pub fn generate_toml_maptree(maptree: &LcfMapTree) -> String {
     output
 }
 
+/*
+Edge Case: 0x7F
+When written with custom formatting and read back, the TOML parser throws an error.
+
+Notes
+- https://stackoverflow.com/questions/26741455/how-to-remove-control-characters-from-string `(str.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""))`
+- Aedemphia Map0323 Event #12 Page #1 Command #59
+- Aedemphia Map1426 Event #42 Page #1 Command #2
+*/
+
 // Although the default toml::to_string() actually does what I want quite well, it just isn't quite there yet.
 pub fn generate_toml_patch(patch: &Patch) -> String {
     let mut output = String::new();
@@ -622,10 +632,21 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
             output.push_str(&format!("character = '''{character}'''\n"));
         }
 
-        // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
-        // Be sure to keep this in mind when reading the patch files!
-        output.push_str(&format!("original = '''\n{original}\n'''\n"));
-        output.push_str(&format!("patched = '''\n{patched}\n'''\n\n"));
+        // Checking for 0x7F for a stupid edge case that causes the TOML Patch to become unreadable.
+        if original.contains('\x7F') {
+            let original = original.replace(r"\", r"\\").replace('\x7F', r"\u007F");
+            let patched = patched.replace(r"\", r"\\").replace('\x7F', r"\u007F");
+
+            // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
+            // Be sure to keep this in mind when reading the patch files!
+            output.push_str(&format!("original = \"\"\"\n{original}\n\"\"\"\n"));
+            output.push_str(&format!("patched = \"\"\"\n{patched}\n\"\"\"\n\n"));
+        } else {
+            // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
+            // Be sure to keep this in mind when reading the patch files!
+            output.push_str(&format!("original = '''\n{original}\n'''\n"));
+            output.push_str(&format!("patched = '''\n{patched}\n'''\n\n"));
+        }
     }
 
     for PatchText {
@@ -650,8 +671,18 @@ pub fn generate_toml_patch(patch: &Patch) -> String {
         if let Some(ignore_overflow) = ignore_overflow {
             output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
         }
-        output.push_str(&format!("original = '''{original}'''\n"));
-        output.push_str(&format!("patched = '''{patched}'''\n\n"));
+
+        // Checking for 0x7F for a stupid edge case that causes the TOML Patch to become unreadable.
+        if original.contains('\x7F') {
+            let original = original.replace(r"\", r"\\").replace('\x7F', r"\u007F");
+            let patched = patched.replace(r"\", r"\\").replace('\x7F', r"\u007F");
+
+            output.push_str(&format!("original = \"\"\"{original}\"\"\"\n"));
+            output.push_str(&format!("patched = \"\"\"{patched}\"\"\"\n\n"));
+        } else {
+            output.push_str(&format!("original = '''{original}'''\n"));
+            output.push_str(&format!("patched = '''{patched}'''\n\n"));
+        }
     }
 
     for PatchSpliceCommands {

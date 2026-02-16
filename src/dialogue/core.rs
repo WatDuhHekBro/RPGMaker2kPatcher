@@ -37,8 +37,6 @@ pub enum DialogueFragment {
     // Normal Text //
     /////////////////
     Normal(String),
-    // These should be grouped together so newlines don't awkwardly split it in the middle.
-    Punctuation(char),
     Space,
     Newline,
     /////////////
@@ -66,7 +64,6 @@ impl DialogueFragment {
         match &self {
             // Normal Text
             DialogueFragment::Normal(fragment_text) => fragment_text.to_string(),
-            DialogueFragment::Punctuation(character) => character.to_string(),
             DialogueFragment::Space => String::from(" "),
             DialogueFragment::Newline => String::new(),
             // Control
@@ -92,7 +89,6 @@ impl DialogueFragment {
         match &self {
             // Normal Text
             DialogueFragment::Normal(fragment_text) => fragment_text.to_string(),
-            DialogueFragment::Punctuation(c) => c.to_string(),
             DialogueFragment::Space => String::from(" "),
             DialogueFragment::Newline => String::new(),
             // Control
@@ -215,42 +211,56 @@ impl Dialogue {
         let mut tmp_type: ControlWithNumberType = ControlWithNumberType::Unknown('?');
         let mut chars_iterator = text.as_ref().chars().peekable();
 
+        // The purpose of this is to let punctuation be grouped with normal text
+        // while also letting it perform special splits.
+        // For example, you don't want to split "...again?!"
+        // But you also want to split up "...again?!Word!"
+        // -----
+        // You only have to set this flag in ParsingMode::Normal.
+        // Because punctuation doesn't change the parsing mode.
+        let mut is_punctuation_mode_active = false;
+
         while let Some(character) = chars_iterator.next() {
             match mode {
                 ParsingMode::Normal => match character {
                     '\\' => {
-                        if !tmp_text.is_empty() {
+                        if !tmp_text.is_empty() || is_punctuation_mode_active {
                             parsed.push(DialogueFragment::Normal(tmp_text));
                             tmp_text = String::new();
                         }
 
+                        is_punctuation_mode_active = false;
                         mode = ParsingMode::Control
                     }
                     '\n' => {
-                        if !tmp_text.is_empty() {
+                        if !tmp_text.is_empty() || is_punctuation_mode_active {
                             parsed.push(DialogueFragment::Normal(tmp_text));
                             tmp_text = String::new();
                         }
 
+                        is_punctuation_mode_active = false;
                         parsed.push(DialogueFragment::Newline)
                     }
                     ' ' => {
-                        if !tmp_text.is_empty() {
+                        if !tmp_text.is_empty() || is_punctuation_mode_active {
                             parsed.push(DialogueFragment::Normal(tmp_text));
                             tmp_text = String::new();
                         }
 
+                        is_punctuation_mode_active = false;
                         parsed.push(DialogueFragment::Space)
                     }
                     '.' | ',' | '?' | '!' | ':' | ';' => {
-                        if !tmp_text.is_empty() {
+                        is_punctuation_mode_active = true;
+                        tmp_text.push(character);
+                    }
+                    _ => {
+                        if is_punctuation_mode_active {
                             parsed.push(DialogueFragment::Normal(tmp_text));
                             tmp_text = String::new();
                         }
 
-                        parsed.push(DialogueFragment::Punctuation(character))
-                    }
-                    _ => {
+                        is_punctuation_mode_active = false;
                         tmp_text.push(character);
                     }
                 },

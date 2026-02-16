@@ -251,4 +251,58 @@ zur Sache?
 ";
         verify_rendered_dialogue(text, false, expected_text, expected_cleaned_text);
     }
+
+    #[test]
+    fn groups_ellipses_properly() {
+        let text = r"123456789 123456789 123456789 1234567...";
+        let expected_text = r"123456789 123456789 123456789
+1234567...";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn groups_ellipses_properly_exact() {
+        let text = r"123456789 123456789 123456789 12345678...";
+        let expected_text = r"123456789 123456789 123456789
+12345678...";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn ellipses_wraps_around_overshoot() {
+        let text = r"123456789 123456789 123456789 123456789...";
+        let expected_text = r"123456789 123456789 123456789
+123456789...";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn groups_punctuation_properly() {
+        let text = r"123456789 123456789 123456789 1234567?!sample text";
+        let expected_text = r"123456789 123456789 123456789
+1234567?!sample text";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn groups_punctuation_properly_exact() {
+        let text = r"123456789 123456789 123456789 12345678?!sample text";
+        let expected_text = r"123456789 123456789 123456789
+12345678?!sample text";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
+
+    #[test]
+    fn punctuation_marks_end_of_section() {
+        let text = r"123456789 123456789 123456789 123456?!sample text";
+        let expected_text = r"123456789 123456789 123456789 123456?!
+sample text";
+        let expected_cleaned_text = expected_text;
+        verify_rendered_dialogue(text, true, expected_text, expected_cleaned_text);
+    }
 }

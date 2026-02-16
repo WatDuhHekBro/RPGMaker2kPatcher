@@ -53,28 +53,12 @@ pub fn generate_patch_from_map(
         }
     }
 
-    let dialogue = {
-        if !dialogue.is_empty() {
-            Some(dialogue)
-        } else {
-            None
-        }
-    };
-
-    let text = {
-        if !text.is_empty() {
-            Some(text)
-        } else {
-            None
-        }
-    };
-
     Patch {
         dialogue,
         text,
-        splice_commands: None,
-        database_vocabulary: None,
-        append_page: None,
+        splice_commands: Vec::new(),
+        database_vocabulary: Vec::new(),
+        append_page: Vec::new(),
     }
 }
 
@@ -101,28 +85,12 @@ pub fn generate_patch_from_database(database: &LcfDataBase, game_title: &String)
         }
     }
 
-    let dialogue = {
-        if !dialogue.is_empty() {
-            Some(dialogue)
-        } else {
-            None
-        }
-    };
-
-    let text = {
-        if !text.is_empty() {
-            Some(text)
-        } else {
-            None
-        }
-    };
-
     Patch {
         dialogue,
         text,
-        splice_commands: None,
-        database_vocabulary: None,
-        append_page: None,
+        splice_commands: Vec::new(),
+        database_vocabulary: Vec::new(),
+        append_page: Vec::new(),
     }
 }
 
@@ -391,184 +359,175 @@ pub fn apply_patch_map(
 ) {
     let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
-    if let Some(dialogues) = &patch.dialogue {
-        for dialogue in dialogues {
-            let PatchDialogue {
-                event,
-                page,
-                command: command_index,
-                indent: explicitly_defined_indent,
-                has_portrait,
-                ignore_overflow: _,
-                character: _,
-                original,
-                patched,
-            } = dialogue;
-            let event = *event;
-            let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, Some(page));
+    for dialogue in &patch.dialogue {
+        let PatchDialogue {
+            event,
+            page,
+            command: command_index,
+            indent: explicitly_defined_indent,
+            has_portrait,
+            ignore_overflow: _,
+            character: _,
+            original,
+            patched,
+        } = dialogue;
+        let event = *event;
+        let page = page.expect(ERROR_MAP_PAGE_NONE);
+        let key = (event, Some(page));
 
-            let commands = &mut map
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_page_mut(page)
-                .expect("Page should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
+        let commands = &mut map
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_page_mut(page)
+            .expect("Page should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
 
-            let has_portrait = has_portrait.unwrap_or(false);
-            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+        let has_portrait = has_portrait.unwrap_or(false);
+        let dialogue = Dialogue::from(patched, has_portrait, character_names);
 
-            splice_dialogue_and_update_offsets(
-                commands,
-                *command_index,
-                explicitly_defined_indent,
-                original,
-                &dialogue.processed_lines,
-                &mut offsets_table,
-                key,
-            );
-        }
+        splice_dialogue_and_update_offsets(
+            commands,
+            *command_index,
+            explicitly_defined_indent,
+            original,
+            &dialogue.processed_lines,
+            &mut offsets_table,
+            key,
+        );
     }
 
-    if let Some(texts) = &patch.text {
-        for text in texts {
-            let PatchText {
-                event,
-                page,
-                command: command_index,
-                has_portrait: _,
-                ignore_overflow: _,
-                original: _,
-                patched,
-            } = text;
-            let event = *event;
-            let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, Some(page));
+    for text in &patch.text {
+        let PatchText {
+            event,
+            page,
+            command: command_index,
+            has_portrait: _,
+            ignore_overflow: _,
+            original: _,
+            patched,
+        } = text;
+        let event = *event;
+        let page = page.expect(ERROR_MAP_PAGE_NONE);
+        let key = (event, Some(page));
 
-            let commands = &mut map
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_page_mut(page)
-                .expect("Page should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
+        let commands = &mut map
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_page_mut(page)
+            .expect("Page should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
 
-            // Get explicit indent if available or assume previous indent
-            let command_index = *command_index as usize;
-            let start_index = {
-                let offsets = offsets_table.get(&key);
+        // Get explicit indent if available or assume previous indent
+        let command_index = *command_index as usize;
+        let start_index = {
+            let offsets = offsets_table.get(&key);
 
-                if let Some(offsets) = offsets {
-                    ((command_index as isize) + (offsets[command_index])).max(0) as usize
-                } else {
-                    command_index
+            if let Some(offsets) = offsets {
+                ((command_index as isize) + (offsets[command_index])).max(0) as usize
+            } else {
+                command_index
+            }
+        };
+
+        // Replace text
+        commands[start_index].text = PascalString::from(patched);
+    }
+
+    for splice_command in &patch.splice_commands {
+        let PatchSpliceCommands {
+            event,
+            page,
+            replace_commands_from,
+            replace_commands_to,
+            commands: patched_commands,
+        } = splice_command;
+        let event = *event;
+        let page = page.expect(ERROR_MAP_PAGE_NONE);
+        let key = (event, Some(page));
+
+        let commands = &mut map
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_page_mut(page)
+            .expect("Page should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
+
+        splice_arbitrary_commands_and_update_offsets(
+            commands,
+            *replace_commands_from,
+            *replace_commands_to,
+            patched_commands.clone(),
+            &mut offsets_table,
+            key,
+        );
+    }
+
+    for entry in &patch.append_page {
+        let PatchMapAppendPage {
+            event,
+            name,
+            headers: headers_map,
+            commands,
+        } = entry;
+
+        let pages = &mut map
+            .get_event_mut(*event)
+            .expect("Event should exist!")
+            .get_pages_mut()
+            .expect("Pages should exist!");
+        let mut headers: NullTerminatedList<LcfMapUnitPageHeader> = NullTerminatedList(Vec::new());
+
+        // Push name if it exists
+        if let Some(name) = name {
+            headers.push(LcfMapUnitPageHeader::Name(PascalString::from(name)));
+        }
+
+        // Push the commands list
+        headers.push(LcfMapUnitPageHeader::Commands(DoubleByteCounted {
+            inner: LcfCommandList(commands.to_vec()),
+            next_id: DynamicInteger(52),
+        }));
+
+        // Push all of the generic headers
+        for (id, bytes) in headers_map {
+            headers.push(LcfMapUnitPageHeader::Generic(ListEntryHeaderGeneric {
+                id: DynamicInteger(*id),
+                value: U8Array(bytes.to_vec()),
+            }));
+        }
+
+        // You MUST make sure to sort the headers in order or the binary output will differ!
+        // -----
+        // Disgusting hardcoded numbers because I can't figure out how to extract the magic numbers of LcfMapUnitPageHeader
+        headers.sort_by(|a, b| {
+            let id_of_a = {
+                match a {
+                    LcfMapUnitPageHeader::Name(_) => 21,
+                    // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
+                    LcfMapUnitPageHeader::Commands(_) => 52,
+                    LcfMapUnitPageHeader::Generic(header) => *header.id,
                 }
             };
 
-            // Replace text
-            commands[start_index].text = PascalString::from(patched);
-        }
-    }
+            let id_of_b = {
+                match b {
+                    LcfMapUnitPageHeader::Name(_) => 21,
+                    // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
+                    LcfMapUnitPageHeader::Commands(_) => 52,
+                    LcfMapUnitPageHeader::Generic(header) => *header.id,
+                }
+            };
 
-    if let Some(splice_commands) = &patch.splice_commands {
-        for splice_command in splice_commands {
-            let PatchSpliceCommands {
-                event,
-                page,
-                replace_commands_from,
-                replace_commands_to,
-                commands: patched_commands,
-            } = splice_command;
-            let event = *event;
-            let page = page.expect(ERROR_MAP_PAGE_NONE);
-            let key = (event, Some(page));
+            id_of_a.cmp(&id_of_b)
+        });
 
-            let commands = &mut map
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_page_mut(page)
-                .expect("Page should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
-
-            splice_arbitrary_commands_and_update_offsets(
-                commands,
-                *replace_commands_from,
-                *replace_commands_to,
-                patched_commands.clone(),
-                &mut offsets_table,
-                key,
-            );
-        }
-    }
-
-    if let Some(append_page) = &patch.append_page {
-        for entry in append_page {
-            let PatchMapAppendPage {
-                event,
-                name,
-                headers: headers_map,
-                commands,
-            } = entry;
-
-            let pages = &mut map
-                .get_event_mut(*event)
-                .expect("Event should exist!")
-                .get_pages_mut()
-                .expect("Pages should exist!");
-            let mut headers: NullTerminatedList<LcfMapUnitPageHeader> =
-                NullTerminatedList(Vec::new());
-
-            // Push name if it exists
-            if let Some(name) = name {
-                headers.push(LcfMapUnitPageHeader::Name(PascalString::from(name)));
-            }
-
-            // Push the commands list
-            headers.push(LcfMapUnitPageHeader::Commands(DoubleByteCounted {
-                inner: LcfCommandList(commands.to_vec()),
-                next_id: DynamicInteger(52),
-            }));
-
-            // Push all of the generic headers
-            for (id, bytes) in headers_map {
-                headers.push(LcfMapUnitPageHeader::Generic(ListEntryHeaderGeneric {
-                    id: DynamicInteger(*id),
-                    value: U8Array(bytes.to_vec()),
-                }));
-            }
-
-            // You MUST make sure to sort the headers in order or the binary output will differ!
-            // -----
-            // Disgusting hardcoded numbers because I can't figure out how to extract the magic numbers of LcfMapUnitPageHeader
-            headers.sort_by(|a, b| {
-                let id_of_a = {
-                    match a {
-                        LcfMapUnitPageHeader::Name(_) => 21,
-                        // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
-                        LcfMapUnitPageHeader::Commands(_) => 52,
-                        LcfMapUnitPageHeader::Generic(header) => *header.id,
-                    }
-                };
-
-                let id_of_b = {
-                    match b {
-                        LcfMapUnitPageHeader::Name(_) => 21,
-                        // The extracted ID is only used for comparison purposes, so it doesn't matter if it's 51 or 52
-                        LcfMapUnitPageHeader::Commands(_) => 52,
-                        LcfMapUnitPageHeader::Generic(header) => *header.id,
-                    }
-                };
-
-                id_of_a.cmp(&id_of_b)
-            });
-
-            pages.push(ListEntry {
-                id: DynamicInteger((pages.len() as i32) + 1),
-                headers,
-            });
-        }
+        pages.push(ListEntry {
+            id: DynamicInteger((pages.len() as i32) + 1),
+            headers,
+        });
     }
 }
 
@@ -579,120 +538,112 @@ pub fn apply_patch_database(
 ) {
     let mut offsets_table: HashMap<(i32, Option<i32>), Vec<isize>> = HashMap::new();
 
-    if let Some(dialogues) = &patch.dialogue {
-        for dialogue in dialogues {
-            let PatchDialogue {
-                event,
-                page: _,
-                command: command_index,
-                indent: explicitly_defined_indent,
-                has_portrait,
-                ignore_overflow: _,
-                character: _,
-                original,
-                patched,
-            } = dialogue;
-            let event = *event;
-            let key = (event, None);
+    for dialogue in &patch.dialogue {
+        let PatchDialogue {
+            event,
+            page: _,
+            command: command_index,
+            indent: explicitly_defined_indent,
+            has_portrait,
+            ignore_overflow: _,
+            character: _,
+            original,
+            patched,
+        } = dialogue;
+        let event = *event;
+        let key = (event, None);
 
-            let commands = &mut database
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
+        let commands = &mut database
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
 
-            let has_portrait = has_portrait.unwrap_or(false);
-            let dialogue = Dialogue::from(patched, has_portrait, character_names);
+        let has_portrait = has_portrait.unwrap_or(false);
+        let dialogue = Dialogue::from(patched, has_portrait, character_names);
 
-            splice_dialogue_and_update_offsets(
-                commands,
-                *command_index,
-                explicitly_defined_indent,
-                original,
-                &dialogue.processed_lines,
-                &mut offsets_table,
-                key,
-            );
-        }
+        splice_dialogue_and_update_offsets(
+            commands,
+            *command_index,
+            explicitly_defined_indent,
+            original,
+            &dialogue.processed_lines,
+            &mut offsets_table,
+            key,
+        );
     }
 
-    if let Some(texts) = &patch.text {
-        for text in texts {
-            let PatchText {
-                event,
-                page: _,
-                command: command_index,
-                has_portrait: _,
-                ignore_overflow: _,
-                original: _,
-                patched,
-            } = text;
-            let event = *event;
-            let key = (event, None);
+    for text in &patch.text {
+        let PatchText {
+            event,
+            page: _,
+            command: command_index,
+            has_portrait: _,
+            ignore_overflow: _,
+            original: _,
+            patched,
+        } = text;
+        let event = *event;
+        let key = (event, None);
 
-            let commands = &mut database
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
+        let commands = &mut database
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
 
-            // Get explicit indent if available or assume previous indent
-            let command_index = *command_index as usize;
-            let start_index = {
-                let offsets = offsets_table.get(&key);
+        // Get explicit indent if available or assume previous indent
+        let command_index = *command_index as usize;
+        let start_index = {
+            let offsets = offsets_table.get(&key);
 
-                if let Some(offsets) = offsets {
-                    ((command_index as isize) + (offsets[command_index])).max(0) as usize
-                } else {
-                    command_index
-                }
-            };
+            if let Some(offsets) = offsets {
+                ((command_index as isize) + (offsets[command_index])).max(0) as usize
+            } else {
+                command_index
+            }
+        };
 
-            // Replace text
-            commands[start_index].text = PascalString::from(patched);
-        }
+        // Replace text
+        commands[start_index].text = PascalString::from(patched);
     }
 
-    if let Some(splice_commands) = &patch.splice_commands {
-        for splice_command in splice_commands {
-            let PatchSpliceCommands {
-                event,
-                page: _,
-                replace_commands_from,
-                replace_commands_to,
-                commands: patched_commands,
-            } = splice_command;
-            let event = *event;
-            let key = (event, None);
+    for splice_command in &patch.splice_commands {
+        let PatchSpliceCommands {
+            event,
+            page: _,
+            replace_commands_from,
+            replace_commands_to,
+            commands: patched_commands,
+        } = splice_command;
+        let event = *event;
+        let key = (event, None);
 
-            let commands = &mut database
-                .get_event_mut(event)
-                .expect("Event should exist!")
-                .get_commands_mut()
-                .expect("Commands should exist!");
+        let commands = &mut database
+            .get_event_mut(event)
+            .expect("Event should exist!")
+            .get_commands_mut()
+            .expect("Commands should exist!");
 
-            splice_arbitrary_commands_and_update_offsets(
-                commands,
-                *replace_commands_from,
-                *replace_commands_to,
-                patched_commands.clone(),
-                &mut offsets_table,
-                key,
-            );
-        }
+        splice_arbitrary_commands_and_update_offsets(
+            commands,
+            *replace_commands_from,
+            *replace_commands_to,
+            patched_commands.clone(),
+            &mut offsets_table,
+            key,
+        );
     }
 
-    if let Some(database_vocabulary) = &patch.database_vocabulary {
-        let vocab_map = PatchDatabaseVocabulary::convert_to_hashmap(database_vocabulary);
+    let vocab_map = PatchDatabaseVocabulary::convert_to_hashmap(&patch.database_vocabulary);
 
-        for header in &mut **database {
-            if let LcfDataBaseHeader::Vocabulary(header) = header {
-                for vocab_entry in &mut ***header {
-                    let patched_vocab_text = vocab_map.get(&vocab_entry.id);
+    for header in &mut **database {
+        if let LcfDataBaseHeader::Vocabulary(header) = header {
+            for vocab_entry in &mut ***header {
+                let patched_vocab_text = vocab_map.get(&vocab_entry.id);
 
-                    if let Some(patched_vocab_text) = patched_vocab_text {
-                        vocab_entry.text = PascalString::from(*patched_vocab_text);
-                    }
+                if let Some(patched_vocab_text) = patched_vocab_text {
+                    vocab_entry.text = PascalString::from(*patched_vocab_text);
                 }
             }
         }
@@ -986,7 +937,7 @@ pub fn extract_text(patch: &Patch, character_names: &HashMap<i32, String>) -> St
         }
     }
 
-    if patch.text.is_some() {
+    if !patch.text.is_empty() {
         output_original
             .push_str("\n###################\n# Original (Text) #\n###################\n");
         output_patched.push_str("\n##################\n# Patched (Text) #\n##################\n");

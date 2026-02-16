@@ -583,126 +583,118 @@ pub fn generate_toml_maptree(maptree: &LcfMapTree) -> String {
 pub fn generate_toml_patch(patch: &Patch) -> String {
     let mut output = String::new();
 
-    if let Some(dialogue) = &patch.dialogue {
-        for PatchDialogue {
-            event,
-            page,
-            command,
-            indent: explicitly_defined_indent,
-            has_portrait,
-            ignore_overflow,
-            character,
-            original,
-            patched,
-        } in dialogue
-        {
-            output.push_str("[[dialogue]]\n");
-            output.push_str(&format!("event = {event}\n"));
-            if let Some(page) = page {
-                output.push_str(&format!("page = {page}\n"));
-            }
-            output.push_str(&format!("command = {command}\n"));
-            if let Some(indent) = explicitly_defined_indent {
-                output.push_str(&format!("indent = {indent}\n"));
-            }
-            if let Some(has_portrait) = has_portrait {
-                output.push_str(&format!("has_portrait = {has_portrait}\n"));
-            }
-            if let Some(ignore_overflow) = ignore_overflow {
-                output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
-            }
-            if let Some(character) = character {
-                output.push_str(&format!("character = '''{character}'''\n"));
+    for PatchDialogue {
+        event,
+        page,
+        command,
+        indent: explicitly_defined_indent,
+        has_portrait,
+        ignore_overflow,
+        character,
+        original,
+        patched,
+    } in &patch.dialogue
+    {
+        output.push_str("[[dialogue]]\n");
+        output.push_str(&format!("event = {event}\n"));
+        if let Some(page) = page {
+            output.push_str(&format!("page = {page}\n"));
+        }
+        output.push_str(&format!("command = {command}\n"));
+        if let Some(indent) = explicitly_defined_indent {
+            output.push_str(&format!("indent = {indent}\n"));
+        }
+        if let Some(has_portrait) = has_portrait {
+            output.push_str(&format!("has_portrait = {has_portrait}\n"));
+        }
+        if let Some(ignore_overflow) = ignore_overflow {
+            output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
+        }
+        if let Some(character) = character {
+            output.push_str(&format!("character = '''{character}'''\n"));
+        }
+
+        // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
+        // Be sure to keep this in mind when reading the patch files!
+        output.push_str(&format!("original = '''\n{original}\n'''\n"));
+        output.push_str(&format!("patched = '''\n{patched}\n'''\n\n"));
+    }
+
+    for PatchText {
+        event,
+        page,
+        command,
+        has_portrait,
+        ignore_overflow,
+        original,
+        patched,
+    } in &patch.text
+    {
+        output.push_str("[[text]]\n");
+        output.push_str(&format!("event = {event}\n"));
+        if let Some(page) = page {
+            output.push_str(&format!("page = {page}\n"));
+        }
+        output.push_str(&format!("command = {command}\n"));
+        if let Some(has_portrait) = has_portrait {
+            output.push_str(&format!("has_portrait = {has_portrait}\n"));
+        }
+        if let Some(ignore_overflow) = ignore_overflow {
+            output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
+        }
+        output.push_str(&format!("original = '''{original}'''\n"));
+        output.push_str(&format!("patched = '''{patched}'''\n\n"));
+    }
+
+    for PatchSpliceCommands {
+        event,
+        page,
+        replace_commands_from,
+        replace_commands_to,
+        commands,
+    } in &patch.splice_commands
+    {
+        output.push_str("[[splice-commands]]\n");
+        output.push_str(&format!("event = {event}\n"));
+        if let Some(page) = page {
+            output.push_str(&format!("page = {page}\n"));
+        }
+        output.push_str(&format!(
+            "replace_commands_from = {replace_commands_from}\n"
+        ));
+        output.push_str(&format!("replace_commands_to = {replace_commands_to}\n"));
+
+        if commands.is_empty() {
+            output.push_str("commands = []\n\n");
+        } else {
+            output.push_str("commands = [\n");
+
+            for LcfCommand {
+                code,
+                indent,
+                text,
+                parameters,
+            } in &**commands
+            {
+                output.push_str(&format!(
+                    "\t[{code}, {indent}, '''{text}''', {parameters}],\n"
+                ));
             }
 
-            // NOTE: This extra newline is to make the dialogue lines pretty for manual editing.
-            // Be sure to keep this in mind when reading the patch files!
-            output.push_str(&format!("original = '''\n{original}\n'''\n"));
-            output.push_str(&format!("patched = '''\n{patched}\n'''\n\n"));
+            output.push_str("]\n\n");
         }
     }
 
-    if let Some(text) = &patch.text {
-        for PatchText {
-            event,
-            page,
-            command,
-            has_portrait,
-            ignore_overflow,
-            original,
-            patched,
-        } in text
-        {
-            output.push_str("[[text]]\n");
-            output.push_str(&format!("event = {event}\n"));
-            if let Some(page) = page {
-                output.push_str(&format!("page = {page}\n"));
-            }
-            output.push_str(&format!("command = {command}\n"));
-            if let Some(has_portrait) = has_portrait {
-                output.push_str(&format!("has_portrait = {has_portrait}\n"));
-            }
-            if let Some(ignore_overflow) = ignore_overflow {
-                output.push_str(&format!("ignore_overflow = {ignore_overflow}\n"));
-            }
-            output.push_str(&format!("original = '''{original}'''\n"));
-            output.push_str(&format!("patched = '''{patched}'''\n\n"));
-        }
-    }
-
-    if let Some(splice_commands) = &patch.splice_commands {
-        for PatchSpliceCommands {
-            event,
-            page,
-            replace_commands_from,
-            replace_commands_to,
-            commands,
-        } in splice_commands
-        {
-            output.push_str("[[splice-commands]]\n");
-            output.push_str(&format!("event = {event}\n"));
-            if let Some(page) = page {
-                output.push_str(&format!("page = {page}\n"));
-            }
-            output.push_str(&format!(
-                "replace_commands_from = {replace_commands_from}\n"
-            ));
-            output.push_str(&format!("replace_commands_to = {replace_commands_to}\n"));
-
-            if commands.is_empty() {
-                output.push_str("commands = []\n\n");
-            } else {
-                output.push_str("commands = [\n");
-
-                for LcfCommand {
-                    code,
-                    indent,
-                    text,
-                    parameters,
-                } in &**commands
-                {
-                    output.push_str(&format!(
-                        "\t[{code}, {indent}, '''{text}''', {parameters}],\n"
-                    ));
-                }
-
-                output.push_str("]\n\n");
-            }
-        }
-    }
-
-    if let Some(database_vocabulary) = &patch.database_vocabulary {
-        for PatchDatabaseVocabulary {
-            id,
-            original,
-            patched,
-        } in database_vocabulary
-        {
-            output.push_str("[[database-vocabulary]]\n");
-            output.push_str(&format!("id = {id}\n"));
-            output.push_str(&format!("original = '''{original}'''\n"));
-            output.push_str(&format!("patched = '''{patched}'''\n\n"));
-        }
+    for PatchDatabaseVocabulary {
+        id,
+        original,
+        patched,
+    } in &patch.database_vocabulary
+    {
+        output.push_str("[[database-vocabulary]]\n");
+        output.push_str(&format!("id = {id}\n"));
+        output.push_str(&format!("original = '''{original}'''\n"));
+        output.push_str(&format!("patched = '''{patched}'''\n\n"));
     }
 
     // Cleanup

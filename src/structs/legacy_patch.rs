@@ -58,38 +58,34 @@ impl LegacyMapPatch {
         }
 
         // Import lines to new patch format
-        if let Some(dialogues) = &mut patch.dialogue {
-            for dialogue in dialogues {
-                let event = dialogue.event;
-                let page = dialogue.page.expect(ERROR_MAP_PAGE_NONE);
-                let command = dialogue.command;
-                let key = &(event, page, command);
-                let patched_text = patch_map.get(key);
+        for dialogue in &mut patch.dialogue {
+            let event = dialogue.event;
+            let page = dialogue.page.expect(ERROR_MAP_PAGE_NONE);
+            let command = dialogue.command;
+            let key = &(event, page, command);
+            let patched_text = patch_map.get(key);
 
-                if let Some(patched_text) = patched_text {
-                    dialogue.patched = patched_text.to_string();
-                    patch_map.remove(key);
-                } else {
-                    println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent dialogue in its legacy patch!");
-                }
+            if let Some(patched_text) = patched_text {
+                dialogue.patched = patched_text.to_string();
+                patch_map.remove(key);
+            } else {
+                println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent dialogue in its legacy patch!");
             }
         }
 
         // Import lines to new patch format
-        if let Some(texts) = &mut patch.text {
-            for text in texts {
-                let event = text.event;
-                let page = text.page.expect(ERROR_MAP_PAGE_NONE);
-                let command = text.command;
-                let key = &(event, page, command);
-                let patched_text = patch_map.get(key);
+        for text in &mut patch.text {
+            let event = text.event;
+            let page = text.page.expect(ERROR_MAP_PAGE_NONE);
+            let command = text.command;
+            let key = &(event, page, command);
+            let patched_text = patch_map.get(key);
 
-                if let Some(patched_text) = patched_text {
-                    text.patched = patched_text.to_string();
-                    patch_map.remove(key);
-                } else {
-                    println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent text in its legacy patch!");
-                }
+            if let Some(patched_text) = patched_text {
+                text.patched = patched_text.to_string();
+                patch_map.remove(key);
+            } else {
+                println!("WARNING: [map.{map_name}.event.{event}.page.{page}.command.{command}] found no equivalent text in its legacy patch!");
             }
         }
 
@@ -175,36 +171,32 @@ impl LegacyDatabasePatch {
         }
 
         // Import lines to new patch format
-        if let Some(dialogues) = &mut patch.dialogue {
-            for dialogue in dialogues {
-                let event = dialogue.event;
-                let command = dialogue.command;
-                let key = &(event, command);
-                let patched_text = patch_map.get(key);
+        for dialogue in &mut patch.dialogue {
+            let event = dialogue.event;
+            let command = dialogue.command;
+            let key = &(event, command);
+            let patched_text = patch_map.get(key);
 
-                if let Some(patched_text) = patched_text {
-                    dialogue.patched = patched_text.to_string();
-                    patch_map.remove(key);
-                } else {
-                    println!("WARNING: [database.event.{event}.command.{command}] found no equivalent dialogue in its legacy patch!");
-                }
+            if let Some(patched_text) = patched_text {
+                dialogue.patched = patched_text.to_string();
+                patch_map.remove(key);
+            } else {
+                println!("WARNING: [database.event.{event}.command.{command}] found no equivalent dialogue in its legacy patch!");
             }
         }
 
         // Import lines to new patch format
-        if let Some(texts) = &mut patch.text {
-            for text in texts {
-                let event = text.event;
-                let command = text.command;
-                let key = &(event, command);
-                let patched_text = patch_map.get(key);
+        for text in &mut patch.text {
+            let event = text.event;
+            let command = text.command;
+            let key = &(event, command);
+            let patched_text = patch_map.get(key);
 
-                if let Some(patched_text) = patched_text {
-                    text.patched = patched_text.to_string();
-                    patch_map.remove(key);
-                } else {
-                    println!("WARNING: [database.event.{event}.command.{command}] found no equivalent text in its legacy patch!");
-                }
+            if let Some(patched_text) = patched_text {
+                text.patched = patched_text.to_string();
+                patch_map.remove(key);
+            } else {
+                println!("WARNING: [database.event.{event}.command.{command}] found no equivalent text in its legacy patch!");
             }
         }
 
@@ -213,7 +205,7 @@ impl LegacyDatabasePatch {
         }
 
         if !vocab_list.is_empty() {
-            patch.database_vocabulary = Some(vocab_list);
+            patch.database_vocabulary = vocab_list;
         }
     }
 }

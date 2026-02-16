@@ -14,12 +14,25 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Patch {
-    // These have to be made optional in order for serde to be able to read the TOML file directly
-    pub dialogue: Option<Vec<PatchDialogue>>,
-    pub text: Option<Vec<PatchText>>,
-    pub splice_commands: Option<Vec<PatchSpliceCommands>>,
-    pub database_vocabulary: Option<Vec<PatchDatabaseVocabulary>>,
-    pub append_page: Option<Vec<PatchMapAppendPage>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub dialogue: Vec<PatchDialogue>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub text: Vec<PatchText>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub splice_commands: Vec<PatchSpliceCommands>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub database_vocabulary: Vec<PatchDatabaseVocabulary>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub append_page: Vec<PatchMapAppendPage>,
 }
 
 // I have two ideas on how to add arbitrary patching if I ever need it:
@@ -54,33 +67,31 @@ impl Patch {
 
     // NOTE: You should run this after immediately reading it from the TOML string so the dialogue string is consistent.
     pub fn trim_dialogue_ending_newline(&mut self) {
-        if let Some(dialogues) = &mut self.dialogue {
-            for dialogue in dialogues {
-                let char_that_should_be_newline_original = &dialogue.original.pop();
-                let char_that_should_be_newline_patched = &dialogue.patched.pop();
+        for dialogue in &mut self.dialogue {
+            let char_that_should_be_newline_original = &dialogue.original.pop();
+            let char_that_should_be_newline_patched = &dialogue.patched.pop();
 
-                if let Some(c) = char_that_should_be_newline_original {
-                    if *c != '\n' {
-                        println!("WARNING: Character of original line should end with newline! Found '{c}' instead!\n{}", dialogue.original);
-                    }
+            if let Some(c) = char_that_should_be_newline_original {
+                if *c != '\n' {
+                    println!("WARNING: Character of original line should end with newline! Found '{c}' instead!\n{}", dialogue.original);
                 }
-                if let Some(c) = char_that_should_be_newline_patched {
-                    if *c != '\n' {
-                        println!("WARNING: Character of patched line should end with newline! Found '{c}' instead!\n{}", dialogue.patched);
-                    }
+            }
+            if let Some(c) = char_that_should_be_newline_patched {
+                if *c != '\n' {
+                    println!("WARNING: Character of patched line should end with newline! Found '{c}' instead!\n{}", dialogue.patched);
                 }
-                if let None = char_that_should_be_newline_original {
-                    println!(
-                        "WARNING: No character was popped from original line! Was it empty?\n{}",
-                        dialogue.original
-                    );
-                }
-                if let None = char_that_should_be_newline_patched {
-                    println!(
-                        "WARNING: No character was popped from patched line! Was it empty?\n{}",
-                        dialogue.patched
-                    );
-                }
+            }
+            if let None = char_that_should_be_newline_original {
+                println!(
+                    "WARNING: No character was popped from original line! Was it empty?\n{}",
+                    dialogue.original
+                );
+            }
+            if let None = char_that_should_be_newline_patched {
+                println!(
+                    "WARNING: No character was popped from patched line! Was it empty?\n{}",
+                    dialogue.patched
+                );
             }
         }
     }
@@ -93,22 +104,20 @@ impl Patch {
     pub fn get_ordered_dialogue(&self) -> HashMap<(i32, Option<i32>), Vec<&PatchDialogue>> {
         let mut table = HashMap::new();
 
-        if let Some(dialogues) = &self.dialogue {
-            for dialogue in dialogues {
-                let key = (dialogue.event, dialogue.page);
+        for dialogue in &self.dialogue {
+            let key = (dialogue.event, dialogue.page);
 
-                // Create entry if it hasn't reached this key yet
-                if !table.contains_key(&key) {
-                    table.insert(key, Vec::new());
-                }
-
-                // Then work off the existing offsets table.
-                let list = table
-                    .get_mut(&key)
-                    .expect("get_ordered_dialogue() HashMap should exist by this point!");
-
-                list.push(dialogue);
+            // Create entry if it hasn't reached this key yet
+            if !table.contains_key(&key) {
+                table.insert(key, Vec::new());
             }
+
+            // Then work off the existing offsets table.
+            let list = table
+                .get_mut(&key)
+                .expect("get_ordered_dialogue() HashMap should exist by this point!");
+
+            list.push(dialogue);
         }
 
         table
@@ -130,22 +139,20 @@ impl Patch {
     pub fn get_ordered_text(&self) -> HashMap<(i32, Option<i32>), Vec<&PatchText>> {
         let mut table = HashMap::new();
 
-        if let Some(texts) = &self.text {
-            for text in texts {
-                let key = (text.event, text.page);
+        for text in &self.text {
+            let key = (text.event, text.page);
 
-                // Create entry if it hasn't reached this key yet
-                if !table.contains_key(&key) {
-                    table.insert(key, Vec::new());
-                }
-
-                // Then work off the existing offsets table.
-                let list = table
-                    .get_mut(&key)
-                    .expect("get_ordered_dialogue() HashMap should exist by this point!");
-
-                list.push(text);
+            // Create entry if it hasn't reached this key yet
+            if !table.contains_key(&key) {
+                table.insert(key, Vec::new());
             }
+
+            // Then work off the existing offsets table.
+            let list = table
+                .get_mut(&key)
+                .expect("get_ordered_dialogue() HashMap should exist by this point!");
+
+            list.push(text);
         }
 
         table
@@ -188,6 +195,11 @@ pub struct PatchDialogue {
     // None = false
     pub has_portrait: Option<bool>,
     pub ignore_overflow: Option<bool>,
+    // The actual value of ignore_overflow
+    // - User input overrides the setting
+    // - But if not set by the user, it checks whether or not the string ends with a trailing newline, indicating if the patch was machine-generated
+    //#[serde(skip_serializing)]
+    //pub should_ignore_overflow: bool,
     // Helpful field to decipher character name variables (e.g. "\n[1]"), unused during actual patching
     pub character: Option<String>,
     pub original: String,
@@ -201,6 +213,7 @@ pub struct PatchText {
     pub page: Option<i32>,
     pub command: i32,
     pub has_portrait: Option<bool>,
+    // NOTE: While Text can't do anything with overflow since it's one command only, this field is still used to suppress warnings in "report.html".
     pub ignore_overflow: Option<bool>,
     pub original: String,
     pub patched: String,

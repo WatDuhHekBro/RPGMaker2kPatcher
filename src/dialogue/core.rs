@@ -152,6 +152,8 @@ pub enum ControlWithNumberType {
 // "\c[\v[123]]"
 // So you need to create an abstract number case
 // I assume \v[#] is a number
+// -----
+// NOTE: For source text errors like "\c[c]", it'll instead spit out "\c[0]" and print a warning to the console.
 #[derive(Debug)]
 pub enum AbstractNumber {
     // "\c[123]"
@@ -387,7 +389,7 @@ impl Dialogue {
                             parsed.push(fragment_type);
                             mode = ParsingMode::Normal;
                         } else {
-                            panic!("Invalid \\x[#] pattern for:\n{text}");
+                            eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
                         }
                     }
                     ParsingModeProgress::Nested(nested_progress) => match nested_progress {
@@ -398,7 +400,7 @@ impl Dialogue {
                                     ParsingModeProgressNested::Main,
                                 ))
                             } else {
-                                panic!("Invalid \\x[#] pattern for:\n{text}");
+                                eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
                             }
                         }
                         ParsingModeProgressNested::Main => {
@@ -452,11 +454,13 @@ impl Dialogue {
                                     if *next_character == ']' {
                                         chars_iterator.next();
                                     } else {
-                                        panic!("Invalid \\x[\\v[#]] pattern for:\n{text}");
+                                        eprintln!(
+                                            "WARNING: Invalid \\x[\\v[#]] pattern for:\n{text}"
+                                        );
                                     }
                                 }
                             } else {
-                                panic!("Invalid \\x[#] pattern for:\n{text}");
+                                eprintln!("WARNING: Invalid \\x[#] pattern for:\n{text}");
                             }
                         }
                     },

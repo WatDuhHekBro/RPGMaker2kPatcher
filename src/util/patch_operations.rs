@@ -726,6 +726,20 @@ fn splice_dialogue_and_update_offsets(
 
     // Generate patched commands
     let mut patched_commands: Vec<LcfCommand> = Vec::new();
+
+    // Edge Case: An empty string will be completely omitted because the for loop below skips it.
+    // So you need to manually add the dialogue command back in.
+    let empty_patched_lines = vec![String::new()];
+
+    // The reason you need to do it this way is because is an empty string normally generates 0 lines
+    // But you need to splice in 1 line to represent the empty string in the binary
+    // So you shadow patched_lines itself and let the program create patched_commands; you don't mess with patched_commands yourself
+    let patched_lines = if patched_lines.is_empty() {
+        &empty_patched_lines
+    } else {
+        patched_lines
+    };
+
     let patched_lines_count = patched_lines.len();
     let mut is_first_line = true;
 

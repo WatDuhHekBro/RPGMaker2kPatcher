@@ -1,133 +1,281 @@
 # RPGMaker2kPatcher
 
-## How To Use
+A tool to extract dialogue from RPG Maker 2000 binary files (`.lmu` and `.ldb`) to easily patch in edited text. Also supports limited patching of arbitrary data.
 
-***🚧 TODO: Under Construction 🚧***
 
-### Installation
 
-...
+# How To Use
 
-### Project Setup
+## Installation / Compilation
 
-...
+1. `git clone https://github.com/WatDuhHekBro/RPGMaker2kPatcher`
+2. `cd RPGMaker2kPatcher`
+3. `cargo build --release` ([install Rust](https://rust-lang.org/tools/install/) if you haven't already)
+4. Place `/path/to/RPGMaker2kPatcher/target/release/rpgmaker2kpatcher` in your project folder (or available via your `PATH` variable)
 
-### Project Workflow
+## Project Setup
 
-...
+*(Note: You can ignore this section if you're working off an existing project!)*
 
-### Dump
-
+1. Create a new folder for your project, then copy in the game you want to use, e.g. `Game`
+    - `/path/to/project` = `<root>`
+    - `/path/to/project/Game/RPG_RT.exe` = `<root>/Game/RPG_RT.exe`
+    - `<root>/Game/RPG_RT.exe` is a valid file
+2. Create the file `<root>/.env` and enter in the following fields *(you can always change these paths to fit your needs)*:
 ```
-How much documentation should be in rpgmaker2kpatcher vs Velsarbor? Specific to project or general?
-- Rpgmk readme: What each option does specifically and why you'd want to do it.
-- Rpgmk general workflow section (not just commands list)
-- Rpgmk: Short description for GitHub and top of readme
-- Rpgmk: Move command reference down a section
-- Spacing in sections
-- [ ] Documentation is just add what this is all about to an outside observer
-- Patch fields, what can be added, what the purpose is of each one (also stuff like has_portrait being optional and it doesn't affect how the text renders by default)
-
-Workflow:
-- Make sure to binary identical, git repo, ignore_overflow if necessary or a [[splice-commands]] for leading newlines
-- Basically, how to use (from existing, and from scratch - two sections)
+PATH_TO_ORIGINAL=./Game
+PATH_TO_REFERENCE=./build/reference
+PATH_TO_WORKSPACE=./patch
+PATH_TO_PATCHED=./build/bin
+PATH_TO_PREVIEW=./build/preview
 ```
+3. **To get started, generate patches via `rpgmaker2kpatcher generate`. These patches are the core of your project.**
+    - NOTE: You should only ever run this command once! Otherwise, you'll erase all your progress!
+4. Make sure to commit `PATH_TO_WORKSPACE` and `.env` to git. It's best to `.gitignore` all other folders though.
+
+-----
+
+*Optional Setup*
+- To get an idea of what's in the original project and what exactly you're patching, decompile the original binaries via `rpgmaker2kpatcher decompile`.
+- To view the text in a cleaner format without the metadata, see extracted text and HTML dialogue previews via `rpgmaker2kpatcher preview`.
+    - NOTE: This cannot be used to edit patches. It is only for viewing.
+- Feel free to delete all the folders and unnecessary files in `<root>/Game`.
+    - The only files this tool uses are `.lmu`, `.ldb`, and `.lmt` files.
+    - This will make it easier to optionally test for binary differences *(right below)*:
+- To test for binary differences with the default patches, run `rpgmaker2kpatcher testLib` and follow the instructions printed to the console.
+    - This involves creating a temporary git repo (`git init`) to easily diff the two sets of binary files.
+    - *The purpose of this is to see if there are any edge cases resulting in the binary files not being identical to the original before starting the project. This tests that the generated patches are as close to the original project as possible.*
+
+## Project Workflow
+
+1. Make whatever edits to patches *(see section below)*
+2. Run `rpgmaker2kpatcher apply` to apply the patches to the binary files
+3. Use the files generated in `PATH_TO_PATCHED` (e.g. `<root>/build/bin`) to overwrite the game's files (in the same directory as `RPG_RT.exe`).
+    - NOTE: Do NOT overwrite the files `<root>/Game`! This will mess up everything because the patches you generated target the original copy, not a patched copy. Instead, make a copy of the game and apply the patches there.
+
+## Editing Patches
+
+### The Patch Format
+
+- Most of the work you'll do in a project is in the TOML patch files generated during the project setup earlier.
+    - Find them in your `PATH_TO_WORKSPACE` (e.g. `<root>/patch`).
+- The first thing you'll probably see are `[[dialogue]]` entries. There are several other types of entries listed below for reference.
+
+### Patch: Dialogue (`[[dialogue]]`)
+
+- This is probably the most common type of entry you'll see. Each line of dialogue is represented as multiple commands, so optimizations were made to make this use case significantly easier to work with.
+- **Leave `event`, `page`, and `command` alone** - this is how the program knows where exactly to insert your edits.
+- `page` is omitted for the database only. It is required for map patches, and will throw an error if it's not found in a map.
+- `indent` is the explicitly-defined indent level of the command(s) shown in the RPG Maker 2000 editor. Unlike what the name implies, it has nothing to do with how the dialogue is formatted.
+    - Usually, the `indent` can be assumed from the surrounding context. If it can't, it'll show up here in the generated patch.
+    - Like with `event`/`page`/`command`, you don't need to do anything with it, just leave it as-is.
+- `has_portrait`
+    - This field is used to determine whether or not dialogue box's size and the maximum amount of characters that is safe to fit inside (38 for portrait dialogue, 50 for non-portrait dialogue)
+        - Used in custom line wrapping
+        - Used in HTML previews
+    - This field is automatically generated by the program, but is not guaranteed to be correct, so you can set it if necessary.
+    - Assumed to be `false` if the field isn't present, but can be set to `false` if an earlier prediction turned out to be wrong (for better semantics).
+    - *By default, this field has no effect on how the text turns out. But if you opt-in to custom line wrapping, then this field is very important in determining where to split the text.*
+- `ignore_overflow`
+    - This is an optional field purely for omitting any overflow warnings from the overflow report when generating HTML previews.
+    - Does not appear by default, must be added in manually by the user.
+    - Like with `has_portrait`, it's assumed to be `false` if the field isn't present.
+- `character`: Purely just a helper field to assist the reader and let them know what the first occurrence of something like `\n[1]` is supposed to stand for. Unused during actual patching.
+- `original`: The string holding the original text and where all the line splits are. **Leave it alone, do not touch it.**
+    - This serves as both a reference for comparison AND has a functional use of determining how many commands to splice out of the original. **It is for this reason that you should not touch this field.**
+- **`patched` is the most important field you'll be working with:**
+    - This is where you edit all the dialogue's text, so that after you apply the patches, it shows up in-game.
+    - By default, all original line endings are kept in-place.
+        - See the **Dialogue Line Wrapping** section below to see how to opt-in to custom line wrapping and not have to worry about getting the line endings right yourself.
+
+**Note:** TOML multiline single-quote strings were used for several reasons:
+- There are a ton of backslashes in the original text for control sequences.
+- Having a multiline string literal is significantly easier to work with than an array of strings (square brackets) or trying to fit in `\n` somewhere.
+- Because of the way TOML treats single-quote string literals, you cannot escape anything at all, neither backslashes nor single quotes. So in order to be as safe as possible, triple single-quotes are the default, even for `[[text]]` which is always a single line. It is very unlikely you'll run into that issue.
+    - Multiline displays are still reserved for dialogue only, as `[[text]]` never spans multiple lines.
+
+```toml
+[[dialogue]]
+event = 32
+page = 3
+command = 21
+#indent = 5
+has_portrait = true
+#ignore_overflow = true
+character = '''Cibon'''
+original = '''
+\c[13]Rothaarige Frau\c[0]:\s[6] S...\.Seldan...\.
+Glaube mir,\....es ist besser so 
+für mich...\.\.\^
+'''
+patched = '''
+\c[13]Red-Haired Woman\c[0]:\s[6] S...\. Seldan...\.
+It's...\. better this way...\.\.\^
+'''
+```
+
+**Dialogue Line Wrapping:** By default, no lines are affected by automatic line wrapping, it's something you have to opt-in to.
+- The reason for this is to be as close to the original binary files as possible, and to make it easier to check for if patches are not identical to the original binary files.
+    - Because it's something you have to opt-in to, the patched binaries should theoretically be identical to the original binaries until you start making edits.
+- By default, TOML multiline strings ignore the first newline, but do take into account the final newline.
+- If there's a final newline, it disables the custom line wrapping solution. If there isn't, then it uses custom line wrapping.
+- *To enable custom line wrapping for a dialogue entry, simply put all the `patched` text onto one line.*
+
+```toml
+# This represents 3 lines of dialogue in a dialogue box
+# All newlines are preserved, no custom line wrapping is used
+# Semantically, the user explicitly declarhas_characteres that this is how the line should be displayed
+# Overflow warnings are available via the HTML previews feature
+[[dialogue]]
+patched = '''
+\c[13]\n[1]:\c[0] This...\. is
+some
+sample text!!1
+'''
+
+# This represents a single line of dialogue
+# This string has an ending newline
+# Therefore, this does not use custom line wrapping
+# The line breaks between the two ''' has both a functional meaning and makes it look nice
+patched = '''
+\c[13]\n[1]:\c[0] This...\. is some sample text!!1
+'''
+
+# This also represents a single line of dialogue
+# But this string does not have an ending newline
+# Therefore, this uses custom line wrapping
+# When you collapse text into no newlines between ''', this semantically reads as "perform custom line wrapping"
+patched = '''\c[13]\n[1]:\c[0] This...\. is some sample text!!1'''
+
+# This is technically read the same as above, no ending newline, so it uses custom line wrapping
+# But why on earth would you format it like this?!
+patched = '''
+\c[13]\n[1]:\c[0] This...\. is some sample text!!1'''
+```
+
+### Patch: Text (`[[text]]`)
+
+- The other most common type of entry you'll see. Used for editing any command's texts that's known to be one only command (known to not span multiple commands).
+    - Specifically for replacing text, not for anything else, so it's not named something like "Replace".
+- The following fields act in the same way as its counterparts in `[[dialogue]]`: `event`, `page` (omitted from database), `command`, `has_portrait`.
+- `ignore_overflow` doesn't seem like it'd do anything since it only spans one command, but this field is still used to suppress warnings in `report.html`.
+- `original` is just here for reference.
+- `patched` is always one line compressed (no newlines).
+
+```toml
+[[text]]
+event = 140
+page = 1                        # omitted from database
+command = 27
+#has_portrait = true
+#ignore_overflow = true
+original = '''Nein, noch nicht.'''
+patched = '''No, not yet.'''
+```
+
+### Patch: Database Vocabulary (`[[database-vocabulary]]`)
+
+- Like `[[text]]`, but targets entries under the "Vocabulary" header (`header = 21`) in the Database.
+- `original` is just here for reference.
+
+```toml
+[[database-vocabulary]]
+id = 153
+original = '''Nein'''
+patched = '''No'''
+```
+
+### Patch: Splice Commands (`[[splice-commands]]`)
+
+- Utility command to append/insert/delete/replace arbitrary commands. Must be manually added by the user.
+- You need to use the decompiled TOML files to figure out what exactly to replace.
+- The following example replaces command #4 with one command. It targets the range `[4, 5)`.
+- If you want to append/insert, simply set the range to `[4, 4)` and it won't delete any commands.
+
+```toml
+[[splice-commands]]
+event = 30
+page = 1                        # omitted from database
+replace_commands_from = 4       # start index (inclusive)
+replace_commands_to = 5         # stop index (exclusive)
+commands = [
+	[10810, 0, '''''', [251, 1, 42]],
+]
+```
+
+### Patch: Append Page (`[[append-page]]`)
+
+- Like `[[splice-commands]]` above, except you're appending an entire page. Must be manually added by the user.
+- You need to use the decompiled TOML files to figure out what exactly to replace.
+- Because of TOML restrictions, you need to format it specifically like this, where the `u8` array headers are after the `[[append-page]]` entry.
+
+```toml
+[[append-page]]
+event = 19
+name = '''NameOfEvent'''        # optional
+commands = [
+	[10210, 0, '''''', [0, 785, 785, 0]],
+	[10210, 0, '''''', [0, 791, 791, 0]],
+	# ...
+]
+
+[append-page.headers]
+2 = [1, 1, 1, 2, 2, 139, 102, 4, 2, 142, 14, 5, 1, 13, 7, 1, 1, 0]
+23 = [2]
+25 = [0]
+31 = [0]
+33 = [1]
+34 = [1]
+35 = [1]
+36 = [0]
+41 = [12, 0, 0]
+```
+
+### Previewing Edits
+
+- Running `rpgmaker2kpatcher preview` does three things:
+    - Generates HTML files that let you easily preview patched dialogue and visually check whether or not it fits into the constraints of the dialogue box's size. Open these `*.patch.html` files in your browser to see.
+        - You can refresh your browser after running the command to easily see new changes.
+    - Generates text files of all the extracted text, cleaned up and put on one line each for a more natural reading. Open these `*.patch.txt` files in your favorite text editor.
+    - Prints out any overflowing dialogue/text to the console. You can also view `report.html` to see all these warnings visually.
+- These generated files aren't used in the actual patching process, but they do help in quickly checking how the patched lines would show up in-game without having to check it in-game.
+
+
+
+# Reference
 
 ## CLI Usage
 
 - `rpgmaker2kpatcher`: Shows the help menu
 - `rpgmaker2kpatcher decompile`: Generates TOML representations for `LcfMapUnit`s
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_REFERENCE`
+    - A nice text representation of database/map files for easier debugging & manual patching.
 - `rpgmaker2kpatcher generatePatches`: Generates TOML patches to apply to `LcfMapUnit`s
     - **Alias:** `rpgmaker2kpatcher generate`
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE`
 - `rpgmaker2kpatcher applyPatches`: Applies TOML patches to `LcfMapUnit`s and generates patched files in another directory
     - **Alias:** `rpgmaker2kpatcher apply`
     - Uses `PATH_TO_ORIGINAL` and `PATH_TO_WORKSPACE` and `PATH_TO_PATCHED`
-    - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
+    - The location of patched binary files. Drag this into a copy of the game to apply your patches to the game.
 - `rpgmaker2kpatcher preview`: Cleans and extracts all text to a separate text file, generates HTML previews of text boxes for easier debugging, and generates an HTML file named `report.html` for any overflowing lines.
     - Uses `PATH_TO_ORIGINAL` (for the database) and `PATH_TO_WORKSPACE`
     - Optionally uses `PATH_TO_PREVIEW`
+    - A convenient method for looking at all the dialogue/text in a patch without the metadata.
+    - Also warns of any potential issues with the patch files, such as more than 4 lines of dialogue and going over character limit.
 - `rpgmaker2kpatcher importLegacyPatches`: Convert old JSON patches to the new TOML patches
     - Uses `PATH_TO_WORKSPACE` and `PATH_TO_WORKSPACE_LEGACY`
 
-`.env` Variables
+## `.env` Variables
+
 - `PATH_TO_ORIGINAL`: Root folder of the original RPGMaker2000 game.
 - `PATH_TO_REFERENCE`: Location of TOML maps. Do not commit this to version control.
 - `PATH_TO_WORKSPACE`: Location of TOML patches. Commit this section to version control.
 - `PATH_TO_PATCHED`: Root folder of the patched RPGMaker2000 game.
 - `PATH_TO_PREVIEW`: Optionally redirect the location of extracted text, HTML dialogue previews, and the HTML overflow report (instead of the `PATH_TO_WORKSPACE`).
-- `PATH_TO_WORKSPACE_LEGACY`: Location of the old JSON patches.
+- `PATH_TO_WORKSPACE_LEGACY`: Location of the legacy JSON patches.
 - `DISABLE_DECOMPILE_INDEXES`: Disables printing array indexes in decompiled TOML, significantly useful for better git diffing for binary identical testing. If set to any value (such as `1`), it will enable this flag.
 
 ## Code Organization
 
 - `structs/`: The main folder to look at to understand each decoded structure
 - `types/`: Assistant binrw types for `structs/`, notably 1-5 byte dynamic integer
-
-
-
-# Clipboard / Current Status / Goals
-
-**Current Commit:** `a`
-
-**What was I doing just now?**
-
-**Coding:**
-- Preserve `\s[06]`
-- `\x[String]` except for `\n[123]` which uses actual (and it's optional function call anyway of `Option<i32>` which attempts to parse the number)
-
------
-
-- Clean up documentation and usage
-- If you can, then you can add an automatic line wrap option, basically meaning the position isn't important for this dialogue box
-    - This option only applies if the patched line is all on one line. If it's multiline, assume manual newlines, then do error checking on `applyPatches`
-    - Separate command `checkDialogue`
-- Generate styled HTML file for dialogue previews, no need to mess with JS (see the `dev` branch). Much easier to look at than a TUI. Also don't need `chars.json`. `rpgmaker2kpatcher generatePreviews` or `previewDialogue`
-- Dialogue overflow warnings - Probably relegate to subcommand just in case there are manual overrides you want and don't want to see the warnings each time you patch
-
-Dialogue / Line Wrap
-- Test: Default patches should be fully identical because auto line wrap is something you need to opt into by putting it all onto one line.
-    - I have a feeling there might be some weird edge case with a long single line. *Maybe `ignore_overflow` in `applyPatches` should also disable line splitting?* After all, if you're taking it out of the overflow report, you're basically dealing with it manually. Think of it as a manual override for single line dialogues.
-- Rule for ellipses, continuous punctuation String (do not split `...`)
-    - Do this by having Dialogue punctuation be counted as Normal text, but act differently via `is_punctuation_mode_active` flag. As soon as punctuation returns to something non-punctuation, then it splits the text up.
-    - Also cases like "word?!" and "word?!word" 
-
-Maybe merge `previewDialogue`, `checkDialogue`, and `extractText` into one big auxiliary operation? Same logic (that you can refine by adding a `HashMap<(event, page), ...>`), roughly the same outputs (only different in specific file types, txt, html, or console warnings).
-- Pass sorted HashMap as reference to 3 functions
-- `checkDialogue`? Change path to extracted text to be like `PATH_TO_DIALOGUE_PREVIEW`, containing both extracted text and HTML previews.
-    - `report.txt`? And if you're checking for line overflows with the HTML preview anyway... **TODO:** `report.html` with the title `Dialogue Overflow Report`. Also an easy GUI way to check what you're missing and what you can safely ignore.
-    - Also make a field on Patch named `ignore_overflow = true` if you want to ignore something for the report and leave it as-is at the same time
-    - `Map0013: Event #119 Page #2`
-    - **How about this?** Or just change all instances of "extracted text" to just "preview(s)". `extracted-text` = `preview(s)`. That is an accurate statement after all.
-
-`extractText` - Convert to ordered HashMap + use Dialogue parsing module
-
-**Main Functionality TODO:**
-- Check if binary identical
-    - Need to add edge case of trailing newline in actual text for consistency
-- `ignore_overflow` disables line splitting?
-- Dialogue punctuation
-
-**TODO:** `cargo clippy`
-
-More
-- Dialogue only splits if it's one line, so by setting `ignore_overflow` on, you both ignore the error as well as preserve that one line property.
-    - Maybe trailing newline because auto vs manual line?
-    - So like `disable_auto_splitting` field calculated on Patch read
-
-Basically:
-```toml
-# This is an auto-generated single line
-patched = '''
-Single line.
-'''
-# While this is an opt-in single line. Programmatic difference of trailing newline.
-patched = '''Single line.'''
-# Recommended to opt-in to all line wrap so you can preview it to see how it looks before you ship it.
-```
-
-## Edge Cases
-
-Edge Case: Tara's Adventure Map1180 Event #16 Page #1 Command #23 - One line itself has a bunch of newlines. Then because the original length gets counted differently, the binary output is tangibly different because of splicing the wrong indexes.
-- For this edge case, you could probably just add a `[[splice-commands]]` entry to deal with it manually.
